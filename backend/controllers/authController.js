@@ -97,9 +97,12 @@ async anonymousLogin(req, res) {
           message: 'Le nom d\'utilisateur doit contenir entre 3 et 30 caractères' 
         });
       }
+      const randomEmail = `anon_${Date.now()}@chat.online`;
+
   
       // Création de l'utilisateur
       const user = new User({
+        email: randomEmail,
         username,
         age: age || null,
         sexe: sexe || null,

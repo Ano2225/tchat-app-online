@@ -14,7 +14,7 @@
 - Gestion des utilisateurs
 
 ## Technologies Recommandées
-- Frontend: React ou Vue.js
+- Frontend: NextJS
 - Backend: Node.js avec Express
 - Websockets: Socket.IO
 - Base de données: MongoDB
