@@ -1,11 +1,16 @@
-import React from 'react'
+"use client"
 
-const page = () => {
+import React from 'react'
+import { useAuthStore } from '@/store/authStore'
+
+const ChatPage = () => {
+  const user = useAuthStore((state) => state.user );
+  console.log(user)
   return (
     <div>
-      <h1>hello</h1>
+      <h1>hello {user ? user.username : 'Visiteur '}</h1>
     </div>
   )
 }
 
-export default page
+export default ChatPage
