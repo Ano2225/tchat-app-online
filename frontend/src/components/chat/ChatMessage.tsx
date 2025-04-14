@@ -69,7 +69,8 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket }) => {
       {messages.length > 0 ? (
         messages.map((msg) => {
             console.log(messages)
-          const isOwnMessage = msg.sender._id === user?.id;
+            const isOwnMessage = msg.sender._id?.toString() === user?.id?.toString();
+
           console.log('USER ID:', user?.id);
           console.log('MSG SENDER ID:', msg.sender._id);
 
