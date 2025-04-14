@@ -1,14 +1,16 @@
 const User = require("../models/User");
 
-const connectedUsers = {};
-
+// username -> Set of socket IDs
+const connectedUsers = new Map();
 
 module.exports = (io, socket) => {
   console.log('Client connecté avec ID :', socket.id);
 
+  let currentUsername = null;
+
   socket.on('join_room', (room) => {
     socket.join(room);
-    socket.currentRoom = room; // stocke la room actuelle dans le socket
+    socket.currentRoom = room;
     console.log(`Utilisateur ${socket.id} a rejoint la room ${room}`);
   });
 
@@ -41,13 +43,34 @@ module.exports = (io, socket) => {
   });
 
   socket.on('user_connected', (username) => {
-    connectedUsers[socket.id] = username;
-    io.emit('update_user_list', Object.values(connectedUsers));
-  })
+    currentUsername = username;
+
+    if (!connectedUsers.has(username)) {
+      connectedUsers.set(username, new Set());
+    }
+
+    connectedUsers.get(username).add(socket.id);
+
+    emitUserList();
+  });
 
   socket.on('disconnect', () => {
     console.log(`Client ${socket.id} déconnecté`);
-    delete connectedUsers[socket.id]; //Supprimer l'utilisateur
-    io.emit('update_user_list', Object.values(connectedUsers));
+    
+    if (currentUsername && connectedUsers.has(currentUsername)) {
+      connectedUsers.get(currentUsername).delete(socket.id);
+
+      // Supprimer l'utilisateur si plus aucun socket actif
+      if (connectedUsers.get(currentUsername).size === 0) {
+        connectedUsers.delete(currentUsername);
+      }
+
+      emitUserList();
+    }
   });
+
+  function emitUserList() {
+    const usernames = Array.from(connectedUsers.keys());
+    io.emit('update_user_list', usernames);
+  }
 };
