@@ -4,9 +4,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 export interface User {
   id: string;
   username: string;
-  age?: number;
-  sexe?: string;
-  ville?: string;
   isAnonymous: boolean;
 }
 
@@ -19,15 +16,42 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
-      login: ({ user, token }) => set({ user, token }),
-      logout: () => set({ user: null, token: null }),
+      login: ({ user, token }) => set({ user, token }), // Mise à jour de l'état avec l'utilisateur et le token
+      logout: async () => {
+        const currentUser = get().user;
+        const currentToken = get().token;
+      
+        if (currentUser?.id && currentToken) {
+          try {
+            const response = await fetch(`/api/auth/logout`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${currentToken}`,
+              },
+            });
+            
+            if (response.ok) {
+              // Mise à jour réussie
+            } else {
+              console.error('Erreur serveur lors de la mise à jour de lastSeen');
+            }
+          } catch (error) {
+            console.error('Erreur lors de la déconnexion:', error);
+          }
+        }
+      
+        // Réinitialisation des données utilisateur dans le store
+        set({ user: null, token: null });
+      }      
+      
     }),
     {
       name: 'auth-storage',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => localStorage), // Utilisation du stockage local pour la persistance
     }
   )
 );

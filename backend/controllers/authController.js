@@ -2,7 +2,10 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
+const INACTIVITY_TIMEOUT = 1000 * 60 * 1; 
+
 class AuthController {
+
   // Inscription
   async register(req, res) {
     try {
@@ -14,7 +17,6 @@ class AuthController {
         return res.status(400).json({ message: 'Utilisateur déjà existant' });
       }
 
-      // Hacher le mot de passe
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -26,7 +28,7 @@ class AuthController {
         isAnonymous: false,
         age,
         sexe,
-        ville,
+        ville: ville || null,
       });
 
       await user.save();
@@ -61,6 +63,10 @@ class AuthController {
         return res.status(400).json({ message: 'Identifiants invalides' });
       }
 
+      //Mettre à jour la date de dernier accès 
+      user.lastSeen = new Date();
+      await user.save();
+
       // Générer un token JWT
       const token = jwt.sign(
         { id: user._id, username: user.username }, 
@@ -75,71 +81,100 @@ class AuthController {
   }
 
   // Connexion anonyme
-async anonymousLogin(req, res) {
+  async anonymousLogin(req, res) {
     try {
-      // Récupérer toutes les données du corps de la requête
       const { username, age, sexe, ville } = req.body;
-  
-      // Vérifier si un nom d'utilisateur est fourni
+
       if (!username) {
         return res.status(400).json({ message: 'Le nom d\'utilisateur est requis' });
       }
-  
-      // Vérifier si le nom d'utilisateur est unique
-      const existingUser = await User.findOne({ username });
-      if (existingUser) {
-        return res.status(400).json({ message: 'Ce nom d\'utilisateur est déjà utilisé' });
-      }
-  
-      // Validation du nom d'utilisateur
-      if (username.length < 3 || username.length > 30) {
-        return res.status(400).json({ 
-          message: 'Le nom d\'utilisateur doit contenir entre 3 et 30 caractères' 
-        });
-      }
-      const randomEmail = `anon_${Date.now()}@chat.online`;
 
-  
-      // Création de l'utilisateur
+      // Vérifier si un utilisateur authentifié utilise déjà ce nom d'utilisateur
+      const existingUser = await User.findOne({ username, isAnonymous: false });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Ce nom d\'utilisateur est déjà réservé par un utilisateur authentifié' });
+      }
+
+      // Vérifier si un utilisateur anonyme avec ce nom est actuellement en ligne
+      const existingAnonymousUserOnline = await User.findOne({ username, isAnonymous: true, isOnline: true });
+      if (existingAnonymousUserOnline) {
+        return res.status(400).json({ message: 'Ce nom d\'utilisateur est actuellement utilisé par un utilisateur anonyme en ligne' });
+      }
+
+      // OK, on peut créer un nouvel utilisateur anonyme
       const user = new User({
-        email: randomEmail,
+        email: `anon_${Date.now()}@chat.online`,
         username,
-        age: age || null,
-        sexe: sexe || null,
+        age,
+        sexe,
         ville: ville || null,
-        isAnonymous: true
+        isAnonymous: true,
+        isOnline: true,
+        lastSeen: new Date()
       });
-  
+
       await user.save();
-  
-      // Génération du token
+
+      // Générer un token
       const token = jwt.sign(
-        { 
-          id: user._id, 
-          username: user.username, 
-          isAnonymous: true,
-          age: user.age,
-          sexe: user.sexe,
-          ville: user.ville
-        }, 
+        { id: user._id, username: user.username, isAnonymous: true },
         process.env.JWT_SECRET,
         { expiresIn: '1h' }
       );
-  
-      res.json({ 
-        token, 
-        user: { 
-          id: user._id, 
+
+      res.json({
+        token,
+        user: {
+          id: user._id,
           username: user.username,
           age: user.age,
           sexe: user.sexe,
-          ville: user.ville
-        } 
+          ville: user.ville,
+        }
       });
+
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }
   }
+
+    // Déconnexion
+    async logout(req, res) {
+      try {
+        const { authorization } = req.headers;
+    
+        if (!authorization) {
+          return res.status(400).json({ message: 'Token manquant' });
+        }
+    
+        const token = authorization.split(' ')[1];
+        if (!token) {
+          return res.status(400).json({ message: 'Token invalide' });
+        }
+    
+        // Vérifier le token
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id;
+        const isAnonymous = decoded.isAnonymous;
+    
+        // Rechercher l'utilisateur
+        const user = await User.findById(userId);
+        if (!user) {
+          return res.status(404).json({ message: 'Utilisateur non trouvé' });
+        }
+    
+        user.lastSeen = new Date();
+        user.isOnline = false;
+    
+        await user.save();
+    
+        return res.status(200).json({ message: 'Déconnexion réussie' });
+    
+      } catch (error) {
+        return res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      }
+    }  
+
 }
 
 module.exports = new AuthController();

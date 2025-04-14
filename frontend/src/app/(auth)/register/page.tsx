@@ -46,8 +46,8 @@ export default function RegisterPage() {
         username: formData.username,
         email: formData.email,
         password: formData.password,
-        age: formData.age ? parseInt(formData.age) : null,
-        sexe: formData.sexe || null,
+        age: formData.age ?? parseInt(formData.age),
+        sexe: formData.sexe ,
         ville: formData.ville || null
       });
 
@@ -144,7 +144,7 @@ export default function RegisterPage() {
 
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2">
-              Âge (optionnel)
+              Âge 
             </label>
             <input
               type="number"
@@ -160,7 +160,7 @@ export default function RegisterPage() {
 
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2">
-              Sexe (optionnel)
+              Sexe
             </label>
             <select
               name="sexe"

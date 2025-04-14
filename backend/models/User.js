@@ -4,8 +4,6 @@ const UserSchema = new mongoose.Schema({
   username: {
     type: String,
     required: true,
-    unique: true,
-    sparse: true,
     trim: true,
     minlength: 3,
     maxlength: 30
@@ -27,7 +25,6 @@ const UserSchema = new mongoose.Schema({
   },
   ville : {
     type: String,
-    required: true
   },
   age : {
     type: String,
@@ -40,6 +37,14 @@ const UserSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  lastSeen: {
+    type: Date,
+    default: Date.now
+  },
+  isOnline : {
+    type: Boolean,
+    default: false,
   }
 });
 
