@@ -4,7 +4,9 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const connectDB = require('./config/database');
 const authRoutes = require('./routes/auth');
-const chatRoutes = require('./routes/chat');
+const messageRoutes = require('./routes/message');
+const channelRoutes = require('./routes/channel');
+const socketHandlers = require('./socket/socketHandlers');
 
 require('dotenv').config();
 
@@ -36,32 +38,19 @@ class ChatServer {
 
   setupRoutes() {
     this.app.use('/api/auth', authRoutes);
-    this.app.use('/api/chat', chatRoutes);
+    this.app.use('/api/messages', messageRoutes);
+    this.app.use('/api/channels', channelRoutes)
    
   }
 
   initSocketEvents() {
     this.io.on('connection', (socket) => {
-      console.log('Nouveau client connecté');
-
-      socket.on('join_room', (room) => {
-        socket.join(room);
-        console.log(`Utilisateur a rejoint le salon ${room}`);
-      });
-
-      socket.on('send_message', (messageData) => {
-        // Diffuser le message à tous les membres du salon
-        this.io.to(messageData.room).emit('receive_message', messageData);
-      });
-
-      socket.on('disconnect', () => {
-        console.log('Client déconnecté');
-      });
+      socketHandlers(this.io, socket)
     });
   }
 
   start() {
-    const PORT = process.env.PORT || 5000;
+    const PORT = process.env.PORT || 8000;
     this.server.listen(PORT, () => {
       console.log(`Serveur démarré sur le port ${PORT}`);
     });

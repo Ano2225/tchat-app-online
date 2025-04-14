@@ -4,7 +4,7 @@ import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import axios from 'axios';
-import { useAuthStore } from '@/store/authStore';
+//import { useAuthStore } from '@/store/authStore';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -19,7 +19,7 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const login = useAuthStore((state) => state.login);
+ // const login = useAuthStore((state) => state.login);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;

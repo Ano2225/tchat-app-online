@@ -10,7 +10,7 @@ interface AuthProviderProps {
 
 export default function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
-  const user = useAuthStore((state) => state.user);
+ // const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
   const router = useRouter();
   const pathname = usePathname();

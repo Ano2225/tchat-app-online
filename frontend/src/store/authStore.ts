@@ -22,11 +22,11 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       token: null,
-      login: (userData) => set(userData),
+      login: ({ user, token }) => set({ user, token }),
       logout: () => set({ user: null, token: null }),
     }),
     {
-      name: 'auth-storage', // Nom de la clé dans le localStorage
+      name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
     }
   )
