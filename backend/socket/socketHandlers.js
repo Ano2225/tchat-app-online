@@ -1,5 +1,8 @@
 const User = require("../models/User");
 
+const connectedUsers = {};
+
+
 module.exports = (io, socket) => {
   console.log('Client connecté avec ID :', socket.id);
 
@@ -37,7 +40,14 @@ module.exports = (io, socket) => {
     }
   });
 
+  socket.on('user_connected', (username) => {
+    connectedUsers[socket.id] = username;
+    io.emit('update_user_list', Object.values(connectedUsers));
+  })
+
   socket.on('disconnect', () => {
     console.log(`Client ${socket.id} déconnecté`);
+    delete connectedUsers[socket.id]; //Supprimer l'utilisateur
+    io.emit('update_user_list', Object.values(connectedUsers));
   });
 };

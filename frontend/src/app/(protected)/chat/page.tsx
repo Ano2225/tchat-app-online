@@ -8,6 +8,7 @@ import ChatChannel from '@/components/chat/ChatChannel';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ChatInput from '@/components/chat/ChatInput';
 import axiosInstance from '@/utils/axiosInstance';
+import UsersOnline from '@/components/chat/UsersOnline';
 
 interface Message {
   _id?: string;
@@ -27,7 +28,7 @@ const ChatPage = () => {
   const [currentRoom, setCurrentRoom] = useState('General');
   const [socket, setSocket] = useState<Socket | null>(null);
 
-  const previousRoomRef = useRef<string | null>(null); // Référence pour l'ancienne room
+  const previousRoomRef = useRef<string | null>(null); 
 
   // Init socket connection
   useEffect(() => {
@@ -72,6 +73,13 @@ const ChatPage = () => {
     };
   }, [socket, currentRoom]);
 
+  //Emettre que l'utilisateur est connecté 
+  useEffect(() => {
+    if (socket && user?.username) {
+      socket.emit('user_connected', user.username);
+    }
+  }, [socket, user?.username]);
+
   // Charger les messages précédents
   useEffect(() => {
     const loadMessages = async () => {
@@ -102,6 +110,7 @@ const ChatPage = () => {
           <ChatMessage currentRoom={currentRoom} socket={socket} />
           <ChatInput currentRoom={currentRoom} socket={socket} />
         </div>
+         <UsersOnline socket={socket} />
       </div>
     </div>
   );
