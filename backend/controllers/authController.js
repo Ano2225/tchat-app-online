@@ -49,13 +49,13 @@ class AuthController {
   // Connexion
   async login(req, res) {
     try {
-      const { email, password } = req.body;
+      const { username, password } = req.body;
 
       // Vérifier si l'utilisateur existe
-      const user = await User.findOne({ email });
-      if (!user) {
-        return res.status(400).json({ message: 'Identifiants invalides' });
-      }
+     const user = await User.findOne({username, isAnonymous: false});
+     if(!user) {
+      return res.status(400).json({message : 'Identifiants invalides'});
+     }
 
       // Vérifier le mot de passe
       const isMatch = await bcrypt.compare(password, user.password);
@@ -65,6 +65,7 @@ class AuthController {
 
       //Mettre à jour la date de dernier accès 
       user.lastSeen = new Date();
+      user.isOnline = true;
       await user.save();
 
       // Générer un token JWT

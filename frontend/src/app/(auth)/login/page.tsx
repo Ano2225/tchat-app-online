@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/authStore';
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: ''
   });
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export default function LoginPage() {
 
     try {
       const response = await axios.post('/api/auth/login', {
-        email: formData.email,
+        username: formData.username,
         password: formData.password
       });
 
@@ -65,16 +65,16 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2">
-              Email
+              Username
             </label>
             <input
-              type="email"
-              name="email"
-              value={formData.email}
+              type="text"
+              name="username"
+              value={formData.username}
               onChange={handleChange}
               required
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              placeholder="Votre email"
+              placeholder="Votre username"
             />
           </div>
 
