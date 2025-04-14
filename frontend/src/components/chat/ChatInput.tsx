@@ -31,7 +31,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ currentRoom, socket }) => {
       setIsSending(true);
       await axiosInstance.post('/messages', newMessage);
       socket.emit('send_message', newMessage);
-      console.log("message envoyé", newMessage)
       setMessage('');
     } catch (error) {
       console.error('Erreur envoi message:', error);
