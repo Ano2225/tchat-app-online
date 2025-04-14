@@ -6,6 +6,7 @@ const connectDB = require('./config/database');
 const authRoutes = require('./routes/auth');
 const messageRoutes = require('./routes/message');
 const channelRoutes = require('./routes/channel');
+const userRoutes = require('./routes/user')
 const socketHandlers = require('./socket/socketHandlers');
 
 require('dotenv').config();
@@ -39,7 +40,9 @@ class ChatServer {
   setupRoutes() {
     this.app.use('/api/auth', authRoutes);
     this.app.use('/api/messages', messageRoutes);
-    this.app.use('/api/channels', channelRoutes)
+    this.app.use('/api/channels', channelRoutes);
+    this.app.use('/api/user',userRoutes )
+
    
   }
 

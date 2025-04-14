@@ -8,6 +8,9 @@ const UserSchema = new mongoose.Schema({
     minlength: 3,
     maxlength: 30
   },
+  avatarUrl : {
+    type: String,
+  },
   email: {
     type: String,
     required: false,
@@ -21,7 +24,8 @@ const UserSchema = new mongoose.Schema({
   },
   sexe: {
     type: String,
-    required: true
+    enum: ['homme', 'femme', 'autre'],
+    default: 'Autre',
   },
   ville : {
     type: String,

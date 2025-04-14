@@ -45,7 +45,7 @@ const ChatPage = () => {
     if (!socket || !currentRoom) return;
 
     if (previousRoomRef.current) {
-      socket.emit('leave_room', previousRoomRef.current); // Quitte l'ancienne room
+      socket.emit('leave_room', previousRoomRef.current);
     }
 
     socket.emit('join_room', currentRoom); // Rejoint la nouvelle room
