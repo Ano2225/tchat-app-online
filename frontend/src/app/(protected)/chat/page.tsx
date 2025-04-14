@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store/authStore';
 import ChatMessage from '@/components/chat/ChatMessage';
@@ -11,7 +11,11 @@ import axiosInstance from '@/utils/axiosInstance';
 
 interface Message {
   _id?: string;
-  sender: string;
+  sender: {
+    id: string,
+    username : string,
+    email?: string,
+  }; 
   content: string;
   room: string;
   createdAt?: string;
@@ -23,23 +27,42 @@ const ChatPage = () => {
   const [currentRoom, setCurrentRoom] = useState('General');
   const [socket, setSocket] = useState<Socket | null>(null);
 
+  const previousRoomRef = useRef<string | null>(null); // Référence pour l'ancienne room
+
   // Init socket connection
   useEffect(() => {
     const newSocket = io('http://localhost:8000');
     setSocket(newSocket);
-    newSocket.emit('join_room', 'General');
 
     return () => {
       newSocket.disconnect();
     };
   }, []);
 
-  // Listen to incoming messages
+  // Rejoindre une room (et quitter l'ancienne)
+  useEffect(() => {
+    if (!socket || !currentRoom) return;
+
+    if (previousRoomRef.current) {
+      socket.emit('leave_room', previousRoomRef.current); // Quitte l'ancienne room
+    }
+
+    socket.emit('join_room', currentRoom); // Rejoint la nouvelle room
+    previousRoomRef.current = currentRoom; // Mémorise la room actuelle
+
+    return () => {
+      socket.emit('leave_room', currentRoom); // Quitte la room quand le composant se démonte
+    };
+  }, [currentRoom, socket]);
+
+  // Ecoute des messages entrants
   useEffect(() => {
     if (!socket) return;
 
     const handleReceive = (msg: Message) => {
-      setMessages((prev) => [...prev, msg]);
+      if (msg.room === currentRoom) {
+        setMessages((prev) => [...prev, msg]);
+      }
     };
 
     socket.on('receive_message', handleReceive);
@@ -47,9 +70,9 @@ const ChatPage = () => {
     return () => {
       socket.off('receive_message', handleReceive);
     };
-  }, [socket]);
+  }, [socket, currentRoom]);
 
-  // Load previous messages
+  // Charger les messages précédents
   useEffect(() => {
     const loadMessages = async () => {
       try {
@@ -66,11 +89,8 @@ const ChatPage = () => {
   }, [currentRoom]);
 
   const handleJoinRoom = (roomName: string) => {
-    if (socket) {
-      socket.emit('join_room', roomName);
-    }
-    setMessages([]);
-    setCurrentRoom(roomName);
+    setMessages([]); // Reset les messages quand on change de room
+    setCurrentRoom(roomName); 
   };
 
   return (
