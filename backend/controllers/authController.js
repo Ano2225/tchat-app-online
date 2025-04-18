@@ -145,12 +145,12 @@ class AuthController {
         const { authorization } = req.headers;
     
         if (!authorization) {
-          return res.status(400).json({ message: 'Token manquant' });
+          return res.status(400).json({ message: 'Token manquant, veuillez vous reconnecter' });
         }
     
         const token = authorization.split(' ')[1];
         if (!token) {
-          return res.status(400).json({ message: 'Token invalide' });
+          return res.status(400).json({ message: 'Token invalide, veuilez vous reconnecter' });
         }
     
         // Vérifier le token

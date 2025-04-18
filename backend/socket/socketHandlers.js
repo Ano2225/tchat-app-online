@@ -8,12 +8,14 @@ module.exports = (io, socket) => {
 
   let currentUsername = null;
 
+  // --- Rejoindre une room ---
   socket.on('join_room', (room) => {
     socket.join(room);
     socket.currentRoom = room;
     console.log(`Utilisateur ${socket.id} a rejoint la room ${room}`);
   });
 
+  // --- Quitter une room ---
   socket.on('leave_room', () => {
     if (socket.currentRoom) {
       socket.leave(socket.currentRoom);
@@ -22,6 +24,7 @@ module.exports = (io, socket) => {
     }
   });
 
+  // --- Envoi de message ---
   socket.on('send_message', async (messageData) => {
     const { sender, content, room } = messageData;
     if (room && sender && content) {
@@ -42,6 +45,7 @@ module.exports = (io, socket) => {
     }
   });
 
+  // --- Connexion initiale ---
   socket.on('user_connected', (username) => {
     currentUsername = username;
 
@@ -50,17 +54,37 @@ module.exports = (io, socket) => {
     }
 
     connectedUsers.get(username).add(socket.id);
+    emitUserList();
+  });
+
+  // --- Mise à jour du nom d'utilisateur ---
+  socket.on('update_username', (newUsername) => {
+    if (!newUsername || newUsername === currentUsername) return;
+
+    // Retirer l'ancien username
+    if (currentUsername && connectedUsers.has(currentUsername)) {
+      connectedUsers.get(currentUsername).delete(socket.id);
+      if (connectedUsers.get(currentUsername).size === 0) {
+        connectedUsers.delete(currentUsername);
+      }
+    }
+
+    // Ajouter le nouveau username
+    currentUsername = newUsername;
+    if (!connectedUsers.has(newUsername)) {
+      connectedUsers.set(newUsername, new Set());
+    }
+    connectedUsers.get(newUsername).add(socket.id);
 
     emitUserList();
   });
 
+  // --- Déconnexion ---
   socket.on('disconnect', () => {
     console.log(`Client ${socket.id} déconnecté`);
-    
+
     if (currentUsername && connectedUsers.has(currentUsername)) {
       connectedUsers.get(currentUsername).delete(socket.id);
-
-      // Supprimer l'utilisateur si plus aucun socket actif
       if (connectedUsers.get(currentUsername).size === 0) {
         connectedUsers.delete(currentUsername);
       }
@@ -69,6 +93,7 @@ module.exports = (io, socket) => {
     }
   });
 
+  // --- Émettre la liste des utilisateurs connectés ---
   function emitUserList() {
     const usernames = Array.from(connectedUsers.keys());
     io.emit('update_user_list', usernames);

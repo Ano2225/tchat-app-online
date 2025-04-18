@@ -103,7 +103,7 @@ const ChatPage = () => {
 
   return (
     <div className="flex flex-col h-screen">
-      <ChatHeader user={user || undefined} />
+      <ChatHeader users={user || undefined} socket={socket} />
       <div className="flex flex-1">
         <ChatChannel onJoinRoom={handleJoinRoom} currentRoom={currentRoom} />
         <div className="flex flex-col flex-1">

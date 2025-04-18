@@ -76,8 +76,13 @@ export const useAuthStore = create<AuthState>()(
               ...response.data,
             },
           }));
+          
+          //return {success : true};
         } catch (error) {
           console.error('❌ Erreur updateUser:', error);
+         /* const message = error.response?.data?.message || "Erreur lors de la mise à jour";
+          return { success: false, message };
+          */
         }
       }
       

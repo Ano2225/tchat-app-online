@@ -1,8 +1,8 @@
-'use client';
-
 import React, { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { Dialog } from '@headlessui/react';
+import { Socket } from 'socket.io-client';
+
 
 interface ProfileModalProps {
   user: {
@@ -12,10 +12,11 @@ interface ProfileModalProps {
     sexe?: string; 
     avatarUrl?: string;
   };
+  socket : Socket | null;
   onClose: () => void;
 }
 
-const ProfileModal = ({ user, onClose }: ProfileModalProps) => {
+const ProfileModal = ({ user, onClose, socket }: ProfileModalProps) => {
   const updateUser = useAuthStore((state) => state.updateUser);
 
   const [username, setUsername] = useState(user.username || '');
@@ -31,6 +32,8 @@ const ProfileModal = ({ user, onClose }: ProfileModalProps) => {
     });
 
     console.log('🔁 Mise à jour des infos :', { username, age, ville });
+
+    socket?.emit('update_username', username)
 
     onClose();
   };
@@ -95,4 +98,5 @@ const ProfileModal = ({ user, onClose }: ProfileModalProps) => {
   );
 };
 
-export default ProfileModal;
+
+export default ProfileModal

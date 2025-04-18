@@ -4,8 +4,20 @@ import React, { useState } from 'react';
 import { LogOut, User } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import ProfileModal from '../userProfil/ProfilModal';
+import { Socket } from 'socket.io-client';
 
-const ChatHeader = () => {
+
+interface ChatHeaderProps {
+  users?: {
+    id: string;
+    username: string;
+    email?: string;
+  };
+    socket : Socket | null;
+  
+}
+
+const ChatHeader: React.FC<ChatHeaderProps> = ({users, socket}) => {
   const { user, logout } = useAuthStore();
   const [showProfileModal, setShowProfileModal] = useState(false);
 
@@ -39,7 +51,7 @@ const ChatHeader = () => {
             </div>
           )}
           <h2 className="text-xl font-bold text-black">
-            👋 Salut {user?.username || 'Visiteur'}
+            👋 Salut {users?.username || 'Visiteur'}
           </h2>
         </div>
 
@@ -65,6 +77,7 @@ const ChatHeader = () => {
         <ProfileModal 
           user={user || {}} 
           onClose={closeProfileModal} 
+          socket={socket}
         />
       )}
     </>
