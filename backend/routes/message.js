@@ -12,7 +12,10 @@ const MessageController = require('../controllers/messageController')
 
 //Show Message By Chanel
 router.get('/:room',authMiddleware, MessageController.getMessagesByChanel);
-
 router.post('/',authMiddleware, MessageController.createMessage)
+
+// 🟣 Private messages
+router.get('/private/:userId/:recipientId', MessageController.getPrivateMessages);
+router.post('/private', MessageController.sendPrivateMessage);
 
 module.exports = router;

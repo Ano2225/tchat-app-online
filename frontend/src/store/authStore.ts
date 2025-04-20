@@ -59,11 +59,11 @@ export const useAuthStore = create<AuthState>()(
       },
 
       updateUser: async (data) => {
-        if (get().isAnonymous) {
+      /*  if (get().isAnonymous) {
           console.warn("🔒 Action bloquée : utilisateur anonyme.");
           return;
         }
-      
+      */
         console.log("📤 Données envoyées :", data);
       
         try {

@@ -11,9 +11,13 @@ const MessageSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  recipient: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  },  
   room: {
     type: String,
-    default: 'general'
+    default: 'null'
   },
   createdAt: {
     type: Date,

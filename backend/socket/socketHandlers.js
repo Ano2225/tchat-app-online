@@ -79,6 +79,41 @@ module.exports = (io, socket) => {
     emitUserList();
   });
 
+  // --- Envoi de message privé ---
+  socket.on('send_private_message', async ({ sender, recipient, content }) => {
+    if (!sender || !recipient || !content) return;
+
+    const user = await User.findById(sender);
+    if (!user) return;
+
+    const enrichedMessage = {
+      _id: Date.now().toString(), // ou un ID Mongo si tu sauvegardes
+      sender: {
+        _id: user._id.toString(),
+        username: user.username,
+      },
+      recipient,
+      content,
+      createdAt: new Date(),
+    };
+
+    const privateRoom = [sender, recipient].sort().join('_');
+
+    // Join la room privée si ce n’est pas déjà fait
+    socket.join(privateRoom);
+
+    io.to(privateRoom).emit('receive_private_message', enrichedMessage);
+  });
+
+  // --- Rejoindre une room privée ---
+  socket.on('join_private_room', ({ senderId, recipientId }) => {
+    const privateRoom = [senderId, recipientId].sort().join('_');
+    socket.join(privateRoom);
+    console.log(`🔐 ${socket.id} a rejoint la room privée ${privateRoom}`);
+  });
+
+
+
   // --- Déconnexion ---
   socket.on('disconnect', () => {
     console.log(`Client ${socket.id} déconnecté`);

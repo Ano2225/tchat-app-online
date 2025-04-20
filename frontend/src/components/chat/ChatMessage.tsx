@@ -1,16 +1,19 @@
-'use client';
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { Socket } from 'socket.io-client';
 import axiosInstance from '@/utils/axiosInstance';
+import UserSelectedModal from '../UserSelected/UserSelectedModal';
 
 interface Message {
   _id: string;
   sender: {
-    _id: string | undefined;
+    _id: string;
     username: string;
     email?: string;
+    age?: number;
+    ville?: string;
+    sexe?: string;
+    avatarUrl?: string;
   };
   content: string;
   createdAt: string;
@@ -23,9 +26,10 @@ interface ChatMessagesProps {
 
 const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket }) => {
   const [messages, setMessages] = useState<Message[]>([]);
-  console.log(messages)
-  const user = useAuthStore((state) => state.user);
+  const [selectedUser, setSelectedUser] = useState<Message['sender'] | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const user = useAuthStore((state) => state.user);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -59,21 +63,16 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket }) => {
     scrollToBottom();
   }, [messages]);
 
-  if (!socket) {
-    return <div className="p-4">Connexion au chat...</div>;
-  }
-  
+  const openProfileModal = (sender: Message['sender']) => {
+    if (!sender || sender._id === user?.id || !sender._id) return; // Vérifier que l'ID est valide
+    setSelectedUser(sender);
+  };
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-white">
       {messages.length > 0 ? (
         messages.map((msg) => {
-            console.log(messages)
-            const isOwnMessage = msg.sender._id?.toString() === user?.id?.toString();
-
-          console.log('USER ID:', user?.id);
-          console.log('MSG SENDER ID:', msg.sender._id);
-
+          const isOwnMessage = msg.sender._id === user?.id;
 
           return (
             <div
@@ -81,11 +80,12 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket }) => {
               className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`rounded-2xl p-3 max-w-xs sm:max-w-sm break-words shadow-md ${
-                  isOwnMessage
-                    ? 'bg-blue-500 text-white rounded-br-none'
-                    : 'bg-gray-100 text-gray-800 rounded-bl-none'
+                className={`rounded-2xl p-3 max-w-xs sm:max-w-sm break-words shadow-md cursor-pointer ${isOwnMessage
+                  ? 'bg-blue-500 text-white rounded-br-none'
+                  : 'bg-gray-100 text-gray-800 rounded-bl-none'
                 }`}
+                onClick={() => openProfileModal(msg.sender)}
+                title="Voir profil"
               >
                 <div className="text-sm font-semibold">
                   {isOwnMessage ? 'Vous' : msg.sender.username}
@@ -105,6 +105,13 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket }) => {
         <p className="text-gray-400 text-center">Aucun message, commencez la discussion !</p>
       )}
       <div ref={messagesEndRef} />
+      {selectedUser && (
+          <UserSelectedModal
+            userId={selectedUser._id}
+            onClose={() => setSelectedUser(null)} 
+            />
+  )}
+
     </div>
   );
 };

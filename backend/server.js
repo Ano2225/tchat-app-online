@@ -50,6 +50,7 @@ class ChatServer {
     this.io.on('connection', (socket) => {
       socketHandlers(this.io, socket)
     });
+
   }
 
   start() {

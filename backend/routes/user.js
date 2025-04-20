@@ -5,5 +5,6 @@ const UserController = require('../controllers/userController');
 
 
 router.put('/', authMiddleware, UserController.updateUserInfo)
+router.get('/:id', UserController.getUserById)
 
 module.exports = router;
