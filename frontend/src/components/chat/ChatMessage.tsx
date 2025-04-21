@@ -108,6 +108,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket }) => {
       {selectedUser && (
           <UserSelectedModal
             userId={selectedUser._id}
+            socket={socket}
             onClose={() => setSelectedUser(null)} 
             />
   )}

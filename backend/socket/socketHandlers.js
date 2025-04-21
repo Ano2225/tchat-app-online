@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const Message = require("../models/Message")
 
 // username -> Set of socket IDs
 const connectedUsers = new Map();
@@ -79,37 +80,51 @@ module.exports = (io, socket) => {
     emitUserList();
   });
 
-  // --- Envoi de message privé ---
-  socket.on('send_private_message', async ({ sender, recipient, content }) => {
-    if (!sender || !recipient || !content) return;
-
-    const user = await User.findById(sender);
-    if (!user) return;
-
-    const enrichedMessage = {
-      _id: Date.now().toString(), // ou un ID Mongo si tu sauvegardes
-      sender: {
-        _id: user._id.toString(),
-        username: user.username,
-      },
-      recipient,
-      content,
-      createdAt: new Date(),
-    };
-
-    const privateRoom = [sender, recipient].sort().join('_');
-
-    // Join la room privée si ce n’est pas déjà fait
-    socket.join(privateRoom);
-
-    io.to(privateRoom).emit('receive_private_message', enrichedMessage);
+ 
+   // Rejoindre une room privée
+   socket.on('join_private_room', ({ senderId, recipientId }) => {
+    const roomId = getPrivateRoomId(senderId, recipientId);
+    socket.join(roomId);
+    console.log(`📥 Utilisateur ${senderId} a rejoint la room privée : ${roomId}`);
   });
 
-  // --- Rejoindre une room privée ---
-  socket.on('join_private_room', ({ senderId, recipientId }) => {
-    const privateRoom = [senderId, recipientId].sort().join('_');
-    socket.join(privateRoom);
-    console.log(`🔐 ${socket.id} a rejoint la room privée ${privateRoom}`);
+  // Récupération de l'historique
+  socket.on('get_message_history', async ({ userId, recipientId }) => {
+    try {
+      const messages = await Message.find({
+        $or: [
+          { sender: userId, recipient: recipientId },
+          { sender: recipientId, recipient: userId },
+        ]
+      })
+        .populate('sender', 'username email')
+        .sort({ createdAt: 1 });
+
+      const roomId = getPrivateRoomId(userId, recipientId);
+      io.to(roomId).emit('message_history', messages);
+    } catch (error) {
+      console.error("Erreur lors de la récupération de l'historique :", error);
+    }
+  });
+
+  // Envoi d'un message privé
+  socket.on('send_private_message', async ({ senderId, recipientId, content }) => {
+    try {
+      const newMessage = await Message.create({
+        sender: senderId,
+        recipient: recipientId,
+        content,
+      });
+
+      await newMessage.populate('sender', 'username email');
+
+      const roomId = getPrivateRoomId(senderId, recipientId);
+      io.to(roomId).emit('receive_private_message', newMessage);
+
+      console.log(`📨 Nouveau message envoyé dans room ${roomId}`);
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi du message privé :', error);
+    }
   });
 
 
@@ -133,4 +148,9 @@ module.exports = (io, socket) => {
     const usernames = Array.from(connectedUsers.keys());
     io.emit('update_user_list', usernames);
   }
+
+  function getPrivateRoomId(userId1, userId2) {
+    return [userId1, userId2].sort().join('_');
+  }
+  
 };

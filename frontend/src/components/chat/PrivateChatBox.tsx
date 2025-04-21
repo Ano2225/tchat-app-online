@@ -1,88 +1,78 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useSocketStore } from '@/store/socketStore';
 import { useAuthStore } from '@/store/authStore';
+import { Socket } from 'socket.io-client';
 
 interface PrivateChatBoxProps {
   recipient: {
-    id: string;
+    _id: string;
     username: string;
   };
+  socket: Socket | null;
   onClose?: () => void;
 }
 
-const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, onClose }) => {
+const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onClose }) => {
   const { user } = useAuthStore();
-  const socket = useSocketStore((state) => state.socket);
   const [message, setMessage] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [messages, setMessages] = useState<any[]>([]);
-
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // --- Effet pour rejoindre la room privée et récupérer l'historique des messages ---
+  // Scroll auto
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  // Initialisation du chat
   useEffect(() => {
     if (!socket || !user) return;
 
-    console.log('Joining private room', recipient.id);
-
-    // Joindre la room privée
     socket.emit('join_private_room', {
       senderId: user.id,
-      recipientId: recipient.id,
+      recipientId: recipient._id,
     });
 
-    // Écoute des messages privés entrants
+    socket.emit('get_message_history', {
+      userId: user.id,
+      recipientId: recipient._id,
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleMessage = (msg: any) => {
-      console.log('Received message:', msg);
       if (
-        (msg.sender._id === recipient.id && msg.recipient === user.id) ||
-        (msg.sender._id === user.id && msg.recipient === recipient.id)
+        (msg.sender._id === recipient._id && msg.recipient === user.id) ||
+        (msg.sender._id === user.id && msg.recipient === recipient._id)
       ) {
         setMessages((prev) => [...prev, msg]);
       }
     };
 
-    socket.on('receive_private_message', handleMessage);
-
-    // Récupérer l'historique des messages privés
-    socket.emit('get_message_history', {
-      userId: user.id,
-      recipientId: recipient.id,
-    });
-
-    // Écoute de l'historique des messages
-    socket.on('message_history', (history: any[]) => {
-      console.log('Message history:', history);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handleHistory = (history: any[]) => {
       setMessages(history);
-    });
+    };
 
-    // Scroll automatique vers le bas
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    socket.on('receive_private_message', handleMessage);
+    socket.on('message_history', handleHistory);
 
     return () => {
       socket.off('receive_private_message', handleMessage);
-      socket.off('message_history');
+      socket.off('message_history', handleHistory);
     };
-  }, [socket, recipient.id, user?.id]);
+  }, [socket, recipient._id, user]);
 
-  // --- Fonction pour envoyer un message ---
   const handleSend = () => {
     if (!message.trim() || !socket || !user) return;
 
-    console.log('Sending message:', message);
-
-    // Créer un message à envoyer
     const newMessage = {
       senderId: user.id,
-      recipientId: recipient.id,
+      recipientId: recipient._id,
       content: message.trim(),
     };
 
-    // Envoyer le message au serveur
     socket.emit('send_private_message', newMessage);
-
-    // Réinitialiser le champ de saisie
     setMessage('');
   };
 
@@ -103,8 +93,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, onClose }) =
           </button>
         )}
       </div>
-      
-      {/* Liste des messages */}
+
       <div className="h-64 overflow-y-auto border p-2 mb-2 bg-gray-50">
         {messages.map((msg, idx) => (
           <div
@@ -113,8 +102,8 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, onClose }) =
           >
             <span
               className={`inline-block px-3 py-1 rounded ${
-                msg.sender._id === user?.id 
-                  ? 'bg-blue-500 text-white' 
+                msg.sender._id === user?.id
+                  ? 'bg-blue-500 text-white'
                   : 'bg-gray-300'
               }`}
             >
@@ -128,7 +117,6 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, onClose }) =
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Formulaire d'envoi */}
       <div className="flex">
         <input
           type="text"
