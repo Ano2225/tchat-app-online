@@ -1,31 +1,31 @@
 const User = require("../models/User");
-const Message = require("../models/Message")
+const Message = require("../models/Message");
 
 // username -> Set of socket IDs
 const connectedUsers = new Map();
 
 module.exports = (io, socket) => {
-  console.log('Client connecté avec ID :', socket.id);
+  console.log('Client connected with ID:', socket.id);
 
   let currentUsername = null;
 
-  // --- Rejoindre une room ---
+  // --- Join a public room ---
   socket.on('join_room', (room) => {
     socket.join(room);
     socket.currentRoom = room;
-    console.log(`Utilisateur ${socket.id} a rejoint la room ${room}`);
+    console.log(`User ${socket.id} joined room ${room}`);
   });
 
-  // --- Quitter une room ---
+  // --- Leave a public room ---
   socket.on('leave_room', () => {
     if (socket.currentRoom) {
       socket.leave(socket.currentRoom);
-      console.log(`Utilisateur ${socket.id} a quitté la room ${socket.currentRoom}`);
+      console.log(`User ${socket.id} left room ${socket.currentRoom}`);
       delete socket.currentRoom;
     }
   });
 
-  // --- Envoi de message ---
+  // --- Send a message to a public room ---
   socket.on('send_message', async (messageData) => {
     const { sender, content, room } = messageData;
     if (room && sender && content) {
@@ -46,7 +46,7 @@ module.exports = (io, socket) => {
     }
   });
 
-  // --- Connexion initiale ---
+  // --- Handle user connection ---
   socket.on('user_connected', (username) => {
     currentUsername = username;
 
@@ -58,11 +58,11 @@ module.exports = (io, socket) => {
     emitUserList();
   });
 
-  // --- Mise à jour du nom d'utilisateur ---
+  // --- Update username (e.g. after login or change) ---
   socket.on('update_username', (newUsername) => {
     if (!newUsername || newUsername === currentUsername) return;
 
-    // Retirer l'ancien username
+    // Remove old username entry
     if (currentUsername && connectedUsers.has(currentUsername)) {
       connectedUsers.get(currentUsername).delete(socket.id);
       if (connectedUsers.get(currentUsername).size === 0) {
@@ -70,7 +70,7 @@ module.exports = (io, socket) => {
       }
     }
 
-    // Ajouter le nouveau username
+    // Add new username entry
     currentUsername = newUsername;
     if (!connectedUsers.has(newUsername)) {
       connectedUsers.set(newUsername, new Set());
@@ -80,15 +80,14 @@ module.exports = (io, socket) => {
     emitUserList();
   });
 
- 
-   // Rejoindre une room privée
-   socket.on('join_private_room', ({ senderId, recipientId }) => {
+  // --- Join a private room (between two users) ---
+  socket.on('join_private_room', ({ senderId, recipientId }) => {
     const roomId = getPrivateRoomId(senderId, recipientId);
     socket.join(roomId);
-    console.log(`📥 Utilisateur ${senderId} a rejoint la room privée : ${roomId}`);
+    console.log(`📥 User ${senderId} joined private room: ${roomId}`);
   });
 
-  // Récupération de l'historique
+  // --- Fetch message history between two users ---
   socket.on('get_message_history', async ({ userId, recipientId }) => {
     try {
       const messages = await Message.find({
@@ -103,11 +102,11 @@ module.exports = (io, socket) => {
       const roomId = getPrivateRoomId(userId, recipientId);
       io.to(roomId).emit('message_history', messages);
     } catch (error) {
-      console.error("Erreur lors de la récupération de l'historique :", error);
+      console.error("Error while fetching message history:", error);
     }
   });
 
-  // Envoi d'un message privé
+  // --- Send a private message ---
   socket.on('send_private_message', async ({ senderId, recipientId, content }) => {
     try {
       const newMessage = await Message.create({
@@ -120,18 +119,31 @@ module.exports = (io, socket) => {
 
       const roomId = getPrivateRoomId(senderId, recipientId);
       io.to(roomId).emit('receive_private_message', newMessage);
+      console.log(`📨 New message sent in room ${roomId}`);
 
-      console.log(`📨 Nouveau message envoyé dans room ${roomId}`);
+      // --- Real-time notification to recipient ---
+      const recipientSockets = connectedUsers.get(recipientId.toString());
+      if (recipientSockets) {
+        recipientSockets.forEach(socketId => {
+          io.to(socketId).emit('notify_user', {
+            from: {
+              _id: newMessage.sender._id,
+              username: newMessage.sender.username,
+            },
+            content: newMessage.content,
+            createdAt: newMessage.createdAt,
+          });
+        });
+      }
+
     } catch (error) {
-      console.error('Erreur lors de l\'envoi du message privé :', error);
+      console.error('Error while sending private message:', error);
     }
   });
 
-
-
-  // --- Déconnexion ---
+  // --- Handle disconnection ---
   socket.on('disconnect', () => {
-    console.log(`Client ${socket.id} déconnecté`);
+    console.log(`Client ${socket.id} disconnected`);
 
     if (currentUsername && connectedUsers.has(currentUsername)) {
       connectedUsers.get(currentUsername).delete(socket.id);
@@ -143,14 +155,14 @@ module.exports = (io, socket) => {
     }
   });
 
-  // --- Émettre la liste des utilisateurs connectés ---
+  // --- Emit the list of connected users ---
   function emitUserList() {
     const usernames = Array.from(connectedUsers.keys());
     io.emit('update_user_list', usernames);
   }
 
+  // --- Generate a consistent private room ID for two users ---
   function getPrivateRoomId(userId1, userId2) {
     return [userId1, userId2].sort().join('_');
   }
-  
 };

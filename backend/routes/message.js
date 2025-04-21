@@ -15,7 +15,8 @@ router.get('/:room',authMiddleware, MessageController.getMessagesByChanel);
 router.post('/',authMiddleware, MessageController.createMessage)
 
 // 🟣 Private messages
-router.get('/private/:userId/:recipientId', MessageController.getPrivateMessages);
-router.post('/private', MessageController.sendPrivateMessage);
+router.get('/private/:userId/:recipientId',authMiddleware, MessageController.getPrivateMessages);
+router.post('/private',authMiddleware, MessageController.sendPrivateMessage);
+router.get('/conversations/:userId',authMiddleware, MessageController.getUserConversations)
 
 module.exports = router;

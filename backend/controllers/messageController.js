@@ -78,6 +78,50 @@ class MessageController {
       res.status(500).json({ error: "Échec de l'envoi du message privé." });
     }
   }
+
+
+  async getUserConversations(req, res) {
+    const { userId } = req.params;
+
+    try {
+      const messages = await Message.find({
+        recipient: { $ne: null }, 
+        $or: [
+          { sender: userId },
+          { recipient: userId }
+        ]
+      })
+      .populate('sender', 'username email')
+      .populate('recipient', 'username email')
+      .sort({ createdAt: -1 }); 
+
+      // Regrouper par participant
+      const conversationMap = new Map();
+
+      for (const msg of messages) {
+        const otherUser = msg.sender._id.toString() === userId
+          ? msg.recipient
+          : msg.sender;
+
+        if (!otherUser) continue;
+
+        if (!conversationMap.has(otherUser._id.toString())) {
+          conversationMap.set(otherUser._id.toString(), {
+            user: otherUser,
+            lastMessage: msg
+          });
+        }
+      }
+
+      const conversations = Array.from(conversationMap.values());
+
+      res.status(200).json(conversations);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des conversations :", error);
+      res.status(500).json({ error: "Erreur interne lors de la récupération des conversations." });
+    }
+  }
+
 }
 
 module.exports = new MessageController();
