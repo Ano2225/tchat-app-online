@@ -31,6 +31,17 @@ class ChatServer {
   initMiddlewares() {
     this.app.use(cors());
     this.app.use(express.json());
+
+    // Global Rate Limiting (100 requests per minute per IP)
+    const limiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 100, // Limit to 100 requests per IP
+      message: 'Too many requests, please try again in 15 minutes!' // Error message
+    });
+
+    // Apply the rate limiter to all API routes
+    this.app.use('/api/', limiter);
+
   }
 
   connectDatabase() {
