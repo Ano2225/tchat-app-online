@@ -3,11 +3,14 @@ const Message = require("../models/Message");
 
 // username -> Set of socket IDs
 const connectedUsers = new Map();
+// userId -> username mapping
+const userIdToUsername = new Map();
 
 module.exports = (io, socket) => {
   console.log('Client connected with ID:', socket.id);
 
   let currentUsername = null;
+  let currentUserId = null;
 
   // --- Join a public room ---
   socket.on('join_room', (room) => {
@@ -47,37 +50,64 @@ module.exports = (io, socket) => {
   });
 
   // --- Handle user connection ---
-  socket.on('user_connected', (username) => {
-    currentUsername = username;
+  socket.on('user_connected', async (username) => {
+    try {
+      currentUsername = username;
+      
+      // Find the user ID for this username
+      const user = await User.findOne({ username });
+      if (user) {
+        currentUserId = user._id.toString();
+        // Store in our mapping
+        userIdToUsername.set(currentUserId, username);
+      }
 
-    if (!connectedUsers.has(username)) {
-      connectedUsers.set(username, new Set());
+      if (!connectedUsers.has(username)) {
+        connectedUsers.set(username, new Set());
+      }
+
+      connectedUsers.get(username).add(socket.id);
+      emitUserList();
+    } catch (error) {
+      console.error("Error in user_connected:", error);
     }
-
-    connectedUsers.get(username).add(socket.id);
-    emitUserList();
   });
 
   // --- Update username (e.g. after login or change) ---
-  socket.on('update_username', (newUsername) => {
+  socket.on('update_username', async (newUsername) => {
     if (!newUsername || newUsername === currentUsername) return;
 
-    // Remove old username entry
-    if (currentUsername && connectedUsers.has(currentUsername)) {
-      connectedUsers.get(currentUsername).delete(socket.id);
-      if (connectedUsers.get(currentUsername).size === 0) {
-        connectedUsers.delete(currentUsername);
+    try {
+      // Remove old username entry
+      if (currentUsername && connectedUsers.has(currentUsername)) {
+        connectedUsers.get(currentUsername).delete(socket.id);
+        if (connectedUsers.get(currentUsername).size === 0) {
+          connectedUsers.delete(currentUsername);
+        }
       }
-    }
 
-    // Add new username entry
-    currentUsername = newUsername;
-    if (!connectedUsers.has(newUsername)) {
-      connectedUsers.set(newUsername, new Set());
-    }
-    connectedUsers.get(newUsername).add(socket.id);
+      // Add new username entry
+      currentUsername = newUsername;
+      
+      // Update the user ID mapping
+      const user = await User.findOne({ username: newUsername });
+      if (user) {
+        // Remove old mapping if exists
+        if (currentUserId) userIdToUsername.delete(currentUserId);
+        
+        currentUserId = user._id.toString();
+        userIdToUsername.set(currentUserId, newUsername);
+      }
 
-    emitUserList();
+      if (!connectedUsers.has(newUsername)) {
+        connectedUsers.set(newUsername, new Set());
+      }
+      connectedUsers.get(newUsername).add(socket.id);
+
+      emitUserList();
+    } catch (error) {
+      console.error("Error in update_username:", error);
+    }
   });
 
   // --- Join a private room (between two users) ---
@@ -121,9 +151,12 @@ module.exports = (io, socket) => {
       io.to(roomId).emit('receive_private_message', newMessage);
       console.log(`📨 New message sent in room ${roomId}`);
 
+      // Get recipient's username from their ID
+      const recipientUsername = userIdToUsername.get(recipientId.toString());
+      
       // --- Real-time notification to recipient ---
-      const recipientSockets = connectedUsers.get(recipientId.toString());
-      if (recipientSockets) {
+      if (recipientUsername && connectedUsers.has(recipientUsername)) {
+        const recipientSockets = connectedUsers.get(recipientUsername);
         recipientSockets.forEach(socketId => {
           io.to(socketId).emit('notify_user', {
             from: {
@@ -149,9 +182,38 @@ module.exports = (io, socket) => {
       connectedUsers.get(currentUsername).delete(socket.id);
       if (connectedUsers.get(currentUsername).size === 0) {
         connectedUsers.delete(currentUsername);
+        // Also clean up the ID mapping if no connections remain
+        if (currentUserId) {
+          userIdToUsername.delete(currentUserId);
+        }
       }
 
       emitUserList();
+    }
+  });
+
+  // --- Check if user is Online/Offline (FIXED) ---
+  socket.on('check_user_online', async (recipientId) => {
+    try {
+      // Convert the recipientId to a username
+      const username = userIdToUsername.get(recipientId.toString());
+      
+      if (username && connectedUsers.has(username)) {
+        socket.emit('user_online', recipientId);
+      } else {
+        // Try to look up the username in the database if not in our cache
+        const user = await User.findById(recipientId);
+        if (user && connectedUsers.has(user.username)) {
+          // Update our cache
+          userIdToUsername.set(recipientId.toString(), user.username);
+          socket.emit('user_online', recipientId);
+        } else {
+          socket.emit('user_offline', recipientId);
+        }
+      }
+    } catch (error) {
+      console.error("Error checking user online status:", error);
+      socket.emit('user_offline', recipientId);
     }
   });
 

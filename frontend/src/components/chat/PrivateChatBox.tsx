@@ -28,13 +28,13 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [isRecipientOnline, setIsRecipientOnline] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch message history when component mounts
   useEffect(() => {
     const fetchMessages = async () => {
       if (!user?.id) return;
-      
+
       try {
         const fetchedMessages = await chatService.getPrivateMessages(user.id, recipient._id);
         setMessages(fetchedMessages);
@@ -46,30 +46,43 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
 
     fetchMessages();
 
-    // Join private room for real-time messaging
     if (socket && user?.id) {
       socket.emit('join_private_room', {
         senderId: user.id,
         recipientId: recipient._id
       });
+
+      // Verify if the user is online
+      socket.emit('check_user_online', recipient._id);
     }
   }, [user, recipient, socket]);
 
-  // Handle receiving messages
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !recipient?._id) return;
 
     const handleReceiveMessage = (message: Message) => {
       setMessages(prev => [...prev, message]);
       scrollToBottom();
     };
 
+    const handleUserOnline = (userId: string) => {
+      if (userId === recipient._id) setIsRecipientOnline(true);
+    };
+
+    const handleUserOffline = (userId: string) => {
+      if (userId === recipient._id) setIsRecipientOnline(false);
+    };
+
     socket.on('receive_private_message', handleReceiveMessage);
+    socket.on('user_online', handleUserOnline);
+    socket.on('user_offline', handleUserOffline);
 
     return () => {
       socket.off('receive_private_message', handleReceiveMessage);
+      socket.off('user_online', handleUserOnline);
+      socket.off('user_offline', handleUserOffline);
     };
-  }, [socket]);
+  }, [socket, recipient]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -79,20 +92,16 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!newMessage.trim() || !user?.id || !socket) return;
 
     try {
-      // Send via socket for real-time delivery
       socket.emit('send_private_message', {
         senderId: user.id,
         recipientId: recipient._id,
         content: newMessage
       });
 
-      // Also send via API for persistence
       await chatService.sendPrivateMessage(newMessage, user.id, recipient._id);
-      
       setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
@@ -103,13 +112,21 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
     <div className="fixed bottom-0 right-6 w-80 bg-white shadow-lg rounded-t-lg z-50 border border-gray-200">
       {/* Chat header */}
       <div className="bg-blue-500 text-white p-3 rounded-t-lg flex justify-between items-center">
-        <h3 className="font-medium">{recipient.username}</h3>
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{recipient.username}</span>
+          <span
+            className={`w-2 h-2 rounded-full ${
+              isRecipientOnline ? 'bg-green-400' : 'bg-gray-400'
+            }`}
+            title={isRecipientOnline ? 'En ligne' : 'Hors ligne'}
+          />
+        </div>
         <button onClick={onClose} className="p-1 hover:bg-blue-600 rounded">
           <X size={18} />
         </button>
       </div>
 
-      {/* Messages container */}
+      {/* Messages */}
       <div className="h-80 overflow-y-auto p-3 bg-gray-50">
         {messages.map((message) => (
           <div
@@ -133,7 +150,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message input */}
+      {/* Input */}
       <form onSubmit={handleSendMessage} className="p-3 border-t flex">
         <input
           type="text"

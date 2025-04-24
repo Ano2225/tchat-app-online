@@ -71,7 +71,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
     if (!socket) return;
   
     const handleNotification = (data: MessageNotification) => {
-      toast.success(`📩 New message from ${data.from.username}: "${data.content}"`, {
+      toast.success(`📩Nouveau message de ${data.from.username}: "${data.content}"`, {
         duration: 5000,
         position: 'bottom-right',
       });
