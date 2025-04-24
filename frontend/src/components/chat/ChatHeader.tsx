@@ -3,9 +3,9 @@ import { LogOut, User, MessageCircle } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import ProfileModal from '../userProfil/ProfilModal';
 import { Socket } from 'socket.io-client';
-import axiosInstance from '@/utils/axiosInstance';
 import PrivateChatBox from './PrivateChatBox';
 import toast from 'react-hot-toast';
+import chatService, { Conversation, MessageNotification } from '@/services/chatServices';
 
 interface ChatHeaderProps {
   users?: {
@@ -16,13 +16,6 @@ interface ChatHeaderProps {
   socket: Socket | null;
 }
 
-interface Conversation {
-  id: string;
-  user: string;
-  lastMessage: string;
-  hasNewMessages?: boolean;
-}
-
 const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
   const { user, logout } = useAuthStore();
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -31,112 +24,89 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [hasNewMessage, setHasNewMessage] = useState(false);
 
-  const openProfileModal = () => setShowProfileModal(true);
-  const closeProfileModal = () => setShowProfileModal(false);
-
   const fetchConversations = useCallback(async () => {
     if (!user?.id) return;
-    try {
-      const response = await axiosInstance.get(`/messages/conversations/${user.id}`);
-      const data = response.data;
-
-      if (Array.isArray(data)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const formatted = data.map((conv: any) => ({
-          id: conv.user._id,
-          user: conv.user.username,
-          lastMessage: conv.lastMessage.content,
-          hasNewMessages: conv.hasNewMessages || false
-        }));
-        
-        // Vérifier s'il y a des nouveaux messages
-        const hasAnyNewMessages = formatted.some(conv => conv.hasNewMessages);
-        setHasNewMessage(hasAnyNewMessages);
-        
-        setConversations(formatted);
-      } else {
-        console.error('La réponse des conversations n\'est pas un tableau:', data);
-      }
-    } catch (error) {
-      console.error('Erreur lors de la récupération des conversations :', error);
-    }
+    
+    const fetchedConversations = await chatService.fetchConversations(user.id);
+    const hasAnyNewMessages = fetchedConversations.some(conv => conv.hasNewMessages);
+    
+    setHasNewMessage(hasAnyNewMessages);
+    setConversations(fetchedConversations);
+    
+    const totalUnread = fetchedConversations.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
+    console.log('Total unread messages:', totalUnread);
   }, [user]);
 
   const handleConversationClick = (conversation: Conversation) => {
     setSelectedConversation(conversation);
     setShowConversations(false);
     
-    // Marquer cette conversation comme lue
-    markConversationAsRead(conversation.id);
+    // Mark conversation as read and update local state
+    if (user?.id) {
+      chatService.markConversationAsRead(user.id, conversation.id);
+    }
     
-    // Mettre à jour l'état local
     setConversations(prevConversations => 
       prevConversations.map(conv => 
-        conv.id === conversation.id ? { ...conv, hasNewMessages: false } : conv
+        conv.id === conversation.id ? { ...conv, hasNewMessages: false, unreadCount: 0 } : conv
       )
     );
     
-    // Vérifier s'il reste des conversations non lues
+    // Check if there are still unread conversations
     const stillHasNewMessages = conversations.some(
       conv => conv.id !== conversation.id && conv.hasNewMessages
     );
     setHasNewMessage(stillHasNewMessages);
   };
 
-  // Fonction pour marquer une conversation comme lue
-  const markConversationAsRead = async (conversationId: string) => {
-    if (!user?.id) return;
-    try {
-      await axiosInstance.post(`/messages/mark-as-read`, {
-        userId: user.id,
-        conversationId: conversationId
-      });
-    } catch (error) {
-      console.error('Erreur lors du marquage de la conversation comme lue:', error);
-    }
-  };
-
   useEffect(() => {
     fetchConversations();
     
-    // Mettre en place un intervalle pour rafraîchir régulièrement
-    const refreshInterval = setInterval(fetchConversations, 10000); // Rafraîchir toutes les 10 secondes
-    
+    // Set refresh interval
+    const refreshInterval = setInterval(fetchConversations, 10000);
     return () => clearInterval(refreshInterval);
   }, [fetchConversations, user]);
 
   useEffect(() => {
     if (!socket) return;
-
-    const handleNotification = (data: {
-      from: { _id: string; username: string };
-      content: string;
-      createdAt: string;
-    }) => {
-      toast.success(`📩 Nouveau message de ${data.from.username} : "${data.content}"`, {
+  
+    const handleNotification = (data: MessageNotification) => {
+      toast.success(`📩 New message from ${data.from.username}: "${data.content}"`, {
         duration: 5000,
         position: 'bottom-right',
       });
       
-      // Marquer qu'il y a un nouveau message
       setHasNewMessage(true);
       
-      // Rafraîchir immédiatement les conversations
+      // Update message counter for this conversation
+      setConversations(prevConversations => 
+        prevConversations.map(conv => 
+          conv.id === data.from._id 
+            ? { 
+                ...conv, 
+                hasNewMessages: true, 
+                unreadCount: (conv.unreadCount || 0) + 1, 
+                lastMessage: data.content 
+              } 
+            : conv
+        )
+      );
+      
       fetchConversations();
     };
-
+  
     socket.on('notify_user', handleNotification);
     
-    // S'assurer que la connexion socket est active
+    // Setup socket connection
     socket.on('connect', () => {
-      console.log('Socket connecté');
+      console.log('Socket connected');
       if (user?.id) {
         socket.emit('register_user', user.id);
       }
     });
     
     socket.on('disconnect', () => {
-      console.log('Socket déconnecté');
+      console.log('Socket disconnected');
     });
     
     return () => {
@@ -155,44 +125,42 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
               src={user.avatarUrl}
               alt="Avatar"
               className="w-10 h-10 rounded-full object-cover border-2 border-gray-300 cursor-pointer"
-              onClick={openProfileModal}
+              onClick={() => setShowProfileModal(true)}
             />
           ) : (
             <div
               className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center border-2 border-gray-300 cursor-pointer"
-              onClick={openProfileModal}
+              onClick={() => setShowProfileModal(true)}
             >
               <User size={20} className="text-blue-500" />
             </div>
           )}
           <h2 className="text-xl font-bold text-black">
-            👋 Salut {users?.username || 'Visiteur'}
+            👋 Hello {users?.username || 'Visitor'}
           </h2>
         </div>
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => {
-              setShowConversations(!showConversations);
-            }}
+            onClick={() => setShowConversations(!showConversations)}
             className="relative flex items-center gap-2 px-3 py-2 text-sm text-white bg-green-500 rounded hover:bg-green-600"
           >
             <MessageCircle size={18} />
             Messages
             {hasNewMessage && (
-              <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full">
-                {/* Un élément fixe pour le badge */}
-                <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>
+              <span className="absolute -top-2 -right-2 min-w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold text-white px-1">
+                {conversations.reduce((total, conv) => total + (conv.unreadCount || 0), 0)}
+                <span className="absolute top-0 right-0 w-full h-full bg-red-500 rounded-full animate-ping opacity-75"></span>
               </span>
             )}
           </button>
 
           <button
-            onClick={openProfileModal}
+            onClick={() => setShowProfileModal(true)}
             className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-blue-500 rounded hover:bg-blue-600"
           >
             <User size={18} />
-            Voir profil
+            Profil
           </button>
 
           <button
@@ -200,7 +168,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
             className="flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-500 rounded hover:bg-red-600"
           >
             <LogOut size={18} />
-            Déconnexion
+            Deconnexion
           </button>
         </div>
       </div>
@@ -223,19 +191,21 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
                     <p className="text-sm text-gray-500">{conversation.lastMessage}</p>
                   </div>
                   {conversation.hasNewMessages && (
-                    <span className="w-3 h-3 bg-red-500 rounded-full"></span>
+                    <span className="flex items-center justify-center min-w-5 h-5 bg-red-500 rounded-full text-xs font-bold text-white px-1">
+                      {conversation.unreadCount}
+                    </span>
                   )}
                 </div>
               ))
             ) : (
-              <p className="text-gray-500 text-center py-2">Aucune conversation</p>
+              <p className="text-gray-500 text-center py-2">No conversations</p>
             )}
           </div>
         </div>
       )}
 
       {showProfileModal && (
-        <ProfileModal user={user || {}} onClose={closeProfileModal} socket={socket} />
+        <ProfileModal user={user || {}} onClose={() => setShowProfileModal(false)} socket={socket} />
       )}
 
       {selectedConversation && (

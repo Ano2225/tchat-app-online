@@ -24,6 +24,7 @@ interface Message {
 
 const ChatPage = () => {
   const user = useAuthStore((state) => state.user);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentRoom, setCurrentRoom] = useState('General');
   const [socket, setSocket] = useState<Socket | null>(null);

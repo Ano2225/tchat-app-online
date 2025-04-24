@@ -1,15 +1,16 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
+import router from 'next/router'; 
 
-// Création d'une instance axios
+// Create an axios instance
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8000/api', 
+  baseURL: 'http://localhost:8000/api',
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Ajoute automatiquement le token avant chaque requête
+// Request interceptor — Automatically adds the token to each request
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = useAuthStore.getState().token;
@@ -19,6 +20,23 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error) => Promise.reject(error)
+);
+
+// Response interceptor — Handles auth errors (missing or invalid token)
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      error.response &&
+      (error.response.status === 401 || error.response.status === 403)
+    ) {
+      console.warn('Invalid or expired token. Logging out...');
+      const logout = useAuthStore.getState().logout; 
+      if (logout) logout(); 
+      router.push('/anonymous');
+    }
+    return Promise.reject(error);
+  }
 );
 
 export default axiosInstance;

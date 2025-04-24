@@ -1,6 +1,8 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Send } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { Socket } from 'socket.io-client';
+import chatService from '@/services/chatServices';
 
 interface PrivateChatBoxProps {
   recipient: {
@@ -8,131 +10,145 @@ interface PrivateChatBoxProps {
     username: string;
   };
   socket: Socket | null;
-  onClose?: () => void;
+  onClose: () => void;
+}
+
+interface Message {
+  _id: string;
+  content: string;
+  sender: {
+    _id: string;
+    username: string;
+  };
+  createdAt: string;
+  read: boolean;
 }
 
 const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onClose }) => {
   const { user } = useAuthStore();
-  const [message, setMessage] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [messages, setMessages] = useState<any[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll auto
+  // Fetch message history when component mounts
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
-
-  // Initialisation du chat
-  useEffect(() => {
-    if (!socket || !user) return;
-
-    socket.emit('join_private_room', {
-      senderId: user.id,
-      recipientId: recipient._id,
-    });
-
-    socket.emit('get_message_history', {
-      userId: user.id,
-      recipientId: recipient._id,
-    });
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handleMessage = (msg: any) => {
-      if (
-        (msg.sender._id === recipient._id && msg.recipient === user.id) ||
-        (msg.sender._id === user.id && msg.recipient === recipient._id)
-      ) {
-        setMessages((prev) => [...prev, msg]);
+    const fetchMessages = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const fetchedMessages = await chatService.getPrivateMessages(user.id, recipient._id);
+        setMessages(fetchedMessages);
+        scrollToBottom();
+      } catch (error) {
+        console.error('Error fetching private messages:', error);
       }
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handleHistory = (history: any[]) => {
-      setMessages(history);
+    fetchMessages();
+
+    // Join private room for real-time messaging
+    if (socket && user?.id) {
+      socket.emit('join_private_room', {
+        senderId: user.id,
+        recipientId: recipient._id
+      });
+    }
+  }, [user, recipient, socket]);
+
+  // Handle receiving messages
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleReceiveMessage = (message: Message) => {
+      setMessages(prev => [...prev, message]);
+      scrollToBottom();
     };
 
-    socket.on('receive_private_message', handleMessage);
-    socket.on('message_history', handleHistory);
+    socket.on('receive_private_message', handleReceiveMessage);
 
     return () => {
-      socket.off('receive_private_message', handleMessage);
-      socket.off('message_history', handleHistory);
+      socket.off('receive_private_message', handleReceiveMessage);
     };
-  }, [socket, recipient._id, user]);
+  }, [socket]);
 
-  const handleSend = () => {
-    if (!message.trim() || !socket || !user) return;
-
-    const newMessage = {
-      senderId: user.id,
-      recipientId: recipient._id,
-      content: message.trim(),
-    };
-
-    socket.emit('send_private_message', newMessage);
-    setMessage('');
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newMessage.trim() || !user?.id || !socket) return;
+
+    try {
+      // Send via socket for real-time delivery
+      socket.emit('send_private_message', {
+        senderId: user.id,
+        recipientId: recipient._id,
+        content: newMessage
+      });
+
+      // Also send via API for persistence
+      await chatService.sendPrivateMessage(newMessage, user.id, recipient._id);
+      
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
     }
   };
 
   return (
-    <div className="border rounded p-4 bg-white">
-      <div className="flex justify-between mb-2">
-        <h3 className="font-semibold">Chat avec {recipient.username}</h3>
-        {onClose && (
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            X
-          </button>
-        )}
+    <div className="fixed bottom-0 right-6 w-80 bg-white shadow-lg rounded-t-lg z-50 border border-gray-200">
+      {/* Chat header */}
+      <div className="bg-blue-500 text-white p-3 rounded-t-lg flex justify-between items-center">
+        <h3 className="font-medium">{recipient.username}</h3>
+        <button onClick={onClose} className="p-1 hover:bg-blue-600 rounded">
+          <X size={18} />
+        </button>
       </div>
 
-      <div className="h-64 overflow-y-auto border p-2 mb-2 bg-gray-50">
-        {messages.map((msg, idx) => (
+      {/* Messages container */}
+      <div className="h-80 overflow-y-auto p-3 bg-gray-50">
+        {messages.map((message) => (
           <div
-            key={idx}
-            className={`mb-1 ${msg.sender._id === user?.id ? 'text-right' : 'text-left'}`}
+            key={message._id}
+            className={`mb-2 ${message.sender._id === user?.id ? 'text-right' : 'text-left'}`}
           >
-            <span
-              className={`inline-block px-3 py-1 rounded ${
-                msg.sender._id === user?.id
+            <div
+              className={`inline-block p-2 rounded-lg max-w-[70%] ${
+                message.sender._id === user?.id
                   ? 'bg-blue-500 text-white'
-                  : 'bg-gray-300'
+                  : 'bg-gray-200 text-gray-800'
               }`}
             >
-              {msg.content}
-            </span>
-            <span className="text-xs text-gray-500 block mt-1">
-              {new Date(msg.createdAt).toLocaleTimeString()}
-            </span>
+              {message.content}
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              {new Date(message.createdAt).toLocaleTimeString()}
+            </div>
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="flex">
+      {/* Message input */}
+      <form onSubmit={handleSendMessage} className="p-3 border-t flex">
         <input
           type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="Écrivez un message..."
-          className="flex-grow border rounded p-2 mr-2"
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          placeholder="Type a message..."
+          className="flex-1 border p-2 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
         <button
-          onClick={handleSend}
-          className="bg-blue-500 text-white px-4 py-2 rounded"
+          type="submit"
+          className="bg-blue-500 text-white p-2 rounded-r-lg hover:bg-blue-600"
         >
-          Envoyer
+          <Send size={18} />
         </button>
-      </div>
+      </form>
     </div>
   );
 };

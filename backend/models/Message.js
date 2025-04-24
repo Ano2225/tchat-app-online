@@ -14,7 +14,8 @@ const MessageSchema = new mongoose.Schema({
   recipient: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-  },  
+  }, 
+  read: { type: Boolean, default: false }, 
   room: {
     type: String,
     default: 'null'

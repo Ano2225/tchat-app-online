@@ -80,10 +80,27 @@ class MessageController {
   }
 
 
+  async markMessagesAsRead(req, res) {
+    const { userId, conversationId } = req.body;
+  
+    try {
+      await Message.updateMany(
+        { sender: conversationId, recipient: userId, read: false },
+        { $set: { read: true } }
+      );
+  
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour des messages lus :", error);
+      res.status(500).json({ error: "Erreur lors de la mise à jour des messages." });
+    }
+  }
+
   async getUserConversations(req, res) {
     const { userId } = req.params;
-
+  
     try {
+      // Récupérer tous les messages pertinents
       const messages = await Message.find({
         recipient: { $ne: null }, 
         $or: [
@@ -93,34 +110,62 @@ class MessageController {
       })
       .populate('sender', 'username email')
       .populate('recipient', 'username email')
-      .sort({ createdAt: -1 }); 
-
+      .sort({ createdAt: -1 });
+  
       // Regrouper par participant
       const conversationMap = new Map();
-
+  
       for (const msg of messages) {
         const otherUser = msg.sender._id.toString() === userId
           ? msg.recipient
           : msg.sender;
-
+  
         if (!otherUser) continue;
-
-        if (!conversationMap.has(otherUser._id.toString())) {
-          conversationMap.set(otherUser._id.toString(), {
+        
+        const otherUserId = otherUser._id.toString();
+  
+        if (!conversationMap.has(otherUserId)) {
+          // Récupérer explicitement le nombre de messages non lus
+          const unreadCount = await Message.countDocuments({
+            sender: otherUserId,
+            recipient: userId,
+            read: false
+          });
+  
+          conversationMap.set(otherUserId, {
             user: otherUser,
-            lastMessage: msg
+            lastMessage: msg,
+            hasNewMessages: unreadCount > 0,
+            unreadCount: unreadCount // Nombre explicite
           });
         }
       }
-
+  
       const conversations = Array.from(conversationMap.values());
-
       res.status(200).json(conversations);
     } catch (error) {
       console.error("Erreur lors de la récupération des conversations :", error);
       res.status(500).json({ error: "Erreur interne lors de la récupération des conversations." });
     }
   }
+
+  //Mark messages As read 
+  async markMessagesAsRead(req, res) {
+    const { userId, conversationId } = req.body;
+  
+    try {
+      await Message.updateMany(
+        { sender: conversationId, recipient: userId, read: false },
+        { $set: { read: true } }
+      );
+  
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour des messages lus :", error);
+      res.status(500).json({ error: "Erreur lors de la mise à jour des messages." });
+    }
+  }
+
 
 }
 

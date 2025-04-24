@@ -19,4 +19,6 @@ router.get('/private/:userId/:recipientId',authMiddleware, MessageController.get
 router.post('/private',authMiddleware, MessageController.sendPrivateMessage);
 router.get('/conversations/:userId',authMiddleware, MessageController.getUserConversations)
 
+router.post('/mark-as-read', authMiddleware, MessageController.markMessagesAsRead)
+
 module.exports = router;
