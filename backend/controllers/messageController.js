@@ -2,7 +2,7 @@ const Message = require("../models/Message");
 
 class MessageController {
 
-  // Récupérer les messages publics d'une room
+  // Retrieve public messages for a given room
   async getMessagesByChanel(req, res) {
     const { room } = req.params;
     try {
@@ -12,17 +12,17 @@ class MessageController {
 
       res.status(200).json(messages);
     } catch (error) {
-      console.error('Erreur lors de la récupération des messages :', error);
-      res.status(500).json({ error: "Erreur interne lors de la récupération des messages." });
+      console.error('Error while fetching messages:', error);
+      res.status(500).json({ error: "Internal server error while fetching messages." });
     }
   }
 
-  // Envoyer un message dans une room publique
+  // Send a message in a public room
   async createMessage(req, res) {
     const { content, sender, room } = req.body;
 
     if (!content || !sender || !room) {
-      return res.status(400).json({ error: "Tous les champs sont requis." });
+      return res.status(400).json({ error: "All fields are required." });
     }
 
     try {
@@ -30,12 +30,12 @@ class MessageController {
       await message.populate('sender', 'username email');
       res.status(201).json(message);
     } catch (error) {
-      console.error("Erreur lors de l'envoi du message :", error);
-      res.status(500).json({ error: "Échec de l'envoi du message." });
+      console.error("Error while sending message:", error);
+      res.status(500).json({ error: "Failed to send message." });
     }
   }
 
-  //  Récupérer l'historique des messages privés entre deux utilisateurs
+  // Retrieve the private message history between two users
   async getPrivateMessages(req, res) {
     const { userId, recipientId } = req.params;
 
@@ -51,17 +51,17 @@ class MessageController {
 
       res.status(200).json(messages);
     } catch (error) {
-      console.error("Erreur lors de la récupération des messages privés :", error);
-      res.status(500).json({ error: "Erreur interne lors de la récupération des messages privés." });
+      console.error("Error while fetching private messages:", error);
+      res.status(500).json({ error: "Internal server error while fetching private messages." });
     }
   }
 
-  // Envoyer un message privé
+  // Send a private message
   async sendPrivateMessage(req, res) {
     const { content, sender, recipient } = req.body;
 
     if (!content || !sender || !recipient) {
-      return res.status(400).json({ error: "Tous les champs sont requis." });
+      return res.status(400).json({ error: "All fields are required." });
     }
 
     try {
@@ -72,37 +72,24 @@ class MessageController {
       });
 
       await message.populate('sender', 'username email');
+
       res.status(201).json(message);
-    } catch (error) {
-      console.error("Erreur lors de l'envoi du message privé :", error);
-      res.status(500).json({ error: "Échec de l'envoi du message privé." });
-    }
-  }
+      return message;
 
-
-  async markMessagesAsRead(req, res) {
-    const { userId, conversationId } = req.body;
-  
-    try {
-      await Message.updateMany(
-        { sender: conversationId, recipient: userId, read: false },
-        { $set: { read: true } }
-      );
-  
-      res.status(200).json({ success: true });
     } catch (error) {
-      console.error("Erreur lors de la mise à jour des messages lus :", error);
-      res.status(500).json({ error: "Erreur lors de la mise à jour des messages." });
+      console.error("Error while sending private message in controller:", error);
+      res.status(500).json({ error: "Failed to send private message." });
+      throw error;
     }
   }
 
   async getUserConversations(req, res) {
     const { userId } = req.params;
-  
+
     try {
-      // Récupérer tous les messages pertinents
+      // Retrieve all relevant messages for the user
       const messages = await Message.find({
-        recipient: { $ne: null }, 
+        recipient: { $ne: null },
         $or: [
           { sender: userId },
           { recipient: userId }
@@ -111,62 +98,60 @@ class MessageController {
       .populate('sender', 'username email')
       .populate('recipient', 'username email')
       .sort({ createdAt: -1 });
-  
-      // Regrouper par participant
+
+      // Group by participant
       const conversationMap = new Map();
-  
+
       for (const msg of messages) {
         const otherUser = msg.sender._id.toString() === userId
           ? msg.recipient
           : msg.sender;
-  
+
         if (!otherUser) continue;
-        
+
         const otherUserId = otherUser._id.toString();
-  
+
         if (!conversationMap.has(otherUserId)) {
-          // Récupérer explicitement le nombre de messages non lus
+          // Explicitly retrieve the number of unread messages
           const unreadCount = await Message.countDocuments({
             sender: otherUserId,
             recipient: userId,
             read: false
           });
-  
+
           conversationMap.set(otherUserId, {
             user: otherUser,
             lastMessage: msg,
             hasNewMessages: unreadCount > 0,
-            unreadCount: unreadCount // Nombre explicite
+            unreadCount: unreadCount 
           });
         }
       }
-  
+
       const conversations = Array.from(conversationMap.values());
       res.status(200).json(conversations);
     } catch (error) {
-      console.error("Erreur lors de la récupération des conversations :", error);
-      res.status(500).json({ error: "Erreur interne lors de la récupération des conversations." });
+      console.error("Error while fetching conversations:", error);
+      res.status(500).json({ error: "Internal server error while fetching conversations." });
     }
   }
 
-  //Mark messages As read 
+  // Mark messages as read
   async markMessagesAsRead(req, res) {
     const { userId, conversationId } = req.body;
-  
+
     try {
       await Message.updateMany(
         { sender: conversationId, recipient: userId, read: false },
         { $set: { read: true } }
       );
-  
+
       res.status(200).json({ success: true });
     } catch (error) {
-      console.error("Erreur lors de la mise à jour des messages lus :", error);
-      res.status(500).json({ error: "Erreur lors de la mise à jour des messages." });
+      console.error("Error while updating messages as read:", error);
+      res.status(500).json({ error: "Error while updating messages." });
     }
   }
-
-
 }
 
 module.exports = new MessageController();

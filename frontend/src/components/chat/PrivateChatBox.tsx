@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send } from 'lucide-react';
+import { X, Send, Smile } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { Socket } from 'socket.io-client';
 import chatService from '@/services/chatServices';
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 interface PrivateChatBoxProps {
   recipient: {
@@ -29,8 +30,11 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isRecipientOnline, setIsRecipientOnline] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
 
+  // Effect to fetch messages and join the private room
   useEffect(() => {
     const fetchMessages = async () => {
       if (!user?.id) return;
@@ -39,6 +43,11 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         const fetchedMessages = await chatService.getPrivateMessages(user.id, recipient._id);
         setMessages(fetchedMessages);
         scrollToBottom();
+
+        // Mark messages as read after loading
+        if (fetchedMessages.length > 0) {
+          await chatService.markConversationAsRead(user.id, recipient._id);
+        }
       } catch (error) {
         console.error('Error fetching private messages:', error);
       }
@@ -57,8 +66,9 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
     }
   }, [user, recipient, socket]);
 
+  // Effect to handle Socket.IO events
   useEffect(() => {
-    if (!socket || !recipient?._id) return;
+    if (!socket || !recipient?._id || !user?.id) return;
 
     const handleReceiveMessage = (message: Message) => {
       setMessages(prev => [...prev, message]);
@@ -73,16 +83,31 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       if (userId === recipient._id) setIsRecipientOnline(false);
     };
 
+    // Listener for the 'messages_read' event
+    const handleMessagesRead = ({ readerId, senderId }: { readerId: string; senderId: string }) => {
+      // Update the 'read' status of messages sent by the current user
+      // when the recipient has read the messages.
+      if (readerId === recipient._id && senderId === user.id) {
+        setMessages(prevMessages =>
+          prevMessages.map(msg =>
+            msg.sender._id === user.id ? { ...msg, read: true } : msg
+          )
+        );
+      }
+    };
+
     socket.on('receive_private_message', handleReceiveMessage);
     socket.on('user_online', handleUserOnline);
     socket.on('user_offline', handleUserOffline);
+    socket.on('messages_read', handleMessagesRead);
 
     return () => {
       socket.off('receive_private_message', handleReceiveMessage);
       socket.off('user_online', handleUserOnline);
       socket.off('user_offline', handleUserOffline);
+      socket.off('messages_read', handleMessagesRead); 
     };
-  }, [socket, recipient]);
+  }, [socket, recipient, user]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -95,18 +120,32 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
     if (!newMessage.trim() || !user?.id || !socket) return;
 
     try {
-      socket.emit('send_private_message', {
-        senderId: user.id,
-        recipientId: recipient._id,
-        content: newMessage
-      });
-
       await chatService.sendPrivateMessage(newMessage, user.id, recipient._id);
       setNewMessage('');
+      setShowEmojiPicker(false);
     } catch (error) {
       console.error('Error sending message:', error);
     }
   };
+
+  // Function to add an emoji
+  const onEmojiClick = (emojiObject: EmojiClickData) => {
+    setNewMessage(prevMessage => prevMessage + emojiObject.emoji);
+  };
+
+  // Handle click outside the emoji picker to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <div className="fixed bottom-0 right-6 w-80 bg-white shadow-lg rounded-t-lg z-50 border border-gray-200">
@@ -118,7 +157,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
             className={`w-2 h-2 rounded-full ${
               isRecipientOnline ? 'bg-green-400' : 'bg-gray-400'
             }`}
-            title={isRecipientOnline ? 'En ligne' : 'Hors ligne'}
+            title={isRecipientOnline ? 'Online' : 'Offline'}
           />
         </div>
         <button onClick={onClose} className="p-1 hover:bg-blue-600 rounded">
@@ -144,6 +183,12 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
             </div>
             <div className="text-xs text-gray-500 mt-1">
               {new Date(message.createdAt).toLocaleTimeString()}
+              {/* Display "Seen" status */}
+              {message.sender._id === user?.id && (
+                <span className="ml-2 text-xs">
+                  {message.read ? 'Vu' : 'Envoyé'}
+                </span>
+              )}
             </div>
           </div>
         ))}
@@ -151,7 +196,15 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSendMessage} className="p-3 border-t flex">
+      <form onSubmit={handleSendMessage} className="p-3 border-t flex relative">
+        {/* Emoji Button */}
+        <button
+          type="button"
+          onClick={() => setShowEmojiPicker(prev => !prev)}
+          className="p-2 hover:bg-gray-100 rounded mr-2"
+        >
+          <Smile size={18} />
+        </button>
         <input
           type="text"
           value={newMessage}
@@ -165,6 +218,13 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         >
           <Send size={18} />
         </button>
+
+        {/* Emoji Picker */}
+        {showEmojiPicker && (
+          <div ref={emojiPickerRef} className="absolute bottom-full mb-2 left-0">
+            <EmojiPicker onEmojiClick={onEmojiClick} />
+          </div>
+        )}
       </form>
     </div>
   );

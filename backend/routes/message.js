@@ -1,24 +1,65 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth');
-const MessageController = require('../controllers/messageController')
+const MessageController = require('../controllers/MessageController');
 
+module.exports = (io) => {
+  // Show Messages by Channel
+  router.get('/:room', authMiddleware, MessageController.getMessagesByChanel);
+  router.post('/', authMiddleware, MessageController.createMessage);
 
-// Exemple de route protégée pour les messages
-/*router.get('/messages', authMiddleware, (req, res) => {
-  // Logique pour récupérer les messages
-  res.json({ message: 'Liste des messages' });
-});*/
+  // Private Messages
+  router.get('/private/:userId/:recipientId', authMiddleware, MessageController.getPrivateMessages);
+  router.post('/private', authMiddleware, async (req, res, next) => {
+    const { content, sender, recipient } = req.body;
 
-//Show Message By Chanel
-router.get('/:room',authMiddleware, MessageController.getMessagesByChanel);
-router.post('/',authMiddleware, MessageController.createMessage)
+    if (!content || !sender || !recipient) {
+      return res.status(400).json({ error: "Tous les champs sont requis !." });
+    }
 
-// 🟣 Private messages
-router.get('/private/:userId/:recipientId',authMiddleware, MessageController.getPrivateMessages);
-router.post('/private',authMiddleware, MessageController.sendPrivateMessage);
-router.get('/conversations/:userId',authMiddleware, MessageController.getUserConversations)
+    try {
+      const newMessage = await MessageController.sendPrivateMessage(req, res);
+      if (res.statusCode === 201 && newMessage) {
+        const getPrivateRoomId = (userId1, userId2) => {
+          return [userId1, userId2].sort().join('_');
+        };
 
-router.post('/mark-as-read', authMiddleware, MessageController.markMessagesAsRead)
+        const roomId = getPrivateRoomId(sender, recipient);
 
-module.exports = router;
+        // Emit the Socket.IO event to the private room
+        io.to(roomId).emit('receive_private_message', newMessage);
+        console.log(`📨 New private message sent and emitted to room ${roomId}`);
+      }
+
+    } catch (error) {
+      console.error('Error while sending private message in route:', error);
+      next(error);
+    }
+  });
+  router.get('/conversations/:userId', authMiddleware, MessageController.getUserConversations);
+
+  router.post('/mark-as-read', authMiddleware, async (req, res, next) => {
+    try {
+      await MessageController.markMessagesAsRead(req, res);
+
+      if (res.statusCode === 200) {
+        const { userId, conversationId } = req.body;
+
+        const getPrivateRoomId = (id1, id2) => {
+          return [id1, id2].sort().join('_');
+        };
+
+        const roomId = getPrivateRoomId(userId, conversationId);
+        io.to(roomId).emit('messages_read', {
+          readerId: userId,
+          senderId: conversationId,
+        });
+        console.log(`KVM 📖 Messages marked as read in room ${roomId} by user ${userId}`);
+      }
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  return router;
+};

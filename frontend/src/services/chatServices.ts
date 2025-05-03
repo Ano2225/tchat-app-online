@@ -4,17 +4,28 @@ export interface Conversation {
   id: string;
   user: string;
   lastMessage: string;
-  hasNewMessages?: boolean;
-  unreadCount?: number;
+  hasNewMessages: boolean;
+  unreadCount: number;
 }
 
 export interface MessageNotification {
-  from: { 
-    _id: string; 
+  from: {
+    _id: string;
     username: string;
   };
   content: string;
   createdAt: string;
+}
+
+export interface Message {
+  _id: string;
+  content: string;
+  sender: {
+    _id: string;
+    username: string;
+  };
+  createdAt: string;
+  read: boolean;
 }
 
 export interface Recipient {
@@ -23,36 +34,51 @@ export interface Recipient {
 }
 
 class ChatService {
-  // Fetch user conversations with unread count
+  /**
+   * Fetches user conversations with unread count.
+   * @param {string} userId - The ID of the user.
+   * @returns {Promise<Conversation[]>} - A promise that resolves to an array of conversations.
+   * @throws {Error} - Throws an error if the API call fails.
+   */
   async fetchConversations(userId: string): Promise<Conversation[]> {
     try {
-      const response = await axiosInstance.get(`/messages/conversations/${userId}`);
-      const data = response.data;
+      const response = await axiosInstance.get<{
+        user: { _id: string; username: string };
+        lastMessage: { content: string };
+        hasNewMessages?: boolean;
+        unreadCount?: number;
+      }[]>(`/messages/conversations/${userId}`);
 
-      if (Array.isArray(data)) {
-        return data.map((conv) => ({
+      // Ensure the response data is an array and map it to the Conversation interface
+      if (Array.isArray(response.data)) {
+        return response.data.map((conv) => ({
           id: conv.user._id,
           user: conv.user.username,
           lastMessage: conv.lastMessage.content,
-          hasNewMessages: conv.hasNewMessages || false,
-          unreadCount: conv.unreadCount || 0
+          hasNewMessages: conv.hasNewMessages ?? false,
+          unreadCount: conv.unreadCount ?? 0,
         }));
       }
-      
-      console.error('Conversations response is not an array:', data);
-      return [];
+
+      console.error('Conversations response is not an array:', response.data);
+      return []; 
     } catch (error) {
       console.error('Error fetching conversations:', error);
-      return [];
+      throw error; 
     }
   }
 
-  // Mark all messages in a conversation as read
+  /**
+   * Marks all messages in a conversation as read.
+   * @param {string} userId - The ID of the current user.
+   * @param {string} conversationId - The ID of the other user in the conversation.
+   * @returns {Promise<boolean>} - A promise that resolves to true if successful, false otherwise.
+   */
   async markConversationAsRead(userId: string, conversationId: string): Promise<boolean> {
     try {
       await axiosInstance.post(`/messages/mark-as-read`, {
         userId: userId,
-        conversationId: conversationId
+        conversationId: conversationId,
       });
       return true;
     } catch (error) {
@@ -61,30 +87,42 @@ class ChatService {
     }
   }
 
-
-  // Get private messages between users
-  async getPrivateMessages(userId: string, recipientId: string) {
+  /**
+   * Get private messages between two users.
+   * @param {string} userId - The ID of the current user.
+   * @param {string} recipientId - The ID of the recipient user.
+   * @returns {Promise<Message[]>} - A promise that resolves to an array of messages.
+   * @throws {Error} - Throws an error if the API call fails.
+   */
+  async getPrivateMessages(userId: string, recipientId: string): Promise<Message[]> {
     try {
-      const response = await axiosInstance.get(`/messages/private/${userId}/${recipientId}`);
+      const response = await axiosInstance.get<Message[]>(`/messages/private/${userId}/${recipientId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching private messages:', error);
-      return [];
+      throw error; 
     }
   }
 
-  // Send a private message
-  async sendPrivateMessage(content: string, senderId: string, recipientId: string) {
+  /**
+   * Sends a private message.
+   * @param {string} content - The content of the message.
+   * @param {string} senderId - The ID of the sender.
+   * @param {string} recipientId - The ID of the recipient.
+   * @returns {Promise<Message>} - A promise that resolves to the created message.
+   * @throws {Error} - Throws an error if the API call fails.
+   */
+  async sendPrivateMessage(content: string, senderId: string, recipientId: string): Promise<Message> {
     try {
-      const response = await axiosInstance.post('/messages/private', {
+      const response = await axiosInstance.post<Message>('/messages/private', {
         content,
         sender: senderId,
-        recipient: recipientId
+        recipient: recipientId,
       });
       return response.data;
     } catch (error) {
       console.error('Error sending private message:', error);
-      throw error;
+      throw error; 
     }
   }
 }
