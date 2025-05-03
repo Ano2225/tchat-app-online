@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Smile } from 'lucide-react';
+import { X, Send, Smile, FilePlus } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { Socket } from 'socket.io-client';
 import chatService from '@/services/chatServices';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import axiosInstance from '@/utils/axiosInstance';
 
 interface PrivateChatBoxProps {
   recipient: {
@@ -21,6 +22,8 @@ interface Message {
     _id: string;
     username: string;
   };
+  mediaUrl?: string;
+  mediaType?: string; 
   createdAt: string;
   read: boolean;
 }
@@ -33,6 +36,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null); // Correct type and initialization
 
   // Effect to fetch messages and join the private room
   useEffect(() => {
@@ -105,7 +109,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       socket.off('receive_private_message', handleReceiveMessage);
       socket.off('user_online', handleUserOnline);
       socket.off('user_offline', handleUserOffline);
-      socket.off('messages_read', handleMessagesRead); 
+      socket.off('messages_read', handleMessagesRead);
     };
   }, [socket, recipient, user]);
 
@@ -115,13 +119,43 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
     }, 100);
   };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setSelectedFile(event.target.files[0]);
+    } else {
+      setSelectedFile(null);
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user?.id || !socket) return;
+    if (!newMessage.trim() && !selectedFile) return; 
+
+    if (!user || !user.id) {
+      console.error("User is not logged in or user ID is not available.");
+      return; 
+    }
 
     try {
-      await chatService.sendPrivateMessage(newMessage, user.id, recipient._id);
+      let mediaUrl = undefined;
+      let mediaType = undefined;
+
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('media', selectedFile);
+        const uploadResponse = await axiosInstance.post('/upload', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        mediaUrl = uploadResponse.data.url;
+        mediaType = uploadResponse.data.media_type;
+      }
+
+      // Now send the message, including media if available
+      await chatService.sendPrivateMessage(newMessage, user?.id, recipient._id, mediaUrl, mediaType);
       setNewMessage('');
+      setSelectedFile(null);
       setShowEmojiPicker(false);
     } catch (error) {
       console.error('Error sending message:', error);
@@ -179,7 +213,16 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                   : 'bg-gray-200 text-gray-800'
               }`}
             >
-              {message.content}
+              {/* Conditionally display media */}
+              {message.mediaUrl && message.mediaType?.startsWith('image') && (
+                <img src={message.mediaUrl} alt="Image" className="max-w-xs max-h-48 rounded-lg object-contain" />
+              )}
+              {message.mediaUrl && message.mediaType?.startsWith('video') && (
+                <video controls src={message.mediaUrl} className="max-w-xs max-h-48 rounded-lg object-contain" />
+              )}
+              {/* Display text content if no media or in addition to media  */}
+              {!message.mediaUrl && message.content}
+              {message.mediaUrl && message.content && <p className="mt-2">{message.content}</p>}
             </div>
             <div className="text-xs text-gray-500 mt-1">
               {new Date(message.createdAt).toLocaleTimeString()}
@@ -195,8 +238,17 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSendMessage} className="p-3 border-t flex relative">
+      <form onSubmit={handleSendMessage} className="p-3 border-t flex relative items-center">
+        <label htmlFor="file-upload" className="cursor-pointer p-2 hover:bg-gray-100 rounded mr-2">
+          <FilePlus size={18} />
+          <input
+            id="file-upload"
+            type="file"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </label>
+
         {/* Emoji Button */}
         <button
           type="button"
@@ -218,6 +270,13 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         >
           <Send size={18} />
         </button>
+
+        {/* Display selected file name */}
+        {selectedFile && (
+          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+            {selectedFile.name}
+          </span>
+        )}
 
         {/* Emoji Picker */}
         {showEmojiPicker && (

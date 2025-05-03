@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -6,11 +8,11 @@ const connectDB = require('./config/database');
 const authRoutes = require('./routes/auth');
 const messageRoutes = require('./routes/message');
 const channelRoutes = require('./routes/channel');
-const userRoutes = require('./routes/user')
+const userRoutes = require('./routes/user');
+const uploadRoutes = require('./routes/upload');
 const socketHandlers = require('./socket/socketHandlers');
 const rateLimit = require('express-rate-limit');
 
-require('dotenv').config();
 
 class ChatServer {
   constructor() {
@@ -36,8 +38,8 @@ class ChatServer {
     // Global Rate Limiting (100 requests per minute per IP)
     const limiter = rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 100, // Limit to 100 requests per IP
-      message: 'Too many requests, please try again in 15 minutes!' // Error message
+      max: 100, 
+      message: 'Too many requests, please try again in 15 minutes!'
     });
 
     // Apply the rate limiter to all API routes
@@ -54,6 +56,7 @@ class ChatServer {
     this.app.use('/api/messages', messageRoutes(this.io));
     this.app.use('/api/channels', channelRoutes);
     this.app.use('/api/user',userRoutes )
+    this.app.use('/api/upload', uploadRoutes);
 
    
   }

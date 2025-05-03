@@ -112,19 +112,23 @@ class ChatService {
    * @returns {Promise<Message>} - A promise that resolves to the created message.
    * @throws {Error} - Throws an error if the API call fails.
    */
-  async sendPrivateMessage(content: string, senderId: string, recipientId: string): Promise<Message> {
+  
+  async sendPrivateMessage(content: string, senderId: string, recipientId: string, mediaUrl?: string, mediaType?: string): Promise<Message> {
     try {
       const response = await axiosInstance.post<Message>('/messages/private', {
         content,
         sender: senderId,
         recipient: recipientId,
+        media_url: mediaUrl,
+        media_type: mediaType,
       });
       return response.data;
     } catch (error) {
       console.error('Error sending private message:', error);
-      throw error; 
+      throw error;
     }
   }
+  
 }
 
 export const chatService = new ChatService();

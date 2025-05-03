@@ -57,11 +57,15 @@ class MessageController {
   }
 
   // Send a private message
-  async sendPrivateMessage(req, res) {
-    const { content, sender, recipient } = req.body;
+  async sendPrivateMessage(req, res, io) { 
+    const { content, sender, recipient, media_url, media_type } = req.body;
 
-    if (!content || !sender || !recipient) {
-      return res.status(400).json({ error: "All fields are required." });
+    if (!sender || !recipient) {
+      return res.status(400).json({ error: "Sender and recipient are required." });
+    }
+
+    if (!content && (!media_url || !media_type)) {
+      return res.status(400).json({ error: "Message must contain either text 'content' or 'media_url' and 'media_type'." });
     }
 
     try {
@@ -69,19 +73,31 @@ class MessageController {
         content,
         sender,
         recipient,
+        media_url,
+        media_type,
       });
 
       await message.populate('sender', 'username email');
+
+      const getPrivateRoomId = (userId1, userId2) => {
+        return [userId1, userId2].sort().join('_');
+      };
+
+      const roomId = getPrivateRoomId(sender, recipient);
+
+      io.to(roomId).emit('receive_private_message', message);
+      console.log(`📨 Nouveau message privé envoyé et émis vers la salle ${roomId}`);
 
       res.status(201).json(message);
       return message;
 
     } catch (error) {
-      console.error("Error while sending private message in controller:", error);
-      res.status(500).json({ error: "Failed to send private message." });
+      console.error("Erreur lors de l'envoi du message privé dans le contrôleur:", error);
+      res.status(500).json({ error: "Échec de l'envoi du message privé." });
       throw error;
     }
   }
+
 
   async getUserConversations(req, res) {
     const { userId } = req.params;

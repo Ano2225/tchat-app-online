@@ -26,32 +26,36 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
 
   const fetchConversations = useCallback(async () => {
     if (!user?.id) return;
-    
-    const fetchedConversations = await chatService.fetchConversations(user.id);
-    const hasAnyNewMessages = fetchedConversations.some(conv => conv.hasNewMessages);
-    
-    setHasNewMessage(hasAnyNewMessages);
-    setConversations(fetchedConversations);
-    
-    const totalUnread = fetchedConversations.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
-    console.log('Total unread messages:', totalUnread);
+
+    try {
+      const fetchedConversations = await chatService.fetchConversations(user.id);
+      const hasAnyNewMessages = fetchedConversations.some(conv => conv.hasNewMessages);
+
+      setHasNewMessage(hasAnyNewMessages);
+      setConversations(fetchedConversations);
+
+      const totalUnread = fetchedConversations.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
+      console.log('Total unread messages:', totalUnread);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+    }
   }, [user]);
 
   const handleConversationClick = (conversation: Conversation) => {
     setSelectedConversation(conversation);
     setShowConversations(false);
-    
+
     // Mark conversation as read and update local state
     if (user?.id) {
       chatService.markConversationAsRead(user.id, conversation.id);
     }
-    
-    setConversations(prevConversations => 
-      prevConversations.map(conv => 
+
+    setConversations(prevConversations =>
+      prevConversations.map(conv =>
         conv.id === conversation.id ? { ...conv, hasNewMessages: false, unreadCount: 0 } : conv
       )
     );
-    
+
     // Check if there are still unread conversations
     const stillHasNewMessages = conversations.some(
       conv => conv.id !== conversation.id && conv.hasNewMessages
@@ -61,42 +65,45 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
 
   useEffect(() => {
     fetchConversations();
-    
-    // Set refresh interval
-    const refreshInterval = setInterval(fetchConversations, 10000);
+
+    const refreshInterval = setInterval(() => {
+      fetchConversations();
+    }, 10000);
+
     return () => clearInterval(refreshInterval);
-  }, [fetchConversations, user]);
+  }, [user]); 
 
   useEffect(() => {
     if (!socket) return;
-  
+
     const handleNotification = (data: MessageNotification) => {
       toast.success(`📩Nouveau message de ${data.from.username}"`, {
         duration: 5000,
         position: 'bottom-right',
       });
-      
+
       setHasNewMessage(true);
-      
+
       // Update message counter for this conversation
-      setConversations(prevConversations => 
-        prevConversations.map(conv => 
-          conv.id === data.from._id 
-            ? { 
-                ...conv, 
-                hasNewMessages: true, 
-                unreadCount: (conv.unreadCount || 0) + 1, 
-                lastMessage: data.content 
-              } 
+      setConversations(prevConversations =>
+        prevConversations.map(conv =>
+          conv.id === data.from._id
+            ? {
+                ...conv,
+                hasNewMessages: true,
+                unreadCount: (conv.unreadCount || 0) + 1,
+                lastMessage: data.content
+              }
             : conv
         )
       );
-      
+
+      // Re-fetch conversations to get the latest state
       fetchConversations();
     };
-  
+
     socket.on('notify_user', handleNotification);
-    
+
     // Setup socket connection
     socket.on('connect', () => {
       console.log('Socket connected');
@@ -104,11 +111,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
         socket.emit('register_user', user.id);
       }
     });
-    
+
     socket.on('disconnect', () => {
       console.log('Socket disconnected');
     });
-    
+
     return () => {
       socket.off('notify_user', handleNotification);
       socket.off('connect');

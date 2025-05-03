@@ -10,32 +10,16 @@ module.exports = (io) => {
 
   // Private Messages
   router.get('/private/:userId/:recipientId', authMiddleware, MessageController.getPrivateMessages);
+  
   router.post('/private', authMiddleware, async (req, res, next) => {
-    const { content, sender, recipient } = req.body;
-
-    if (!content || !sender || !recipient) {
-      return res.status(400).json({ error: "Tous les champs sont requis !." });
-    }
-
     try {
-      const newMessage = await MessageController.sendPrivateMessage(req, res);
-      if (res.statusCode === 201 && newMessage) {
-        const getPrivateRoomId = (userId1, userId2) => {
-          return [userId1, userId2].sort().join('_');
-        };
-
-        const roomId = getPrivateRoomId(sender, recipient);
-
-        // Emit the Socket.IO event to the private room
-        io.to(roomId).emit('receive_private_message', newMessage);
-        console.log(`📨 New private message sent and emitted to room ${roomId}`);
-      }
-
+      await MessageController.sendPrivateMessage(req, res, io);
     } catch (error) {
-      console.error('Error while sending private message in route:', error);
+      console.error('error during send private message', error);
       next(error);
     }
   });
+  
   router.get('/conversations/:userId', authMiddleware, MessageController.getUserConversations);
 
   router.post('/mark-as-read', authMiddleware, async (req, res, next) => {

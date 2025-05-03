@@ -3,26 +3,35 @@ const mongoose = require('mongoose');
 const MessageSchema = new mongoose.Schema({
   content: {
     type: String,
-    required: true,
-    maxlength: 500
+    trim: true,
   },
   sender: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: true,
   },
-  recipient: {
+  room: { // For public chats
+    type: String,
+    trim: true,
+    default: null,
+  },
+  recipient: { // For private chats
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-  }, 
-  read: { type: Boolean, default: false }, 
-  room: {
+  },
+  media_url: { // URL to the uploaded image or video
     type: String,
-    default: 'null'
+  },
+  media_type: { // e.g., 'image', 'video'
+    type: String,
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
+  },
+  read: {
+    type: Boolean,
+    default: false,
   }
 });
 
