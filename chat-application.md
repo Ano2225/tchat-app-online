@@ -12,6 +12,8 @@
 - Envoi de messages
 - Création de salons de chat
 - Gestion des utilisateurs
+- Envoi message en privé (img , videos inclus)
+- Système de gamification (canal de jeux )
 
 ## Technologies Recommandées
 - Frontend: NextJS
@@ -36,41 +38,11 @@
 
 ### 2. Structure du Backend
 
-#### Routes d'Authentification
-- `POST /auth/anonymous` : Générer un identifiant temporaire
-- `POST /auth/register` : Créer un nouveau compte
-- `POST /auth/login` : Connexion pour utilisateurs enregistrés
-- `POST /auth/logout` : Déconnexion
 
-#### Routes de Chat
-- `GET /rooms` : Lister les salons disponibles
-- `POST /rooms` : Créer un nouveau salon
-- `GET /messages/:roomId` : Récupérer les messages d'un salon
-- `WS /chat` : Socket pour l'envoi/réception de messages
 
 ### 3. Modèle de Données
 
-#### Utilisateur
-```javascript
-{
-  id: String,
-  username: String,
-  email: String?, // Optionnel pour les connexions anonymes
-  isAnonymous: Boolean,
-  createdAt: Date
-}
-```
 
-#### Message
-```javascript
-{
-  id: String,
-  roomId: String,
-  userId: String,
-  content: String,
-  timestamp: Date
-}
-```
 
 ### 4. Sécurité
 - Limitation du nombre de messages par minute
