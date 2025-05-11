@@ -1,5 +1,8 @@
 # Architecture de l'Application de Chat en Ligne
 
+# Bugs 
+- if no msg , you disconnect users
+
 ## Composants Principaux
 1. Frontend
 2. Backend (API)
@@ -14,6 +17,7 @@
 - Gestion des utilisateurs
 - Envoi message en privé (img , videos inclus)
 - Système de gamification (canal de jeux )
+- Search users by username 
 
 ## Technologies Recommandées
 - Frontend: NextJS

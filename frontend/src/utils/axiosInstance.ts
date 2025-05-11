@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '@/store/authStore';
-import router from 'next/router'; 
+//import router from 'next/router'; 
 
 // Create an axios instance
 const axiosInstance = axios.create({
@@ -33,7 +33,11 @@ axiosInstance.interceptors.response.use(
       console.warn('Invalid or expired token. Logging out...');
       const logout = useAuthStore.getState().logout; 
       if (logout) logout(); 
-      router.push('/anonymous');
+      if (typeof window !== 'undefined') {
+        window.location.href = '/anonymous'; 
+      } else {
+        console.error("Attempted to redirect on server, but router is not available.");
+      }
     }
     return Promise.reject(error);
   }

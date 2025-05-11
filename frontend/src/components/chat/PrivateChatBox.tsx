@@ -5,6 +5,7 @@ import { Socket } from 'socket.io-client';
 import chatService from '@/services/chatServices';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import axiosInstance from '@/utils/axiosInstance';
+import Image from 'next/image'; // <-- Importe le composant Image de Next.js
 
 interface PrivateChatBoxProps {
   recipient: {
@@ -23,7 +24,7 @@ interface Message {
     username: string;
   };
   mediaUrl?: string;
-  mediaType?: string; 
+  mediaType?: string;
   createdAt: string;
   read: boolean;
 }
@@ -36,7 +37,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null); // Correct type and initialization
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Effect to fetch messages and join the private room
   useEffect(() => {
@@ -75,6 +76,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
     if (!socket || !recipient?._id || !user?.id) return;
 
     const handleReceiveMessage = (message: Message) => {
+      console.log("Received private message:", message); // Debugging
       setMessages(prev => [...prev, message]);
       scrollToBottom();
     };
@@ -89,8 +91,6 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
 
     // Listener for the 'messages_read' event
     const handleMessagesRead = ({ readerId, senderId }: { readerId: string; senderId: string }) => {
-      // Update the 'read' status of messages sent by the current user
-      // when the recipient has read the messages.
       if (readerId === recipient._id && senderId === user.id) {
         setMessages(prevMessages =>
           prevMessages.map(msg =>
@@ -129,36 +129,48 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() && !selectedFile) return; 
+    if (!newMessage.trim() && !selectedFile) {
+      console.log("No message content or file to send."); // Debugging
+      return;
+    }
 
     if (!user || !user.id) {
       console.error("User is not logged in or user ID is not available.");
-      return; 
+      return;
     }
 
     try {
-      let mediaUrl = undefined;
-      let mediaType = undefined;
+      let mediaUrl: string | undefined = undefined;
+      let mediaType: string | undefined = undefined;
 
       if (selectedFile) {
         const formData = new FormData();
         formData.append('media', selectedFile);
-        const uploadResponse = await axiosInstance.post('/upload', formData, {
+        console.log("Attempting to upload file:", selectedFile.name); // Debugging
+        const uploadResponse = await axiosInstance.post('/api/upload', formData, { // Assure-toi que cette URL est correcte
           headers: {
             'Content-Type': 'multipart/form-data',
           },
         });
         mediaUrl = uploadResponse.data.url;
         mediaType = uploadResponse.data.media_type;
+        console.log("File uploaded successfully:", { mediaUrl, mediaType }); // Debugging
       }
 
       // Now send the message, including media if available
-      await chatService.sendPrivateMessage(newMessage, user?.id, recipient._id, mediaUrl, mediaType);
+      const sentMessage = await chatService.sendPrivateMessage(newMessage, user?.id, recipient._id, mediaUrl, mediaType);
+      console.log("Message sent to backend:", sentMessage); // Debugging
+
+      // OPTIONAL: Add the sent message directly to state if you don't wait for Socket.IO echo
+      // setMessages(prev => [...prev, { ...sentMessage, sender: { _id: user.id, username: user.username } }]);
+      // scrollToBottom();
+
       setNewMessage('');
       setSelectedFile(null);
       setShowEmojiPicker(false);
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error sending message or uploading file:', error);
+      alert("Échec de l'envoi du message ou de l'upload du fichier. Veuillez réessayer.");
     }
   };
 
@@ -201,40 +213,50 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
 
       {/* Messages */}
       <div className="h-80 overflow-y-auto p-3 bg-gray-50">
-        {messages.map((message) => (
-          <div
-            key={message._id}
-            className={`mb-2 ${message.sender._id === user?.id ? 'text-right' : 'text-left'}`}
-          >
+        {messages.map((message) => {
+          console.log("Rendering message:", message); // Debugging: Inspect each message being rendered
+          return (
             <div
-              className={`inline-block p-2 rounded-lg max-w-[70%] ${
-                message.sender._id === user?.id
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-200 text-gray-800'
-              }`}
+              key={message._id}
+              className={`mb-2 ${message.sender._id === user?.id ? 'text-right' : 'text-left'}`}
             >
-              {/* Conditionally display media */}
-              {message.mediaUrl && message.mediaType?.startsWith('image') && (
-                <img src={message.mediaUrl} alt="Image" className="max-w-xs max-h-48 rounded-lg object-contain" />
-              )}
-              {message.mediaUrl && message.mediaType?.startsWith('video') && (
-                <video controls src={message.mediaUrl} className="max-w-xs max-h-48 rounded-lg object-contain" />
-              )}
-              {/* Display text content if no media or in addition to media  */}
-              {!message.mediaUrl && message.content}
-              {message.mediaUrl && message.content && <p className="mt-2">{message.content}</p>}
+              <div
+                className={`inline-block p-2 rounded-lg max-w-[70%] ${
+                  message.sender._id === user?.id
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200 text-gray-800'
+                }`}
+              >
+                {/* Conditionally display media */}
+                {message.mediaUrl && message.mediaType === 'image' && ( // Changed from startsWith('image')
+                  <Image
+                    src={message.mediaUrl}
+                    alt="Image"
+                    width={200} // Définis une largeur par défaut
+                    height={150} // Définis une hauteur par défaut
+                    objectFit="contain" // Utilise 'objectFit' au lieu de 'object-contain' pour Next/Image
+                    className="rounded-lg" // Tailwind CSS classes should be applied as usual
+                    unoptimized={true} // Remove this if you set up Next.js Image config for Cloudinary
+                  />
+                )}
+                {message.mediaUrl && message.mediaType === 'video' && ( // Changed from startsWith('video')
+                  <video controls src={message.mediaUrl} className="max-w-xs max-h-48 rounded-lg object-contain" />
+                )}
+                {/* Display text content if no media or in addition to media */}
+                {message.content && <p className={message.mediaUrl ? "mt-2" : ""}>{message.content}</p>}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {new Date(message.createdAt).toLocaleTimeString()}
+                {/* Display "Seen" status */}
+                {message.sender._id === user?.id && (
+                  <span className="ml-2 text-xs">
+                    {message.read ? 'Vu' : 'Envoyé'}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {new Date(message.createdAt).toLocaleTimeString()}
-              {/* Display "Seen" status */}
-              {message.sender._id === user?.id && (
-                <span className="ml-2 text-xs">
-                  {message.read ? 'Vu' : 'Envoyé'}
-                </span>
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 
