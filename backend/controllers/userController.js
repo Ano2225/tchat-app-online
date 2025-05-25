@@ -4,14 +4,14 @@ class UserController  {
 
   async updateUserInfo(req, res) {
       try {
-        const { username, age, ville } = req.body;
+        const { username, age, ville, avatarUrl } = req.body;
     
-        console.log("📥 Reçu côté serveur :", { username, age, ville });
+        console.log("📥 Reçu côté serveur :", { username, age, ville, avatarUrl });
         console.log("🔑 Utilisateur connecté :", req.user);
     
         const updatedUser = await User.findByIdAndUpdate(
           req.user.id, 
-          { username, age, ville },
+          { username, age, ville, avatarUrl },
           { new: true }
         );
     
