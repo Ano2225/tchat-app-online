@@ -1,5 +1,9 @@
+// next.config.js
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: import('next').NextConfig = {
+  images: {
+    domains: ['res.cloudinary.com'],
+  },
   async rewrites() {
     return [
       {

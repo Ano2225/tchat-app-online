@@ -5,7 +5,7 @@ import { Socket } from 'socket.io-client';
 import chatService from '@/services/chatServices';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import axiosInstance from '@/utils/axiosInstance';
-import Image from 'next/image'; // <-- Importe le composant Image de Next.js
+import Image from 'next/image'; 
 
 interface PrivateChatBoxProps {
   recipient: {
@@ -23,8 +23,8 @@ interface Message {
     _id: string;
     username: string;
   };
-  mediaUrl?: string;
-  mediaType?: string;
+  media_url?: string;
+  media_type?: string;
   createdAt: string;
   read: boolean;
 }
@@ -146,8 +146,9 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       if (selectedFile) {
         const formData = new FormData();
         formData.append('media', selectedFile);
+
         console.log("Attempting to upload file:", selectedFile.name); // Debugging
-        const uploadResponse = await axiosInstance.post('/api/upload', formData, { // Assure-toi que cette URL est correcte
+        const uploadResponse = await axiosInstance.post('/upload', formData, { // Assure-toi que cette URL est correcte
           headers: {
             'Content-Type': 'multipart/form-data',
           },
@@ -170,7 +171,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       setShowEmojiPicker(false);
     } catch (error) {
       console.error('Error sending message or uploading file:', error);
-      alert("Échec de l'envoi du message ou de l'upload du fichier. Veuillez réessayer.");
+      //alert("Échec de l'envoi du message ou de l'upload du fichier. Veuillez réessayer.");
     }
   };
 
@@ -228,22 +229,20 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                 }`}
               >
                 {/* Conditionally display media */}
-                {message.mediaUrl && message.mediaType === 'image' && ( // Changed from startsWith('image')
-                  <Image
-                    src={message.mediaUrl}
+                {message.media_url && message.media_type === 'image' && (
+                  <img
+                    src={message.media_url}
                     alt="Image"
-                    width={200} // Définis une largeur par défaut
-                    height={150} // Définis une hauteur par défaut
-                    objectFit="contain" // Utilise 'objectFit' au lieu de 'object-contain' pour Next/Image
-                    className="rounded-lg" // Tailwind CSS classes should be applied as usual
-                    unoptimized={true} // Remove this if you set up Next.js Image config for Cloudinary
+                    width={200} 
+                    height={150} 
+                    className="rounded-lg" 
                   />
                 )}
-                {message.mediaUrl && message.mediaType === 'video' && ( // Changed from startsWith('video')
-                  <video controls src={message.mediaUrl} className="max-w-xs max-h-48 rounded-lg object-contain" />
+                {message.media_url && message.media_type === 'video' && ( 
+                  <video controls src={message.media_url} className="max-w-xs max-h-48 rounded-lg object-contain" />
                 )}
                 {/* Display text content if no media or in addition to media */}
-                {message.content && <p className={message.mediaUrl ? "mt-2" : ""}>{message.content}</p>}
+                {message.content && <p className={message.media_url ? "mt-2" : ""}>{message.content}</p>}
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 {new Date(message.createdAt).toLocaleTimeString()}
