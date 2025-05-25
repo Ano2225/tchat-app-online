@@ -1,62 +1,62 @@
 # 💬 Tchat_Online
 
-Tchat_Online est une application de chat en temps réel qui vous permet d'échanger des messages dans les **canaux de discussions**, en **privé**, et de partager des **images et des vidéos**.
+Tchat_Online is a real-time chat application that lets you exchange messages in **discussion channels**, **privately**, and share **images and videos**.
 
 ---
 
-## ✨ Fonctionnalités Clés
+## ✨ Key Features
 
-* **Chat en temps réel :** Conversations instantanées entre utilisateurs.
-* **Canaux de discussion :** Participez à des discussions de groupe.
-* **Messages privés :** Échangez en tête-à-tête avec d'autres utilisateurs.
-* **Partage de médias :** Envoyez des photos et des vidéos directement dans le chat.
-* **Statut en ligne :** Voyez qui est disponible pour discuter.
-* **Historique des messages :** Retrouvez vos anciennes discussions facilement.
+* **Real-time Chat:** Instant conversations between users.
+* **Discussion Channels:** Participate in group discussions.
+* **Private Messages:** Chat one-on-one with other users.
+* **Media Sharing:** Send photos and videos directly in the chat.
+* **Online Status:** See who's available to chat.
+* **Message History:** Easily retrieve your past discussions.
 
 ---
 
 ## 🛠️ Technologies
 
-* **Frontend :** Next.js, React, Tailwind CSS, Axios, Socket.IO Client, Zustand.
-* **Backend :** Node.js, Express.js, Socket.IO, MongoDB, Mongoose.
-* **Stockage des médias :** Cloudinary.
+* **Frontend:** Next.js, React, Tailwind CSS, Axios, Socket.IO Client, Zustand.
+* **Backend:** Node.js, Express.js, Socket.IO, MongoDB, Mongoose.
+* **Media Storage:** Cloudinary.
 
 ---
 
-## 🚀 Comment l'utiliser (Localement)
+## 🚀 How to Use (Locally)
 
-### 1. Prérequis
+### 1. Prerequisites
 
-Assurez-vous d'avoir :
-* **Node.js** (v18 ou plus recommandé)
-* **npm** ou **Yarn**
-* Une instance **MongoDB** (locale ou Cloud Atlas)
-* Un compte **Cloudinary**
+Make sure you have:
+* **Node.js** (v18 or higher recommended)
+* **npm** or **Yarn**
+* A **MongoDB** instance (local or Cloud Atlas)
+* A **Cloudinary** account
 
-### 2. Démarrage du Backend
+### 2. Backend Setup
 
-* Allez dans le dossier de votre backend (ex: `cd backend`).
-* Installez les dépendances : `npm install`
-* Créez un fichier `.env` à la racine du dossier backend et ajoutez vos variables d'environnement (port, connexion MongoDB, secret JWT, clés Cloudinary).
-* Lancez le serveur : `npm start` (ou votre commande de démarrage).
+* Navigate to your backend folder (e.g., `cd backend`).
+* Install dependencies: `npm install`
+* Create a `.env` file at the root of the backend folder and add your environment variables (port, MongoDB connection string, JWT secret, Cloudinary keys).
+* Start the server: `npm start` (or your specific start command).
 
-### 3. Démarrage du Frontend
+### 3. Frontend Setup
 
-* Allez dans le dossier de votre frontend (ex: `cd frontend` ou à la racine de votre projet).
-* Installez les dépendances : `npm install`
-* Lancez l'application Next.js : `npm run dev`
+* Navigate to your frontend folder (e.g., `cd frontend` or the project root).
+* Install dependencies: `npm install`
+* Start the Next.js application: `npm run dev`
 
-L'application sera accessible sur `http://localhost:3000`.
+The application will be accessible at `http://localhost:3000`.
 
 ---
 
-## ⚙️ Configuration Importante pour le Développement
+## ⚙️ Important Development Configuration
 
-* **`next.config.js` :** Vérifiez que le domaine de Cloudinary (`res.cloudinary.com`) est bien ajouté dans la section `images.domains` pour que les images s'affichent. Assurez-vous également que la règle de `rewrites` pour `/api` est configurée pour proxyfier vers votre backend.
-* **`src/utils/axiosInstance.js` :** Assurez-vous que la `baseURL` est bien définie sur `/api` pour une bonne communication entre le frontend Next.js et le backend.
+* **`next.config.js`:** Ensure the `res.cloudinary.com` domain is added to the `images.domains` section for images to display correctly. Also, make sure the `rewrites` rule for `/api` is configured to proxy requests to your backend.
+* **`src/utils/axiosInstance.js`:** Verify that the `baseURL` is set to `/api` for proper communication between the Next.js frontend and the backend.
 
 ---
 
 ## 🤝 Contribution
 
-Les contributions sont les bienvenues ! N'hésitez pas à ouvrir des problèmes (issues) ou à soumettre des requêtes de fusion (pull requests).
+Contributions are welcome! Feel free to open issues or submit pull requests.
