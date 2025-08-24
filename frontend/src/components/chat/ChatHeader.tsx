@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 import { Socket } from 'socket.io-client'
 import axiosInstance from '@/utils/axiosInstance'
 import PrivateChatBox from './PrivateChatBox'
+import Toast from '../ui/Toast'
 
 interface ChatHeaderProps {
   users?: {
@@ -35,6 +36,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedUser, setSelectedUser] = useState<{_id: string, username: string} | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [showToast, setShowToast] = useState(false)
   const user = useAuthStore((state) => state.user)
 
   const handleLogout = () => {
@@ -42,7 +44,10 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
       socket.disconnect()
     }
     logout()
-    router.push('/')
+    setShowToast(true)
+    setTimeout(() => {
+      router.push('/')
+    }, 1000)
   }
 
   const fetchConversations = async () => {
@@ -229,6 +234,15 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
           recipient={selectedUser} 
           socket={socket} 
           onClose={() => setSelectedUser(null)} 
+        />
+      )}
+      
+      {/* Toast de déconnexion */}
+      {showToast && (
+        <Toast 
+          message="Déconnexion réussie" 
+          type="success" 
+          onClose={() => setShowToast(false)} 
         />
       )}
     </>
