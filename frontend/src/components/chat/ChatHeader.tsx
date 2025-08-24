@@ -7,6 +7,7 @@ import { Socket } from 'socket.io-client'
 import axiosInstance from '@/utils/axiosInstance'
 import PrivateChatBox from './PrivateChatBox'
 import Toast from '../ui/Toast'
+import ThemeToggle from '../ui/ThemeToggle'
 
 interface ChatHeaderProps {
   users?: {
@@ -150,6 +151,9 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
               </div>
             </div>
 
+            {/* Bouton thème */}
+            <ThemeToggle variant="inline" />
+            
             {/* Bouton déconnexion */}
             <button
               onClick={handleLogout}

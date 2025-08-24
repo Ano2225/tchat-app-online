@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react'
 
-const ThemeToggle = () => {
+interface ThemeToggleProps {
+  variant?: 'fixed' | 'inline'
+}
+
+const ThemeToggle: React.FC<ThemeToggleProps> = ({ variant = 'fixed' }) => {
   const [isDark, setIsDark] = useState(false)
 
   useEffect(() => {
@@ -25,10 +29,15 @@ const ThemeToggle = () => {
     }
   }
 
+  const className = variant === 'fixed' 
+    ? "fixed top-4 right-4 z-50 p-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full shadow-lg hover:bg-white/20 transition-all"
+    : "p-2 bg-gray-100/10 hover:bg-gray-100/20 border border-gray-200/20 rounded-xl transition-all duration-200"
+
   return (
     <button
       onClick={toggleTheme}
-      className="fixed top-4 right-4 z-50 p-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full shadow-lg hover:bg-white/20 transition-all"
+      className={className}
+      title="Changer le thème"
     >
       {isDark ? (
         <span className="text-lg">☀️</span>
