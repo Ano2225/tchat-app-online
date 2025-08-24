@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import AuthProvider from "./providers";
 import { Toaster } from 'react-hot-toast';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 
 
 
@@ -19,8 +21,11 @@ export default function RootLayout({
     <html lang="fr">
       <body 
       >
-        <Toaster/>
-        <AuthProvider>{children}</AuthProvider>
+        <ErrorBoundary>
+          <ThemeToggle />
+          <Toaster/>
+          <AuthProvider>{children}</AuthProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

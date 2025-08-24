@@ -33,6 +33,10 @@ const upload = multer({
 });
 
 router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
+    // Vérification d'autorisation supplémentaire
+    if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: 'Utilisateur non authentifié' });
+    }
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'Aucun fichier téléchargé.' });

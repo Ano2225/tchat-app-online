@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Smile, FilePlus } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { Socket } from 'socket.io-client';
 import chatService from '@/services/chatServices';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import axiosInstance from '@/utils/axiosInstance';
-import Image from 'next/image'; 
 
 interface PrivateChatBoxProps {
   recipient: {
@@ -35,11 +33,11 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
   const [newMessage, setNewMessage] = useState('');
   const [isRecipientOnline, setIsRecipientOnline] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const emojiPickerRef = useRef<HTMLDivElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Effect to fetch messages and join the private room
   useEffect(() => {
     const fetchMessages = async () => {
       if (!user?.id) return;
@@ -49,7 +47,6 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         setMessages(fetchedMessages);
         scrollToBottom();
 
-        // Mark messages as read after loading
         if (fetchedMessages.length > 0) {
           await chatService.markConversationAsRead(user.id, recipient._id);
         }
@@ -65,18 +62,17 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         senderId: user.id,
         recipientId: recipient._id
       });
-
-      // Verify if the user is online
       socket.emit('check_user_online', recipient._id);
     }
   }, [user, recipient, socket]);
 
-  // Effect to handle Socket.IO events
   useEffect(() => {
     if (!socket || !recipient?._id || !user?.id) return;
 
     const handleReceiveMessage = (message: Message) => {
-      console.log("Received private message:", message); // Debugging
+      console.log('Received message:', message);
+      console.log('Message media_url:', message.media_url);
+      console.log('Message media_type:', message.media_type);
       setMessages(prev => [...prev, message]);
       scrollToBottom();
     };
@@ -89,27 +85,14 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       if (userId === recipient._id) setIsRecipientOnline(false);
     };
 
-    // Listener for the 'messages_read' event
-    const handleMessagesRead = ({ readerId, senderId }: { readerId: string; senderId: string }) => {
-      if (readerId === recipient._id && senderId === user.id) {
-        setMessages(prevMessages =>
-          prevMessages.map(msg =>
-            msg.sender._id === user.id ? { ...msg, read: true } : msg
-          )
-        );
-      }
-    };
-
     socket.on('receive_private_message', handleReceiveMessage);
     socket.on('user_online', handleUserOnline);
     socket.on('user_offline', handleUserOffline);
-    socket.on('messages_read', handleMessagesRead);
 
     return () => {
       socket.off('receive_private_message', handleReceiveMessage);
       socket.off('user_online', handleUserOnline);
       socket.off('user_offline', handleUserOffline);
-      socket.off('messages_read', handleMessagesRead);
     };
   }, [socket, recipient, user]);
 
@@ -119,193 +102,191 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
     }, 100);
   };
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setSelectedFile(event.target.files[0]);
-    } else {
-      setSelectedFile(null);
-    }
-  };
-
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() && !selectedFile) {
-      console.log("No message content or file to send."); // Debugging
-      return;
-    }
-
-    if (!user || !user.id) {
-      console.error("User is not logged in or user ID is not available.");
-      return;
-    }
+    if ((!newMessage.trim() && !selectedFile) || !user?.id || !socket) return;
 
     try {
-      let mediaUrl: string | undefined = undefined;
-      let mediaType: string | undefined = undefined;
+      setUploading(true);
+      let mediaUrl = undefined;
+      let mediaType = undefined;
 
       if (selectedFile) {
         const formData = new FormData();
         formData.append('media', selectedFile);
-
-        console.log("Attempting to upload file:", selectedFile.name); // Debugging
-        const uploadResponse = await axiosInstance.post('/upload', formData, { // Assure-toi que cette URL est correcte
+        
+        const uploadResponse = await axiosInstance.post('/upload', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
         });
+        
         mediaUrl = uploadResponse.data.url;
         mediaType = uploadResponse.data.media_type;
-        console.log("File uploaded successfully:", { mediaUrl, mediaType }); // Debugging
       }
 
-      // Now send the message, including media if available
-      const sentMessage = await chatService.sendPrivateMessage(newMessage, user?.id, recipient._id, mediaUrl, mediaType);
-      console.log("Message sent to backend:", sentMessage); // Debugging
-
-      // OPTIONAL: Add the sent message directly to state if you don't wait for Socket.IO echo
-      // setMessages(prev => [...prev, { ...sentMessage, sender: { _id: user.id, username: user.username } }]);
-      // scrollToBottom();
-
+      const messageContent = newMessage.trim();
+      if (!messageContent && !mediaUrl) {
+        throw new Error('Message must contain text or media');
+      }
+      
+      console.log('Sending message with media:', { messageContent, mediaUrl, mediaType });
+      
+      // Envoyer directement via socket
+      socket.emit('send_private_message', {
+        senderId: user.id,
+        recipientId: recipient._id,
+        content: messageContent,
+        media_url: mediaUrl,
+        media_type: mediaType,
+      });
+      
       setNewMessage('');
       setSelectedFile(null);
       setShowEmojiPicker(false);
     } catch (error) {
-      console.error('Error sending message or uploading file:', error);
-      //alert("Échec de l'envoi du message ou de l'upload du fichier. Veuillez réessayer.");
+      console.error('Error sending message:', error);
+    } finally {
+      setUploading(false);
     }
   };
 
-  // Function to add an emoji
-  const onEmojiClick = (emojiObject: EmojiClickData) => {
-    setNewMessage(prevMessage => prevMessage + emojiObject.emoji);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
   };
 
-  // Handle click outside the emoji picker to close it
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
-        setShowEmojiPicker(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
   return (
-    <div className="fixed bottom-0 right-6 w-80 bg-white shadow-lg rounded-t-lg z-50 border border-gray-200">
-      {/* Chat header */}
-      <div className="bg-blue-500 text-white p-3 rounded-t-lg flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{recipient.username}</span>
-          <span
-            className={`w-2 h-2 rounded-full ${
-              isRecipientOnline ? 'bg-green-400' : 'bg-gray-400'
-            }`}
-            title={isRecipientOnline ? 'Online' : 'Offline'}
-          />
+    <div className="relative">
+      {/* Emoji Picker */}
+      {showEmojiPicker && (
+        <div className="fixed bottom-20 right-6 z-[9999]">
+          <EmojiPicker onEmojiClick={(emojiObject: EmojiClickData) => {
+            setNewMessage(prev => prev + emojiObject.emoji);
+            setShowEmojiPicker(false);
+          }} />
         </div>
-        <button onClick={onClose} className="p-1 hover:bg-blue-600 rounded">
-          <X size={18} />
-        </button>
-      </div>
-
-      {/* Messages */}
-      <div className="h-80 overflow-y-auto p-3 bg-gray-50">
-        {messages.map((message) => {
-          console.log("Rendering message:", message); // Debugging: Inspect each message being rendered
-          return (
-            <div
-              key={message._id}
-              className={`mb-2 ${message.sender._id === user?.id ? 'text-right' : 'text-left'}`}
-            >
-              <div
-                className={`inline-block p-2 rounded-lg max-w-[70%] ${
-                  message.sender._id === user?.id
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 text-gray-800'
-                }`}
-              >
-                {/* Conditionally display media */}
-                {message.media_url && message.media_type === 'image' && (
-                  <img
-                    src={message.media_url}
-                    alt="Image"
-                    width={200} 
-                    height={150} 
-                    className="rounded-lg" 
-                  />
-                )}
-                {message.media_url && message.media_type === 'video' && ( 
-                  <video controls src={message.media_url} className="max-w-xs max-h-48 rounded-lg object-contain" />
-                )}
-                {/* Display text content if no media or in addition to media */}
-                {message.content && <p className={message.media_url ? "mt-2" : ""}>{message.content}</p>}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {new Date(message.createdAt).toLocaleTimeString()}
-                {/* Display "Seen" status */}
-                {message.sender._id === user?.id && (
-                  <span className="ml-2 text-xs">
-                    {message.read ? 'Vu' : 'Envoyé'}
-                  </span>
-                )}
+      )}
+      
+      <div className="fixed bottom-0 right-4 w-80 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 shadow-2xl z-50 rounded-t-lg overflow-hidden">
+        {/* Header */}
+        <div className="bg-orange-400 text-white px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <span className="text-sm font-bold">{recipient.username.charAt(0).toUpperCase()}</span>
+            </div>
+            <div>
+              <div className="font-medium text-sm">{recipient.username}</div>
+              <div className="flex items-center space-x-1 text-xs opacity-90">
+                <div className={`w-2 h-2 rounded-full ${isRecipientOnline ? 'bg-green-400' : 'bg-gray-400'}`}></div>
+                <span>{isRecipientOnline ? 'En ligne' : 'Hors ligne'}</span>
               </div>
             </div>
-          );
-        })}
-        <div ref={messagesEndRef} />
-      </div>
-
-      <form onSubmit={handleSendMessage} className="p-3 border-t flex relative items-center">
-        <label htmlFor="file-upload" className="cursor-pointer p-2 hover:bg-gray-100 rounded mr-2">
-          <FilePlus size={18} />
-          <input
-            id="file-upload"
-            type="file"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-        </label>
-
-        {/* Emoji Button */}
-        <button
-          type="button"
-          onClick={() => setShowEmojiPicker(prev => !prev)}
-          className="p-2 hover:bg-gray-100 rounded mr-2"
-        >
-          <Smile size={18} />
-        </button>
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Type a message..."
-          className="flex-1 border p-2 rounded-l-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-        <button
-          type="submit"
-          className="bg-blue-500 text-white p-2 rounded-r-lg hover:bg-blue-600"
-        >
-          <Send size={18} />
-        </button>
-
-        {/* Display selected file name */}
-        {selectedFile && (
-          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
-            {selectedFile.name}
-          </span>
-        )}
-
-        {/* Emoji Picker */}
-        {showEmojiPicker && (
-          <div ref={emojiPickerRef} className="absolute bottom-full mb-2 left-0">
-            <EmojiPicker onEmojiClick={onEmojiClick} />
           </div>
-        )}
-      </form>
+          <button onClick={onClose} className="text-white/80 hover:text-white text-lg">×</button>
+        </div>
+
+        {/* Messages */}
+        <div className="h-64 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-3">
+          {messages.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+              Aucun message
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {messages.map((message) => {
+                const isOwn = message.sender._id === user?.id;
+                return (
+                  <div key={message._id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${
+                      isOwn 
+                        ? 'bg-orange-400 text-white' 
+                        : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600'
+                    }`}>
+                      {message.media_url && (
+                        <div className="mb-2">
+                          <img 
+                            src={message.media_url.replace(/&#x2F;/g, '/').replace(/&amp;/g, '&')} 
+                            alt="Image" 
+                            className="max-w-[180px] h-auto rounded cursor-pointer" 
+                            onClick={() => window.open(message.media_url.replace(/&#x2F;/g, '/').replace(/&amp;/g, '&'), '_blank')}
+                          />
+                        </div>
+                      )}
+                      {message.content && <div>{message.content}</div>}
+                      <div className={`text-xs mt-1 ${isOwn ? 'text-orange-100' : 'text-gray-500'}`}>
+                        {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {isOwn && <span className="ml-1">{message.read ? '✓✓' : '✓'}</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        {/* Input */}
+        <div className="border-t border-gray-200 dark:border-gray-600 p-3">
+          {selectedFile && (
+            <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs flex items-center justify-between">
+              <span>Image: {selectedFile.name}</span>
+              <button
+                type="button"
+                onClick={() => setSelectedFile(null)}
+                className="text-red-500 hover:text-red-700 ml-2"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          <div className="flex space-x-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-2 rounded text-sm hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              📎
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-2 rounded text-sm hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              😊
+            </button>
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Tapez votre message..."
+              className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-orange-400"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  handleSendMessage(e)
+                }
+              }}
+            />
+            <button
+              onClick={handleSendMessage}
+              disabled={(!newMessage.trim() && !selectedFile) || uploading}
+              className="bg-orange-400 text-white px-2 py-2 rounded text-sm hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {uploading ? '...' : '→'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

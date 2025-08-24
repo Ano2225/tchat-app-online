@@ -24,6 +24,8 @@ export interface Message {
     _id: string;
     username: string;
   };
+  media_url?: string;
+  media_type?: string;
   createdAt: string;
   read: boolean;
 }
@@ -63,7 +65,7 @@ class ChatService {
       console.error('Conversations response is not an array:', response.data);
       return []; 
     } catch (error) {
-      console.error('Error fetching conversations:', error);
+      console.error('Error fetching conversations');
       throw error; 
     }
   }
@@ -74,16 +76,15 @@ class ChatService {
    * @param {string} conversationId - The ID of the other user in the conversation.
    * @returns {Promise<boolean>} - A promise that resolves to true if successful, false otherwise.
    */
-  async markConversationAsRead(userId: string, conversationId: string): Promise<boolean> {
+  async markConversationAsRead(userId: string, conversationId: string): Promise<void> {
     try {
       await axiosInstance.post(`/messages/mark-as-read`, {
         userId: userId,
         conversationId: conversationId,
       });
-      return true;
     } catch (error) {
-      console.error('Error marking conversation as read:', error);
-      return false;
+      console.error('Error marking conversation as read');
+      throw error;
     }
   }
 
@@ -99,7 +100,7 @@ class ChatService {
       const response = await axiosInstance.get<Message[]>(`/messages/private/${userId}/${recipientId}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching private messages:', error);
+      console.error('Error fetching private messages');
       throw error; 
     }
   }
@@ -115,16 +116,30 @@ class ChatService {
   
   async sendPrivateMessage(content: string, senderId: string, recipientId: string, mediaUrl?: string, mediaType?: string): Promise<Message> {
     try {
-      const response = await axiosInstance.post<Message>('/messages/private', {
+      // Envoyer via socket au lieu de l'API REST
+      const socket = (window as any).socket;
+      if (socket) {
+        socket.emit('send_private_message', {
+          senderId,
+          recipientId,
+          content,
+          media_url: mediaUrl,
+          media_type: mediaType,
+        });
+      }
+      
+      // Retourner un message temporaire
+      return {
+        _id: Date.now().toString(),
         content,
-        sender: senderId,
-        recipient: recipientId,
+        sender: { _id: senderId, username: 'Vous' },
         media_url: mediaUrl,
         media_type: mediaType,
-      });
-      return response.data;
+        createdAt: new Date().toISOString(),
+        read: false,
+      };
     } catch (error) {
-      console.error('Error sending private message:', error);
+      console.error('Error sending private message');
       throw error;
     }
   }

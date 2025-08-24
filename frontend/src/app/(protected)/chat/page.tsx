@@ -24,7 +24,6 @@ interface Message {
 
 const ChatPage = () => {
   const user = useAuthStore((state) => state.user);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentRoom, setCurrentRoom] = useState('General');
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -49,11 +48,11 @@ const ChatPage = () => {
       socket.emit('leave_room', previousRoomRef.current);
     }
 
-    socket.emit('join_room', currentRoom); // Rejoint la nouvelle room
-    previousRoomRef.current = currentRoom; // Mémorise la room actuelle
+    socket.emit('join_room', currentRoom);
+    previousRoomRef.current = currentRoom;
 
     return () => {
-      socket.emit('leave_room', currentRoom); // Quitte la room quand le composant se démonte
+      socket.emit('leave_room', currentRoom);
     };
   }, [currentRoom, socket]);
 
@@ -98,20 +97,24 @@ const ChatPage = () => {
   }, [currentRoom]);
 
   const handleJoinRoom = (roomName: string) => {
-    setMessages([]); // Reset les messages quand on change de room
+    setMessages([]);
     setCurrentRoom(roomName); 
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="h-screen bg-gradient-to-br from-neutral-bg via-gray-100 to-neutral-bg dark:from-neutral-dark dark:via-gray-900 dark:to-neutral-dark">
       <ChatHeader users={user || undefined} socket={socket} />
-      <div className="flex flex-1">
-        <ChatChannel onJoinRoom={handleJoinRoom} currentRoom={currentRoom} />
-        <div className="flex flex-col flex-1">
+      <div className="flex h-[calc(100vh-80px)] gap-1 p-1">
+        <div className="flex-shrink-0">
+          <ChatChannel onJoinRoom={handleJoinRoom} currentRoom={currentRoom} />
+        </div>
+        <div className="flex flex-col flex-1 bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl overflow-hidden shadow-xl">
           <ChatMessage currentRoom={currentRoom} socket={socket} />
           <ChatInput currentRoom={currentRoom} socket={socket} />
         </div>
-         <UsersOnline socket={socket} />
+        <div className="flex-shrink-0">
+          <UsersOnline socket={socket} />
+        </div>
       </div>
     </div>
   );

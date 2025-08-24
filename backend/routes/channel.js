@@ -4,7 +4,7 @@ const authMiddleware = require('../middleware/auth');
 
 const channelController = require('../controllers/channelController')
 
-router.get('/',authMiddleware, channelController.getChannel);
+router.get('/', channelController.getChannels);
 router.post('/',authMiddleware, channelController.createChannel);
 
 

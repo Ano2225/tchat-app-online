@@ -17,7 +17,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     // Route actuelles
-    const publicPaths = ['/login', '/register', '/anonymous'];
+    const publicPaths = ['/', '/login', '/register', '/anonymous'];
     const isPublicPath = publicPaths.includes(pathname);
     
     if (!token && !isPublicPath) {

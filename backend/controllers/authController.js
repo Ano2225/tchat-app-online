@@ -17,6 +17,11 @@ class AuthController {
         return res.status(400).json({ message: 'Utilisateur déjà existant' });
       }
 
+      const ageNum = parseInt(age);
+      if (ageNum < 13 || ageNum > 25) {
+        return res.status(400).json({ message: 'L\'âge doit être entre 13 et 25 ans' });
+      }
+
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -26,7 +31,7 @@ class AuthController {
         email,
         password: hashedPassword,
         isAnonymous: false,
-        age,
+        age: ageNum,
         sexe,
         ville: ville || null,
       });
@@ -84,10 +89,21 @@ class AuthController {
   // Connexion anonyme
   async anonymousLogin(req, res) {
     try {
-      const { username, age, sexe, ville } = req.body;
+      const { username, age, sexe } = req.body;
 
       if (!username) {
         return res.status(400).json({ message: 'Le nom d\'utilisateur est requis' });
+      }
+
+      if (!age) {
+        return res.status(400).json({ message: 'L\'âge est requis' });
+      }
+
+
+
+      const ageNum = parseInt(age);
+      if (ageNum < 13 || ageNum > 25) {
+        return res.status(400).json({ message: 'L\'âge doit être entre 13 et 25 ans' });
       }
 
       // Vérifier si un utilisateur authentifié utilise déjà ce nom d'utilisateur
@@ -106,9 +122,8 @@ class AuthController {
       const user = new User({
         email: `anon_${Date.now()}@chat.online`,
         username,
-        age,
-        sexe,
-        ville: ville || null,
+        age: ageNum,
+        sexe: sexe || 'autre',
         isAnonymous: true,
         isOnline: true,
         lastSeen: new Date()

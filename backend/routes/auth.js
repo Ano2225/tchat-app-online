@@ -1,15 +1,18 @@
 const express = require('express');
-const router = express.Router();
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/auth');
+const { authLimiter } = require('../middleware/rateLimiter');
+const { validateUserRegistration } = require('../middleware/validation');
+
+const router = express.Router();
 
 
-router.post('/register', authController.register);
+router.post('/register', authLimiter, validateUserRegistration, authController.register);
 
-router.post('/login', authController.login);
+router.post('/login', authLimiter, authController.login);
 
 // Anonymous login
-router.post('/anonymous', authController.anonymousLogin);
+router.post('/anonymous', authLimiter, authController.anonymousLogin);
 
 router.post('/logout', authController.logout)
 

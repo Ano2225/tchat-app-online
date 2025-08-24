@@ -32,20 +32,34 @@ module.exports = (io, socket) => {
   socket.on('send_message', async (messageData) => {
     const { sender, content, room } = messageData;
     if (room && sender && content) {
-      const user = await User.findById(sender);
-      if (!user) return;
+      try {
+        const user = await User.findById(sender.id);
+        if (!user) return;
 
-      const enrichedMessage = {
-        _id: Date.now().toString(),
-        sender: {
-          _id: user._id.toString(),
-          username: user.username,
-        },
-        content,
-        createdAt: new Date(),
-      };
+        // Sauvegarder le message en base
+        const newMessage = await Message.create({
+          sender: user._id,
+          content,
+          room,
+        });
 
-      io.to(room).emit('receive_message', enrichedMessage);
+        await newMessage.populate('sender', 'username');
+
+        const enrichedMessage = {
+          _id: newMessage._id.toString(),
+          sender: {
+            _id: newMessage.sender._id.toString(),
+            username: newMessage.sender.username,
+          },
+          content: newMessage.content,
+          room: newMessage.room,
+          createdAt: newMessage.createdAt,
+        };
+
+        io.to(room).emit('receive_message', enrichedMessage);
+      } catch (error) {
+        console.error('Error saving message:', error);
+      }
     }
   });
 
@@ -137,19 +151,21 @@ module.exports = (io, socket) => {
   });
 
   // --- Send a private message ---
-  socket.on('send_private_message', async ({ senderId, recipientId, content }) => {
+  socket.on('send_private_message', async ({ senderId, recipientId, content, media_url, media_type }) => {
     try {
       const newMessage = await Message.create({
         sender: senderId,
         recipient: recipientId,
         content,
+        media_url,
+        media_type,
       });
 
       await newMessage.populate('sender', 'username email');
 
       const roomId = getPrivateRoomId(senderId, recipientId);
       io.to(roomId).emit('receive_private_message', newMessage);
-      console.log(`📨 New message sent in room ${roomId}`);
+      console.log(`📨 New message sent in room ${roomId}`, { content, media_url, media_type });
 
       // Get recipient's username from their ID
       const recipientUsername = userIdToUsername.get(recipientId.toString());
@@ -163,7 +179,7 @@ module.exports = (io, socket) => {
               _id: newMessage.sender._id,
               username: newMessage.sender.username,
             },
-            content: newMessage.content,
+            content: newMessage.content || 'Image',
             createdAt: newMessage.createdAt,
           });
         });

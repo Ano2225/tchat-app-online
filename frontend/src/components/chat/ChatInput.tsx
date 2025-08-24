@@ -1,67 +1,154 @@
-'use client';
+'use client'
 
-import React, { useState } from 'react';
-import { useAuthStore } from '@/store/authStore';
-import axiosInstance from '@/utils/axiosInstance';
-import { Socket } from 'socket.io-client';
+import React, { useState, useRef } from 'react'
+import { useAuthStore } from '@/store/authStore'
+import { Socket } from 'socket.io-client'
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react'
 
 interface ChatInputProps {
-  currentRoom: string;
-  socket: Socket | null;
+  currentRoom: string
+  socket: Socket | null
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({ currentRoom, socket }) => {
-  const [message, setMessage] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const user = useAuthStore((state) => state.user);
-  console.log("user depuis le store:", user);
+  const [message, setMessage] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const user = useAuthStore((state) => state.user)
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!message.trim() || !socket || !user) return
 
-    if (!socket || !message.trim()) return;
-
-    const newMessage = {
-      sender: user?.id || null,
+    const messageData = {
       content: message.trim(),
       room: currentRoom,
-    };
-
-    try {
-      setIsSending(true);
-      await axiosInstance.post('/messages', newMessage);
-      socket.emit('send_message', newMessage);
-      setMessage('');
-    } catch (error) {
-      console.error('Erreur envoi message:', error);
-    } finally {
-      setIsSending(false);
+      sender: {
+        id: user.id,
+        username: user.username
+      }
     }
-  };
+
+    socket.emit('send_message', messageData)
+    setMessage('')
+    setIsTyping(false)
+    setShowEmojiPicker(false)
+    
+    if (inputRef.current) {
+      inputRef.current.focus()
+    }
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMessage(e.target.value)
+    
+    if (!isTyping && e.target.value.length > 0) {
+      setIsTyping(true)
+      socket?.emit('typing_start', { room: currentRoom, username: user?.username })
+    } else if (isTyping && e.target.value.length === 0) {
+      setIsTyping(false)
+      socket?.emit('typing_stop', { room: currentRoom, username: user?.username })
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSubmit(e as any)
+    }
+  }
+
+  const onEmojiClick = (emojiObject: EmojiClickData) => {
+    setMessage(prev => prev + emojiObject.emoji)
+    setShowEmojiPicker(false)
+    if (inputRef.current) {
+      inputRef.current.focus()
+    }
+  }
 
   return (
-    <form
-      onSubmit={handleSendMessage}
-      className="flex items-center border-t px-4 py-2 bg-white"
-    >
-      <input
-        type="text"
-        placeholder={`Message dans #${currentRoom}`}
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        className="flex-1 p-2 border rounded mr-2 text-black"
-      />
-      <button
-        type="submit"
-        disabled={isSending}
-        className={`bg-blue-500 text-white px-4 py-2 rounded ${
-          isSending ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'
-        }`}
-      >
-        Envoyer
-      </button>
-    </form>
-  );
-};
+    <div className="p-4 border-t border-gray-200 dark:border-white/20 bg-gray-50/50 dark:bg-white/5 relative">
+      {showEmojiPicker && (
+        <div className="absolute bottom-full right-4 mb-2 z-10">
+          <EmojiPicker onEmojiClick={onEmojiClick} />
+        </div>
+      )}
+      
+      <form onSubmit={handleSubmit} className="flex items-end space-x-3">
+        {/* Zone de saisie */}
+        <div className="flex-1 relative">
+          <input
+            ref={inputRef}
+            type="text"
+            value={message}
+            onChange={handleInputChange}
+            onKeyPress={handleKeyPress}
+            placeholder={`Tapez votre message dans ${currentRoom}...`}
+            className="w-full bg-white dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl px-4 py-3 pr-12 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all resize-none"
+            maxLength={1000}
+            autoComplete="off"
+          />
+          
+          {/* Compteur de caractères */}
+          <div className="absolute bottom-1 right-3 text-xs text-gray-400">
+            {message.length}/1000
+          </div>
+        </div>
 
-export default ChatInput;
+        {/* Boutons d'action */}
+        <div className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            className="p-3 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 border border-gray-300 dark:border-white/20 rounded-xl transition-all duration-200"
+            title="Ajouter un emoji"
+          >
+            <span className="text-lg">😊</span>
+          </button>
+
+          {/* Bouton d'envoi */}
+          <button
+            type="submit"
+            disabled={!message.trim()}
+            className={`p-3 rounded-xl transition-all duration-200 ${
+              message.trim()
+                ? 'bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white shadow-lg'
+                : 'bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+            }`}
+            title="Envoyer le message"
+          >
+            <svg 
+              className="w-5 h-5" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" 
+              />
+            </svg>
+          </button>
+        </div>
+      </form>
+
+      {/* Indicateur de frappe */}
+      {isTyping && (
+        <div className="mt-2 flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex space-x-1">
+            <div className="w-1 h-1 bg-primary-500 rounded-full animate-bounce"></div>
+            <div className="w-1 h-1 bg-secondary-500 rounded-full animate-bounce delay-100"></div>
+            <div className="w-1 h-1 bg-turquoise-500 rounded-full animate-bounce delay-200"></div>
+          </div>
+          <span>Vous tapez...</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default ChatInput

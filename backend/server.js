@@ -11,7 +11,9 @@ const channelRoutes = require('./routes/channel');
 const userRoutes = require('./routes/user');
 const uploadRoutes = require('./routes/upload');
 const socketHandlers = require('./socket/socketHandlers');
-const rateLimit = require('express-rate-limit');
+const { generalLimiter } = require('./middleware/rateLimiter');
+const { sanitizeInput } = require('./middleware/validation');
+const helmet = require('helmet');
 
 
 class ChatServer {
@@ -32,19 +34,20 @@ class ChatServer {
   }
 
   initMiddlewares() {
-    this.app.use(cors());
-    this.app.use(express.json());
-
-    // Global Rate Limiting (100 requests per minute per IP)
-    const limiter = rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 100, 
-      message: 'Too many requests, please try again in 15 minutes!'
-    });
-
-    // Apply the rate limiter to all API routes
-    this.app.use('/api/', limiter);
-
+    // Sécurité
+    this.app.use(helmet());
+    this.app.use(cors({
+      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+      credentials: true
+    }));
+    
+    // Parsing et validation
+    this.app.use(express.json({ limit: '10mb' }));
+    this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+    this.app.use(sanitizeInput);
+    
+    // Rate limiting
+    this.app.use('/api/', generalLimiter);
   }
 
   connectDatabase() {

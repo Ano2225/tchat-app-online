@@ -10,11 +10,13 @@ const UserSchema = new mongoose.Schema({
   },
   avatarUrl : {
     type: String,
+    default:null,
   },
   email: {
     type: String,
     required: false,
-    unique: true,
+    unique: false,
+    sparse: true,
     trim: true,
     lowercase: true
   },
@@ -25,14 +27,14 @@ const UserSchema = new mongoose.Schema({
   sexe: {
     type: String,
     enum: ['homme', 'femme', 'autre'],
-    default: 'Autre',
+    default: 'autre',
   },
   ville : {
     type: String,
   },
   age : {
-    type: String,
-    required: true
+    type: Number,
+    required: false
   },
   isAnonymous: {
     type: Boolean,
