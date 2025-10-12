@@ -7,9 +7,11 @@ export interface User {
   username: string;
   isAnonymous: boolean;
   avatarUrl?: string;
+  bgColor?: string;
   age?: number;
   ville?: string;
   sexe?: string;
+  role?: string;
 }
 
 interface AuthState {

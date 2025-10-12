@@ -51,6 +51,19 @@ const UserSchema = new mongoose.Schema({
   isOnline : {
     type: Boolean,
     default: false,
+  },
+  isBlocked: {
+    type: Boolean,
+    default: false
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
+  },
+  bgColor: {
+    type: String,
+    default: 'bg-orange-400'
   }
 });
 

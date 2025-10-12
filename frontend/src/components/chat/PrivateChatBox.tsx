@@ -210,7 +210,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                             src={message.media_url.replace(/&#x2F;/g, '/').replace(/&amp;/g, '&')} 
                             alt="Image" 
                             className="max-w-[180px] h-auto rounded cursor-pointer" 
-                            onClick={() => message.media_url && window.open(message.media_url.replace(/&#x2F;/g, '/').replace(/&amp;/g, '&'), '_blank')}
+                            onClick={() => window.open(message?.media_url?.replace(/&#x2F;/g, '/').replace(/&amp;/g, '&'), '_blank')}
                           />
                         </div>
                       )}

@@ -10,6 +10,7 @@ const messageRoutes = require('./routes/message');
 const channelRoutes = require('./routes/channel');
 const userRoutes = require('./routes/user');
 const uploadRoutes = require('./routes/upload');
+const adminRoutes = require('./routes/admin');
 const socketHandlers = require('./socket/socketHandlers');
 const { generalLimiter } = require('./middleware/rateLimiter');
 const { sanitizeInput } = require('./middleware/validation');
@@ -58,8 +59,9 @@ class ChatServer {
     this.app.use('/api/auth', authRoutes);
     this.app.use('/api/messages', messageRoutes(this.io));
     this.app.use('/api/channels', channelRoutes);
-    this.app.use('/api/user',userRoutes )
+    this.app.use('/api/user', userRoutes);
     this.app.use('/api/upload', uploadRoutes);
+    this.app.use('/api/admin', adminRoutes);
 
    
   }

@@ -8,6 +8,7 @@ import axiosInstance from '@/utils/axiosInstance'
 import PrivateChatBox from './PrivateChatBox'
 import Toast from '../ui/Toast'
 import ThemeToggle from '../ui/ThemeToggle'
+import ProfileModal from '../profile/ProfileModal'
 
 interface ChatHeaderProps {
   users?: {
@@ -38,6 +39,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
   const [selectedUser, setSelectedUser] = useState<{_id: string, username: string} | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [showToast, setShowToast] = useState(false)
+  const [showProfile, setShowProfile] = useState(false)
   const user = useAuthStore((state) => state.user)
 
   const handleLogout = () => {
@@ -134,10 +136,13 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
               )}
             </button>
             
-            <div className="flex items-center space-x-3 bg-gray-100 dark:bg-white/10 rounded-full px-4 py-2 border border-gray-200 dark:border-white/20">
-              <div className="w-8 h-8 bg-gradient-to-r from-secondary-500 to-turquoise-500 rounded-full flex items-center justify-center">
+            <button
+              onClick={() => setShowProfile(true)}
+              className="flex items-center space-x-3 bg-gray-100 dark:bg-white/10 rounded-full px-4 py-2 border border-gray-200 dark:border-white/20 hover:bg-gray-200 dark:hover:bg-white/20 transition-all cursor-pointer"
+            >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user?.bgColor || 'bg-gradient-to-r from-secondary-500 to-turquoise-500'}`}>
                 <span className="text-sm font-bold text-white">
-                  {users?.username?.charAt(0).toUpperCase()}
+                  {user?.avatarUrl || users?.username?.charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="hidden sm:block">
@@ -149,8 +154,22 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
                   <span className="text-xs text-gray-600 dark:text-gray-300">En ligne</span>
                 </div>
               </div>
-            </div>
+            </button>
 
+            {/* Bouton Admin */}
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => router.push('/admin')}
+                className="p-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-xl transition-all duration-200"
+                title="Dashboard Admin"
+              >
+                <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            )}
+            
             {/* Bouton thème */}
             <ThemeToggle variant="inline" />
             
@@ -239,6 +258,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
           socket={socket} 
           onClose={() => setSelectedUser(null)} 
         />
+      )}
+      
+      {/* Modal de profil */}
+      {showProfile && (
+        <ProfileModal onClose={() => setShowProfile(false)} />
       )}
       
       {/* Toast de déconnexion */}
