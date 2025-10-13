@@ -36,6 +36,16 @@ export interface Recipient {
 }
 
 class ChatService {
+  private mapConversationData(data: any[]): Conversation[] {
+    return data.map((conv) => ({
+      id: conv.user._id,
+      user: conv.user.username,
+      lastMessage: conv.lastMessage.content,
+      hasNewMessages: conv.hasNewMessages ?? false,
+      unreadCount: conv.unreadCount ?? 0,
+    }));
+  }
+
   /**
    * Fetches user conversations with unread count.
    * @param {string} userId - The ID of the user.
@@ -51,15 +61,8 @@ class ChatService {
         unreadCount?: number;
       }[]>(`/messages/conversations/${userId}`);
 
-      // Ensure the response data is an array and map it to the Conversation interface
       if (Array.isArray(response.data)) {
-        return response.data.map((conv) => ({
-          id: conv.user._id,
-          user: conv.user.username,
-          lastMessage: conv.lastMessage.content,
-          hasNewMessages: conv.hasNewMessages ?? false,
-          unreadCount: conv.unreadCount ?? 0,
-        }));
+        return this.mapConversationData(response.data);
       }
 
       console.error('Conversations response is not an array:', response.data);
@@ -79,8 +82,8 @@ class ChatService {
   async markConversationAsRead(userId: string, conversationId: string): Promise<void> {
     try {
       await axiosInstance.post(`/messages/mark-as-read`, {
-        userId: userId,
-        conversationId: conversationId,
+        userId,
+        conversationId,
       });
     } catch (error) {
       console.error('Error marking conversation as read');
@@ -97,11 +100,21 @@ class ChatService {
    */
   async getPrivateMessages(userId: string, recipientId: string): Promise<Message[]> {
     try {
+      if (!userId || !recipientId) {
+        throw new Error('User ID and recipient ID are required');
+      }
+      
       const response = await axiosInstance.get<Message[]>(`/messages/private/${userId}/${recipientId}`);
+      
+      if (!Array.isArray(response.data)) {
+        console.error('Private messages response is not an array:', response.data);
+        return [];
+      }
+      
       return response.data;
     } catch (error) {
-      console.error('Error fetching private messages');
-      throw error; 
+      console.error('Error fetching private messages:', error);
+      throw new Error(`Failed to fetch messages: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -116,19 +129,24 @@ class ChatService {
   
   async sendPrivateMessage(content: string, senderId: string, recipientId: string, mediaUrl?: string, mediaType?: string): Promise<Message> {
     try {
-      // Envoyer via socket au lieu de l'API REST
       const socket = (window as any).socket;
-      if (socket) {
-        socket.emit('send_private_message', {
-          senderId,
-          recipientId,
-          content,
-          media_url: mediaUrl,
-          media_type: mediaType,
-        });
+      
+      if (!socket) {
+        throw new Error('Socket connection not available');
       }
       
-      // Retourner un message temporaire
+      if (!socket.connected) {
+        throw new Error('Socket not connected');
+      }
+      
+      socket.emit('send_private_message', {
+        senderId,
+        recipientId,
+        content,
+        media_url: mediaUrl,
+        media_type: mediaType,
+      });
+      
       return {
         _id: Date.now().toString(),
         content,
@@ -139,8 +157,8 @@ class ChatService {
         read: false,
       };
     } catch (error) {
-      console.error('Error sending private message');
-      throw error;
+      console.error('Error sending private message:', error);
+      throw new Error(`Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
   

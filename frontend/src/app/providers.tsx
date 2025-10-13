@@ -8,28 +8,27 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const publicPaths = ['/', '/login', '/register', '/anonymous'];
+
 export default function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
- // const user = useAuthStore((state) => state.user);
   const token = useAuthStore((state) => state.token);
   const router = useRouter();
   const pathname = usePathname();
 
-  useEffect(() => {
-    // Route actuelles
-    const publicPaths = ['/', '/login', '/register', '/anonymous'];
+  const handleNavigation = () => {
     const isPublicPath = publicPaths.includes(pathname);
     
     if (!token && !isPublicPath) {
-      // Rediriger vers la page de connexion si non authentifié
       router.push('/anonymous');
     } else if (token && isPublicPath) {
-      // Rediriger vers la page de chat si déjà authentifié
       router.push('/chat');
     }
     
     setIsLoading(false);
-  }, [token, pathname, router]);
+  };
+
+  useEffect(handleNavigation, [token, pathname, router]);
 
   if (isLoading) {
     return (

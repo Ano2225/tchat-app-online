@@ -36,25 +36,17 @@ export const useAuthStore = create<AuthState>()(
       login: ({ user, token }) => set({ user, token }),
 
       logout: async () => {
-        const currentUser = get().user;
-        const currentToken = get().token;
+        const { user: currentUser, token: currentToken } = get();
 
+        // Fire and forget - don't wait for server response
         if (currentUser?.id && currentToken) {
-          try {
-            const response = await fetch(`/api/auth/logout`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${currentToken}`,
-              },
-            });
-
-            if (!response.ok) {
-              console.error('Erreur serveur lors de la mise à jour de lastSeen');
-            }
-          } catch (error) {
-            console.error('Erreur lors de la déconnexion:', error);
-          }
+          fetch(`/api/auth/logout`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${currentToken}`,
+            },
+          }).catch(() => {}); // Silently ignore errors
         }
 
         set({ user: null, token: null });
@@ -66,11 +58,8 @@ export const useAuthStore = create<AuthState>()(
           return;
         }
       */
-        console.log("📤 Données envoyées :", data);
-      
         try {
           const response = await axiosInstance.put('/user', data);
-          console.log("✅ Réponse du serveur :", response.data);
       
           set((state) => ({
             user: {
@@ -78,13 +67,12 @@ export const useAuthStore = create<AuthState>()(
               ...response.data,
             },
           }));
-          
-          //return {success : true};
         } catch (error) {
-          console.error('❌ Erreur updateUser:', error);
-         /* const message = error.response?.data?.message || "Erreur lors de la mise à jour";
-          return { success: false, message };
-          */
+          console.error('Failed to update user:', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            data,
+            timestamp: new Date().toISOString()
+          });
         }
       }
       

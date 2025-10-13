@@ -56,11 +56,14 @@ class AuthController {
     try {
       const { username, password } = req.body;
 
-      // Vérifier si l'utilisateur existe
-     const user = await User.findOne({username, isAnonymous: false});
-     if(!user) {
-      return res.status(400).json({message : 'Identifiants invalides'});
-     }
+      // Vérifier si l'utilisateur existe (par username ou email)
+      const user = await User.findOne({
+        $or: [{ username }, { email: username }],
+        isAnonymous: false
+      });
+      if (!user) {
+        return res.status(400).json({ message: 'Identifiants invalides' });
+      }
 
       // Vérifier le mot de passe
       const isMatch = await bcrypt.compare(password, user.password);
@@ -75,12 +78,19 @@ class AuthController {
 
       // Générer un token JWT
       const token = jwt.sign(
-        { id: user._id, username: user.username }, 
+        { id: user._id, username: user.username, role: user.role }, 
         process.env.JWT_SECRET,
         { expiresIn: '1h' }
       );
 
-      res.json({ token, user: { id: user._id, username: user.username } });
+      res.json({ 
+        token, 
+        user: { 
+          id: user._id, 
+          username: user.username,
+          role: user.role
+        } 
+      });
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }

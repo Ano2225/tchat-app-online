@@ -32,6 +32,11 @@ export default function RegisterPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
 
+    if (!formData.username.trim() || !formData.email.trim() || !formData.password.trim()) {
+      toast.error('Veuillez remplir tous les champs obligatoires')
+      return
+    }
+
     if (formData.password !== formData.confirmPassword) {
       toast.error('Les mots de passe ne correspondent pas')
       return
@@ -42,22 +47,31 @@ export default function RegisterPage() {
       return
     }
 
+    const age = parseInt(formData.age)
+    if (!formData.age || isNaN(age) || age < 13 || age > 25) {
+      toast.error('Veuillez entrer un âge valide (13-25 ans)')
+      return
+    }
+
     setLoading(true)
 
     try {
-      await axios.post('/api/auth/register', {
-        username: formData.username,
-        email: formData.email,
+      const response = await axios.post('/api/auth/register', {
+        username: formData.username.trim(),
+        email: formData.email.trim(),
         password: formData.password,
-        age: parseInt(formData.age),
+        age,
         sexe: formData.sexe,
-        ville: formData.ville
+        ville: formData.ville.trim()
       })
 
-      toast.success('Inscription réussie! Vous pouvez maintenant vous connecter.')
-      router.push('/login')
+      if (response.status === 201) {
+        toast.success('Inscription réussie! Vous pouvez maintenant vous connecter.')
+        router.push('/login')
+      }
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erreur lors de l\'inscription')
+      const errorMessage = err.response?.data?.message || err.message || 'Erreur lors de l\'inscription'
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }

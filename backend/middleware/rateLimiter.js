@@ -14,7 +14,7 @@ const authLimiter = rateLimit({
 // Rate limiter pour les messages
 const messageLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 30, // 30 messages par minute
+  max: 100, // 100 requêtes par minute
   message: {
     error: 'Trop de messages envoyés. Ralentissez un peu.'
   },
@@ -36,7 +36,7 @@ const uploadLimiter = rateLimit({
 // Rate limiter général
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // 500 requêtes par IP
+  max: 1000, // 1000 requêtes par IP
   message: {
     error: 'Trop de requêtes. Réessayez plus tard.'
   },

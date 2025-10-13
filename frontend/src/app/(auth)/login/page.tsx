@@ -27,13 +27,23 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    
+    if (!formData.username.trim() || !formData.password.trim()) {
+      toast.error('Veuillez remplir tous les champs')
+      return
+    }
+    
     setLoading(true)
 
     try {
       const response = await axios.post('/api/auth/login', {
-        username: formData.username,
+        username: formData.username.trim(),
         password: formData.password
       })
+
+      if (!response.data?.user || !response.data?.token) {
+        throw new Error('Réponse serveur invalide')
+      }
 
       login({
         user: response.data.user,
@@ -43,7 +53,8 @@ export default function LoginPage() {
       toast.success('Connexion réussie!')
       router.push('/chat')
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Identifiants invalides')
+      const errorMessage = err.response?.data?.message || err.message || 'Erreur de connexion'
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -70,7 +81,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                Nom d'utilisateur
+                Nom d'utilisateur ou Email
               </label>
               <div className="relative">
                 <input
@@ -78,7 +89,7 @@ export default function LoginPage() {
                   type="text"
                   value={formData.username}
                   onChange={handleChange}
-                  placeholder="Votre nom d'utilisateur"
+                  placeholder="Votre nom d'utilisateur ou email"
                   className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                   required
                 />

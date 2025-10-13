@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useMemo } from 'react'
 import { io, Socket } from 'socket.io-client'
 
 interface UseOptimizedSocketOptions {
@@ -17,27 +17,29 @@ export const useOptimizedSocket = (options: UseOptimizedSocketOptions = {}) => {
   } = options
 
   const socketRef = useRef<Socket | null>(null)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const reconnectionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const socketConfig = useMemo(() => ({
+    autoConnect,
+    reconnectionAttempts,
+    reconnectionDelay,
+    transports: ['websocket', 'polling'],
+    upgrade: true,
+    rememberUpgrade: true
+  }), [autoConnect, reconnectionAttempts, reconnectionDelay])
 
   const connect = useCallback(() => {
     if (socketRef.current?.connected) return socketRef.current
 
-    socketRef.current = io(url, {
-      autoConnect,
-      reconnectionAttempts,
-      reconnectionDelay,
-      transports: ['websocket', 'polling'],
-      upgrade: true,
-      rememberUpgrade: true
-    })
+    socketRef.current = io(url, socketConfig)
 
     return socketRef.current
-  }, [url, autoConnect, reconnectionAttempts, reconnectionDelay])
+  }, [url, socketConfig])
 
   const disconnect = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current)
-      reconnectTimeoutRef.current = null
+    if (reconnectionTimeoutRef.current) {
+      clearTimeout(reconnectionTimeoutRef.current)
+      reconnectionTimeoutRef.current = null
     }
     
     if (socketRef.current) {
@@ -47,8 +49,12 @@ export const useOptimizedSocket = (options: UseOptimizedSocketOptions = {}) => {
   }, [])
 
   const emit = useCallback((event: string, data?: any) => {
-    if (socketRef.current?.connected) {
-      socketRef.current.emit(event, data)
+    try {
+      if (socketRef.current?.connected) {
+        socketRef.current.emit(event, data)
+      }
+    } catch (error) {
+      console.error('Socket emit error:', error)
     }
   }, [])
 
@@ -65,12 +71,20 @@ export const useOptimizedSocket = (options: UseOptimizedSocketOptions = {}) => {
   }, [])
 
   useEffect(() => {
-    if (autoConnect) {
-      connect()
+    try {
+      if (autoConnect) {
+        connect()
+      }
+    } catch (error) {
+      console.error('Socket connection error:', error)
     }
 
     return () => {
-      disconnect()
+      try {
+        disconnect()
+      } catch (error) {
+        console.error('Socket disconnect error:', error)
+      }
     }
   }, [connect, disconnect, autoConnect])
 

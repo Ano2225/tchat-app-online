@@ -10,33 +10,25 @@ const api = axios.create({
   }
 });
 
-// Intercepteur pour ajouter le token d'authentification
-api.interceptors.request.use((config) => {
+const addAuthToken = (config: any) => {
   const token = useAuthStore.getState().token;
-  
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
-  
   return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+};
 
-// Intercepteur pour gérer les erreurs d'authentification (token expiré)
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Si le serveur renvoie une erreur 401, déconnexion
-      useAuthStore.getState().logout();
-      // Rediriger vers la page de connexion si nécessaire
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
+const handleAuthError = (error: any) => {
+  if (error.response?.status === 401) {
+    useAuthStore.getState().logout();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
     }
-    return Promise.reject(error);
   }
-);
+  return Promise.reject(error);
+};
+
+api.interceptors.request.use(addAuthToken, Promise.reject);
+api.interceptors.response.use((response) => response, handleAuthError);
 
 export default api;

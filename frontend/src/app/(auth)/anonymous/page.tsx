@@ -33,21 +33,24 @@ export default function AnonymousPage() {
       return
     }
 
-    if (!formData.age) {
-      toast.error('Veuillez entrer votre âge')
+    const age = parseInt(formData.age)
+    if (!formData.age || isNaN(age) || age < 13 || age > 25) {
+      toast.error('Veuillez entrer un âge valide (13-25 ans)')
       return
     }
-
-
 
     setLoading(true)
 
     try {
       const response = await axiosInstance.post('/auth/anonymous', {
         username: formData.username.trim(),
-        age: parseInt(formData.age),
+        age,
         sexe: formData.sexe
       })
+
+      if (!response.data?.user || !response.data?.token) {
+        throw new Error('Réponse serveur invalide')
+      }
 
       login({
         user: response.data.user,

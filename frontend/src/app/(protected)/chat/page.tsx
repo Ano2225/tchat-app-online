@@ -28,73 +28,64 @@ const ChatPage = () => {
   const [currentRoom, setCurrentRoom] = useState('General');
   const [socket, setSocket] = useState<Socket | null>(null);
 
-  const previousRoomRef = useRef<string | null>(null); 
+  const previousRoomRef = useRef<string | null>(null);
 
-  // Init socket connection
+
+
+  const loadRoomMessages = async () => {
+    if (!currentRoom) return;
+    
+    try {
+      const res = await axiosInstance.get(`/messages/${currentRoom}`);
+      setMessages(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     const newSocket = io('http://localhost:8000');
     setSocket(newSocket);
-
     return () => {
       newSocket.disconnect();
     };
   }, []);
 
-  // Rejoindre une room (et quitter l'ancienne)
   useEffect(() => {
     if (!socket || !currentRoom) return;
-
+    
     if (previousRoomRef.current) {
       socket.emit('leave_room', previousRoomRef.current);
     }
-
+    
     socket.emit('join_room', currentRoom);
     previousRoomRef.current = currentRoom;
-
+    
     return () => {
       socket.emit('leave_room', currentRoom);
     };
   }, [currentRoom, socket]);
 
-  // Ecoute des messages entrants
   useEffect(() => {
     if (!socket) return;
-
+    
     const handleReceive = (msg: Message) => {
       if (msg.room === currentRoom) {
         setMessages((prev) => [...prev, msg]);
       }
     };
-
+    
     socket.on('receive_message', handleReceive);
-
     return () => {
       socket.off('receive_message', handleReceive);
     };
   }, [socket, currentRoom]);
-
-  //Emettre que l'utilisateur est connecté 
   useEffect(() => {
     if (socket && user?.username) {
       socket.emit('user_connected', user.username);
     }
   }, [socket, user?.username]);
-
-  // Charger les messages précédents
-  useEffect(() => {
-    const loadMessages = async () => {
-      try {
-        const res = await axiosInstance.get(`/messages/${currentRoom}`);
-        setMessages(res.data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    if (currentRoom) {
-      loadMessages();
-    }
-  }, [currentRoom]);
+  useEffect(() => { loadRoomMessages(); }, [currentRoom]);
 
   const handleJoinRoom = (roomName: string) => {
     setMessages([]);

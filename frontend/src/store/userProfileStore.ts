@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import axiosInstance from '@/utils/axiosInstance';
 
 export interface UserProfile {
   _id: string;
@@ -18,7 +18,7 @@ interface UserProfileState {
   clearProfile: () => void;
 }
 
-export const useUserProfileStore = create<UserProfileState>((set) => ({
+export const useUserProfileStore = create<UserProfileState>((set, get) => ({
   profile: null,
   loading: false,
   error: null,
@@ -29,14 +29,19 @@ export const useUserProfileStore = create<UserProfileState>((set) => ({
       return;
     }
 
+    const { profile, loading } = get();
+    if (loading || profile?._id === id) return;
+
     set({ loading: true, error: null });
 
     try {
-      const res = await axios.get(`/api/user/${id}`);
+      const res = await axiosInstance.get(`/user/${id}`);
       set({ profile: res.data, loading: false });
-    } catch (err) {
-      console.error('Erreur fetch profil :', err);
-      set({ error: 'Impossible de charger le profil', loading: false });
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Erreur réseau inconnue';
+      
+      console.error('Erreur fetch profil:', { id, error: errorMessage });
+      set({ error: errorMessage, loading: false, profile: null });
     }
   },
 

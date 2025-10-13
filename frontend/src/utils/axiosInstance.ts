@@ -10,37 +10,26 @@ const axiosInstance = axios.create({
   },
 });
 
-// Request interceptor — Automatically adds the token to each request
-axiosInstance.interceptors.request.use(
-  (config) => {
-    const token = useAuthStore.getState().token;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor — Handles auth errors (missing or invalid token)
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (
-      error.response &&
-      (error.response.status === 401 || error.response.status === 403)
-    ) {
-      console.warn('Invalid or expired token. Logging out...');
-      const logout = useAuthStore.getState().logout; 
-      if (logout) logout(); 
-      if (typeof window !== 'undefined') {
-        window.location.href = '/anonymous'; 
-      } else {
-        console.error("Attempted to redirect on server, but router is not available.");
-      }
-    }
-    return Promise.reject(error);
+const requestInterceptor = (config: any) => {
+  const token = useAuthStore.getState().token;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  return config;
+};
+
+const responseErrorInterceptor = (error: any) => {
+  if (error.response?.status === 401 || error.response?.status === 403) {
+    console.warn('Invalid or expired token. Logging out...');
+    useAuthStore.getState().logout();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/anonymous';
+    }
+  }
+  return Promise.reject(error);
+};
+
+axiosInstance.interceptors.request.use(requestInterceptor, Promise.reject);
+axiosInstance.interceptors.response.use((response) => response, responseErrorInterceptor);
 
 export default axiosInstance;

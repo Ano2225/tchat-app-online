@@ -27,15 +27,6 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState<'users' | 'channels'>('users');
   const [newChannelName, setNewChannelName] = useState('');
 
-  useEffect(() => {
-    if (!user || user.role !== 'admin') {
-      router.push('/chat');
-      return;
-    }
-    fetchUsers();
-    fetchChannels();
-  }, [user, router]);
-
   const fetchUsers = async () => {
     try {
       const response = await axiosInstance.get('/admin/users');
@@ -53,6 +44,19 @@ const AdminDashboard = () => {
       console.error('Error fetching channels:', error);
     }
   };
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') {
+      router.push('/chat');
+      return;
+    }
+    fetchUsers();
+    fetchChannels();
+  }, [user, router]);
+
+  if (!user || user.role !== 'admin') {
+    return <div className="p-8">Accès refusé - Rôle admin requis</div>;
+  }
 
   const toggleUserBlock = async (userId: string, isBlocked: boolean) => {
     try {
@@ -94,9 +98,7 @@ const AdminDashboard = () => {
     }
   };
 
-  if (!user || user.role !== 'admin') {
-    return <div>Accès refusé</div>;
-  }
+
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-6">

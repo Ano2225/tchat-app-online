@@ -3,27 +3,22 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 
-const createAdmin = async () => {
+const resetAdmin = async () => {
   try {
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/tchat_online';
     await mongoose.connect(mongoUri);
     
+    // Supprimer tous les admins existants
+    await User.deleteMany({ role: 'admin' });
+    console.log('Anciens admins supprimés');
+    
     const adminUsername = 'admin';
     const adminPassword = 'admin123';
-    
-    // Vérifier si l'admin existe déjà
-    const existingAdmin = await User.findOne({ username: adminUsername });
-    if (existingAdmin) {
-      console.log('Admin déjà existant');
-      console.log('Username:', adminUsername);
-      console.log('Mot de passe:', adminPassword);
-      process.exit(0);
-    }
     
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
     
-    // Créer l'admin
+    // Créer le nouvel admin
     const admin = new User({
       username: adminUsername,
       email: 'admin@tchat.com',
@@ -34,7 +29,7 @@ const createAdmin = async () => {
     });
     
     await admin.save();
-    console.log('Admin créé avec succès');
+    console.log('Nouvel admin créé avec succès');
     console.log('Username:', adminUsername);
     console.log('Mot de passe:', adminPassword);
     
@@ -45,4 +40,4 @@ const createAdmin = async () => {
   }
 };
 
-createAdmin();
+resetAdmin();

@@ -14,6 +14,16 @@ const adminRoutes = require('./routes/admin');
 const socketHandlers = require('./socket/socketHandlers');
 const { generalLimiter } = require('./middleware/rateLimiter');
 const { sanitizeInput } = require('./middleware/validation');
+const {
+  corsOptions,
+  globalRateLimit,
+  authRateLimit,
+  messageRateLimit,
+  helmetConfig,
+  sanitizeInput: securitySanitize,
+  secureLogger,
+  checkBruteForce
+} = require('./middleware/security');
 const helmet = require('helmet');
 
 
@@ -35,20 +45,20 @@ class ChatServer {
   }
 
   initMiddlewares() {
-    // Sécurité
-    this.app.use(helmet());
-    this.app.use(cors({
-      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-      credentials: true
-    }));
+    // Sécurité renforcée
+    this.app.use(helmetConfig);
+    this.app.use(cors(corsOptions));
     
     // Parsing et validation
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     this.app.use(sanitizeInput);
+    this.app.use(securitySanitize);
     
-    // Rate limiting
-    this.app.use('/api/', generalLimiter);
+    // Rate limiting et protection
+    this.app.use(globalRateLimit);
+    this.app.use(secureLogger);
+    // this.app.use(checkBruteForce); // Désactivé
   }
 
   connectDatabase() {
@@ -56,14 +66,17 @@ class ChatServer {
   }
 
   setupRoutes() {
-    this.app.use('/api/auth', authRoutes);
-    this.app.use('/api/messages', messageRoutes(this.io));
+    this.app.use('/api/auth', authRateLimit, authRoutes);
+    this.app.use('/api/messages', messageRateLimit, messageRoutes(this.io));
     this.app.use('/api/channels', channelRoutes);
     this.app.use('/api/user', userRoutes);
     this.app.use('/api/upload', uploadRoutes);
     this.app.use('/api/admin', adminRoutes);
 
-   
+    // Route de santé
+    this.app.get('/health', (req, res) => {
+      res.json({ status: 'OK', timestamp: new Date().toISOString() });
+    });
   }
 
   initSocketEvents() {
