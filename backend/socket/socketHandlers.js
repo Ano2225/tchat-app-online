@@ -30,7 +30,7 @@ module.exports = (io, socket) => {
 
   // --- Send a message to a public room ---
   socket.on('send_message', async (messageData) => {
-    const { sender, content, room } = messageData;
+    const { sender, content, room, replyTo } = messageData;
     if (room && sender && content) {
       try {
         const user = await User.findById(sender.id);
@@ -41,9 +41,13 @@ module.exports = (io, socket) => {
           sender: user._id,
           content,
           room,
+          replyTo: replyTo || null,
         });
 
         await newMessage.populate('sender', 'username');
+        if (replyTo) {
+          await newMessage.populate('replyTo');
+        }
 
         const enrichedMessage = {
           _id: newMessage._id.toString(),
@@ -53,6 +57,8 @@ module.exports = (io, socket) => {
           },
           content: newMessage.content,
           room: newMessage.room,
+          replyTo: newMessage.replyTo,
+          reactions: newMessage.reactions || [],
           createdAt: newMessage.createdAt,
         };
 
@@ -60,6 +66,48 @@ module.exports = (io, socket) => {
       } catch (error) {
         console.error('Error saving message:', error);
       }
+    }
+  });
+
+  // --- Add reaction to message ---
+  socket.on('add_reaction', async ({ messageId, emoji, userId, room }) => {
+    try {
+      const message = await Message.findById(messageId);
+      if (!message) return;
+
+      const existingReaction = message.reactions.find(r => r.emoji === emoji);
+      
+      if (existingReaction) {
+        if (existingReaction.users.includes(userId)) {
+          // Remove reaction
+          existingReaction.users = existingReaction.users.filter(id => id.toString() !== userId);
+          existingReaction.count = existingReaction.users.length;
+          if (existingReaction.count === 0) {
+            message.reactions = message.reactions.filter(r => r.emoji !== emoji);
+          }
+        } else {
+          // Add reaction
+          existingReaction.users.push(userId);
+          existingReaction.count = existingReaction.users.length;
+        }
+      } else {
+        // Create new reaction
+        message.reactions.push({
+          emoji,
+          users: [userId],
+          count: 1
+        });
+      }
+
+      await message.save();
+      
+      // Emit to all users in the room
+      io.to(room).emit('reaction_updated', {
+        messageId,
+        reactions: message.reactions
+      });
+    } catch (error) {
+      console.error('Error adding reaction:', error);
     }
   });
 

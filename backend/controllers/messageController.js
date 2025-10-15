@@ -168,6 +168,48 @@ class MessageController {
       res.status(500).json({ error: "Error while updating messages." });
     }
   }
+
+  // Add reaction to message
+  async addReaction(req, res) {
+    const { messageId } = req.params;
+    const { emoji, userId } = req.body;
+
+    try {
+      const message = await Message.findById(messageId);
+      if (!message) {
+        return res.status(404).json({ error: "Message not found" });
+      }
+
+      // Remove user from all existing reactions first (one reaction per user)
+      message.reactions.forEach(reaction => {
+        reaction.users = reaction.users.filter(id => id.toString() !== userId);
+        reaction.count = reaction.users.length;
+      });
+      // Remove empty reactions
+      message.reactions = message.reactions.filter(r => r.count > 0);
+
+      const existingReaction = message.reactions.find(r => r.emoji === emoji);
+      
+      if (existingReaction) {
+        // Add user to this reaction
+        existingReaction.users.push(userId);
+        existingReaction.count = existingReaction.users.length;
+      } else {
+        // Create new reaction
+        message.reactions.push({
+          emoji,
+          users: [userId],
+          count: 1
+        });
+      }
+
+      await message.save();
+      res.status(200).json(message);
+    } catch (error) {
+      console.error("Error adding reaction:", error);
+      res.status(500).json({ error: "Failed to add reaction" });
+    }
+  }
 }
 
 module.exports = new MessageController();

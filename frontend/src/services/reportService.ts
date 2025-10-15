@@ -1,7 +1,7 @@
 import axiosInstance from '@/utils/axiosInstance';
 
 export const reportService = {
-  // Signaler un utilisateur
+  // Signaler un utilisateur ou un message
   async reportUser(reportedUserId: string, reason: string, description?: string) {
     const response = await axiosInstance.post('/reports/report', {
       reportedUserId,

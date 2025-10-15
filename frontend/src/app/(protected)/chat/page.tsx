@@ -11,15 +11,19 @@ import axiosInstance from '@/utils/axiosInstance';
 import UsersOnline from '@/components/chat/UsersOnline';
 
 interface Message {
-  _id?: string;
+  _id: string;
   sender: {
-    id: string,
-    username : string,
-    email?: string,
-  }; 
+    _id: string;
+    username: string;
+  };
   content: string;
-  room: string;
-  createdAt?: string;
+  createdAt: string;
+  replyTo?: Message;
+  reactions?: Array<{
+    emoji: string;
+    users: string[];
+    count: number;
+  }>;
 }
 
 const ChatPage = () => {
@@ -27,6 +31,7 @@ const ChatPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentRoom, setCurrentRoom] = useState('General');
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
 
   const previousRoomRef = useRef<string | null>(null);
 
@@ -89,7 +94,16 @@ const ChatPage = () => {
 
   const handleJoinRoom = (roomName: string) => {
     setMessages([]);
-    setCurrentRoom(roomName); 
+    setCurrentRoom(roomName);
+    setReplyTo(null); // Clear reply when changing rooms
+  };
+
+  const handleReply = (message: Message) => {
+    setReplyTo(message);
+  };
+
+  const handleCancelReply = () => {
+    setReplyTo(null);
   };
 
   return (
@@ -100,8 +114,13 @@ const ChatPage = () => {
           <ChatChannel onJoinRoom={handleJoinRoom} currentRoom={currentRoom} />
         </div>
         <div className="flex flex-col flex-1 bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl overflow-hidden shadow-xl">
-          <ChatMessage currentRoom={currentRoom} socket={socket} />
-          <ChatInput currentRoom={currentRoom} socket={socket} />
+          <ChatMessage currentRoom={currentRoom} socket={socket} onReply={handleReply} />
+          <ChatInput 
+            currentRoom={currentRoom} 
+            socket={socket} 
+            replyTo={replyTo}
+            onCancelReply={handleCancelReply}
+          />
         </div>
         <div className="flex-shrink-0">
           <UsersOnline socket={socket} />

@@ -45,5 +45,8 @@ module.exports = (io) => {
     }
   });
 
+  // Reactions
+  router.post('/reaction/:messageId', authMiddleware, MessageController.addReaction);
+
   return router;
 };

@@ -25,6 +25,25 @@ const MessageSchema = new mongoose.Schema({
   media_type: { // e.g., 'image', 'video'
     type: String,
   },
+  replyTo: { // Message being replied to
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Message',
+    default: null,
+  },
+  reactions: [{
+    emoji: {
+      type: String,
+      required: true,
+    },
+    users: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    }],
+    count: {
+      type: Number,
+      default: 0,
+    }
+  }],
   createdAt: {
     type: Date,
     default: Date.now,

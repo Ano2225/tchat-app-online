@@ -2,15 +2,15 @@
 
 import React, { useState } from 'react';
 import { reportService } from '@/services/reportService';
+import toast from 'react-hot-toast';
 
 interface ReportModalProps {
-  isOpen: boolean;
+  targetUserId: string;
   onClose: () => void;
-  userId: string;
-  username: string;
+  username?: string;
 }
 
-const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, userId, username }) => {
+const ReportModal: React.FC<ReportModalProps> = ({ targetUserId, onClose, username }) => {
   const [reason, setReason] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,23 +29,29 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, userId, user
 
     setLoading(true);
     try {
-      await reportService.reportUser(userId, reason, description);
-      alert('Signalement envoyé avec succès');
+      await reportService.reportUser(targetUserId, reason, description);
+      toast.success('Signalement envoyé avec succès');
       onClose();
-    } catch (error) {
-      alert('Erreur lors du signalement');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Erreur lors du signalement';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000]"
+      onClick={onClose}
+      role="dialog"
+    >
+      <div 
+        className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-          Signaler {username}
+          Signaler {username || 'cet utilisateur'}
         </h2>
         
         <form onSubmit={handleSubmit}>

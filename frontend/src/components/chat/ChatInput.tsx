@@ -5,12 +5,24 @@ import { useAuthStore } from '@/store/authStore'
 import { Socket } from 'socket.io-client'
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react'
 
+interface Message {
+  _id: string;
+  sender: {
+    _id: string;
+    username: string;
+  };
+  content: string;
+  createdAt: string;
+}
+
 interface ChatInputProps {
   currentRoom: string
   socket: Socket | null
+  replyTo?: Message | null
+  onCancelReply?: () => void
 }
 
-const ChatInput: React.FC<ChatInputProps> = ({ currentRoom, socket }) => {
+const ChatInput: React.FC<ChatInputProps> = ({ currentRoom, socket, replyTo, onCancelReply }) => {
   const [message, setMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
@@ -28,13 +40,19 @@ const ChatInput: React.FC<ChatInputProps> = ({ currentRoom, socket }) => {
       sender: {
         id: user.id,
         username: user.username
-      }
+      },
+      replyTo: replyTo?._id || null
     }
 
     socket.emit('send_message', messageData)
     setMessage('')
     setIsTyping(false)
     setShowEmojiPicker(false)
+    
+    // Clear reply
+    if (onCancelReply) {
+      onCancelReply()
+    }
     
     if (inputRef.current) {
       inputRef.current.focus()
@@ -70,6 +88,32 @@ const ChatInput: React.FC<ChatInputProps> = ({ currentRoom, socket }) => {
 
   return (
     <div className="p-4 border-t border-gray-200 dark:border-white/20 bg-gray-50/50 dark:bg-white/5 relative">
+      {/* Reply preview */}
+      {replyTo && (
+        <div className="mb-3 p-3 bg-white dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-lg flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-1 h-8 bg-primary-500 rounded-full"></div>
+            <div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">
+                Réponse à {replyTo.sender.username}
+              </div>
+              <div className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-xs">
+                {replyTo.content}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onCancelReply}
+            className="p-1 hover:bg-gray-200 dark:hover:bg-white/20 rounded transition-colors"
+            title="Annuler la réponse"
+          >
+            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+      
       {showEmojiPicker && (
         <div className="absolute bottom-full right-4 mb-2 z-10">
           <EmojiPicker onEmojiClick={onEmojiClick} />
