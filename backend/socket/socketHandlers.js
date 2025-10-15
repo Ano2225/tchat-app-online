@@ -71,9 +71,22 @@ module.exports = (io, socket) => {
       // Find the user ID for this username
       const user = await User.findOne({ username });
       if (user) {
+        // Vérifier si l'utilisateur est bloqué
+        if (user.isBlocked && !user.isAnonymous) {
+          socket.emit('user_blocked', { message: 'Votre compte a été bloqué. Contactez l\'administrateur.' });
+          socket.disconnect();
+          return;
+        }
+        
         currentUserId = user._id.toString();
         // Store in our mapping
         userIdToUsername.set(currentUserId, username);
+        
+        // Mettre à jour le statut en ligne dans la base de données
+        await User.findByIdAndUpdate(user._id, { 
+          isOnline: true,
+          lastSeen: new Date()
+        });
       }
 
       if (!connectedUsers.has(username)) {
@@ -107,10 +120,23 @@ module.exports = (io, socket) => {
       const user = await User.findOne({ username: newUsername });
       if (user) {
         // Remove old mapping if exists
-        if (currentUserId) userIdToUsername.delete(currentUserId);
+        if (currentUserId) {
+          // Mettre l'ancien utilisateur hors ligne
+          await User.findByIdAndUpdate(currentUserId, { 
+            isOnline: false,
+            lastSeen: new Date()
+          });
+          userIdToUsername.delete(currentUserId);
+        }
         
         currentUserId = user._id.toString();
         userIdToUsername.set(currentUserId, newUsername);
+        
+        // Mettre le nouvel utilisateur en ligne
+        await User.findByIdAndUpdate(user._id, { 
+          isOnline: true,
+          lastSeen: new Date()
+        });
       }
 
       if (!connectedUsers.has(newUsername)) {
@@ -191,15 +217,24 @@ module.exports = (io, socket) => {
   });
 
   // --- Handle disconnection ---
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     console.log(`Client ${socket.id} disconnected`);
 
     if (currentUsername && connectedUsers.has(currentUsername)) {
       connectedUsers.get(currentUsername).delete(socket.id);
       if (connectedUsers.get(currentUsername).size === 0) {
         connectedUsers.delete(currentUsername);
-        // Also clean up the ID mapping if no connections remain
+        
+        // Mettre à jour le statut hors ligne dans la base de données
         if (currentUserId) {
+          try {
+            await User.findByIdAndUpdate(currentUserId, { 
+              isOnline: false,
+              lastSeen: new Date()
+            });
+          } catch (error) {
+            console.error('Error updating user offline status:', error);
+          }
           userIdToUsername.delete(currentUserId);
         }
       }

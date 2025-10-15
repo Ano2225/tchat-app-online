@@ -11,6 +11,7 @@ const channelRoutes = require('./routes/channel');
 const userRoutes = require('./routes/user');
 const uploadRoutes = require('./routes/upload');
 const adminRoutes = require('./routes/admin');
+const reportRoutes = require('./routes/reports');
 const socketHandlers = require('./socket/socketHandlers');
 const { generalLimiter } = require('./middleware/rateLimiter');
 const { sanitizeInput } = require('./middleware/validation');
@@ -72,6 +73,7 @@ class ChatServer {
     this.app.use('/api/user', userRoutes);
     this.app.use('/api/upload', uploadRoutes);
     this.app.use('/api/admin', adminRoutes);
+    this.app.use('/api/reports', reportRoutes);
 
     // Route de santé
     this.app.get('/health', (req, res) => {

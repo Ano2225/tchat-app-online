@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 // Rate limiter pour les routes d'authentification
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 tentatives par IP
+  max: 8, // 8 tentatives par IP
   message: {
     error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.'
   },

@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Alert = require('../models/Alert');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -37,6 +38,15 @@ class AuthController {
       });
 
       await user.save();
+      
+      // Créer une alerte pour le nouvel utilisateur
+      await Alert.create({
+        type: 'new_user',
+        title: 'Nouvel utilisateur inscrit',
+        message: `${username} s'est inscrit sur la plateforme`,
+        severity: 'low',
+        relatedUserId: user._id
+      });
 
       // Générer un token JWT
       const token = jwt.sign(
@@ -65,6 +75,11 @@ class AuthController {
         return res.status(400).json({ message: 'Identifiants invalides' });
       }
 
+      // Vérifier si l'utilisateur est bloqué
+      if (user.isBlocked) {
+        return res.status(403).json({ message: 'Votre compte a été bloqué. Contactez l\'administrateur.' });
+      }
+
       // Vérifier le mot de passe
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
@@ -74,6 +89,7 @@ class AuthController {
       //Mettre à jour la date de dernier accès 
       user.lastSeen = new Date();
       user.isOnline = true;
+      user.isEnabled = true;
       await user.save();
 
       // Générer un token JWT

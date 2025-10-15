@@ -56,6 +56,10 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isEnabled: {
+    type: Boolean,
+    default: false
+  },
   role: {
     type: String,
     enum: ['user', 'admin'],
@@ -64,7 +68,11 @@ const UserSchema = new mongoose.Schema({
   bgColor: {
     type: String,
     default: 'bg-orange-400'
-  }
+  },
+  blockedUsers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }]
 });
 
 module.exports = mongoose.model('User', UserSchema);
