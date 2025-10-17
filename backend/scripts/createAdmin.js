@@ -8,8 +8,11 @@ const createAdmin = async () => {
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/tchat_online';
     await mongoose.connect(mongoUri);
     
-    const adminUsername = 'admin';
-    const adminPassword = 'admin123';
+    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+    const adminPassword = process.env.ADMIN_PASSWORD || (() => {
+      console.error('❌ ADMIN_PASSWORD environment variable is required');
+      process.exit(1);
+    })();
     
     // Vérifier si l'admin existe déjà
     const existingAdmin = await User.findOne({ username: adminUsername });
@@ -26,7 +29,7 @@ const createAdmin = async () => {
     // Créer l'admin
     const admin = new User({
       username: adminUsername,
-      email: 'admin@tchat.com',
+      email: process.env.ADMIN_EMAIL || 'admin@tchat.com',
       password: hashedPassword,
       role: 'admin',
       age: 25,

@@ -9,7 +9,8 @@ const validateUserRegistration = (req, res, next) => {
   if (!username || username.length < 3 || username.length > 20) {
     errors.push('Le nom d\'utilisateur doit contenir entre 3 et 20 caractères');
   }
-  if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+  const usernameRegex = /^[a-zA-Z0-9_]+$/;
+  if (!usernameRegex.test(username)) {
     errors.push('Le nom d\'utilisateur ne peut contenir que des lettres, chiffres et underscores');
   }
 
@@ -19,8 +20,11 @@ const validateUserRegistration = (req, res, next) => {
   }
 
   // Validation password
-  if (!password || password.length < 6) {
-    errors.push('Le mot de passe doit contenir au moins 6 caractères');
+  if (!password || password.length < 8) {
+    errors.push('Le mot de passe doit contenir au moins 8 caractères');
+  }
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(password)) {
+    errors.push('Le mot de passe doit contenir au moins une minuscule, une majuscule, un chiffre et un caractère spécial');
   }
 
   if (errors.length > 0) {

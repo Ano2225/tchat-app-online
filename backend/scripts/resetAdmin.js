@@ -12,8 +12,11 @@ const resetAdmin = async () => {
     await User.deleteMany({ role: 'admin' });
     console.log('Anciens admins supprimés');
     
-    const adminUsername = 'admin';
-    const adminPassword = 'admin123';
+    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+    const adminPassword = process.env.ADMIN_PASSWORD || (() => {
+      console.error('❌ ADMIN_PASSWORD environment variable is required');
+      process.exit(1);
+    })();
     
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
@@ -21,7 +24,7 @@ const resetAdmin = async () => {
     // Créer le nouvel admin
     const admin = new User({
       username: adminUsername,
-      email: 'admin@tchat.com',
+      email: process.env.ADMIN_EMAIL || 'admin@tchat.com',
       password: hashedPassword,
       role: 'admin',
       age: 25,

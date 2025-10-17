@@ -62,7 +62,7 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom }) =>
 
   if (loading) {
     return (
-      <div className="w-64 bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl shadow-xl overflow-hidden">
+      <div className="w-64 bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl overflow-hidden">
         <div className="p-4 border-b border-gray-200 dark:border-white/20">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Salons</h2>
           <p className="text-sm text-gray-600 dark:text-gray-300">Chargement...</p>
@@ -79,7 +79,7 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom }) =>
   }
 
   return (
-    <div className="w-64 h-full bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl shadow-xl overflow-hidden">
+    <div className="w-64 h-full bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-white/20">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Salons</h2>
@@ -96,7 +96,7 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom }) =>
             onClick={() => onJoinRoom(channel.name)}
             className={`w-full text-left p-3 rounded-xl transition-all duration-200 group ${
               currentRoom === channel.name
-                ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-lg'
+                ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white'
                 : 'hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300'
             }`}
           >

@@ -20,6 +20,7 @@ interface MessageContextMenuProps {
   onReply: (message: Message) => void;
   onClose: () => void;
   position: { x: number; y: number };
+  socket: any;
 }
 
 const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
@@ -27,6 +28,7 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
   onReply,
   onClose,
   position,
+  socket,
 }) => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Message['sender'] | null>(null);
@@ -128,7 +130,8 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
 
       {selectedUser && (
         <UserSelectedModal
-          user={selectedUser}
+          userId={selectedUser._id}
+          socket={socket}
           onClose={() => setSelectedUser(null)}
         />
       )}

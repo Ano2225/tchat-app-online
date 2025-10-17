@@ -46,7 +46,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket }) => {
   }
 
   return (
-    <div className={`h-full bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl shadow-xl overflow-hidden transition-all duration-300 ${
+    <div className={`h-full bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl overflow-hidden transition-all duration-300 ${
       isCollapsed ? 'w-16' : 'w-64'
     }`}>
       {/* Header */}

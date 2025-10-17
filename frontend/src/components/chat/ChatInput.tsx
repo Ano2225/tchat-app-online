@@ -158,7 +158,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ currentRoom, socket, replyTo, onC
             disabled={!message.trim()}
             className={`p-3 rounded-xl transition-all duration-200 ${
               message.trim()
-                ? 'bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white shadow-lg'
+                ? 'bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white'
                 : 'bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-gray-500 cursor-not-allowed'
             }`}
             title="Envoyer le message"
@@ -186,7 +186,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ currentRoom, socket, replyTo, onC
           <div className="flex space-x-1">
             <div className="w-1 h-1 bg-primary-500 rounded-full animate-bounce"></div>
             <div className="w-1 h-1 bg-secondary-500 rounded-full animate-bounce delay-100"></div>
-            <div className="w-1 h-1 bg-turquoise-500 rounded-full animate-bounce delay-200"></div>
+            <div className="w-1 h-1 bg-accent-500 rounded-full animate-bounce delay-200"></div>
           </div>
           <span>Vous tapez...</span>
         </div>

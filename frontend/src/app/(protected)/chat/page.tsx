@@ -113,7 +113,7 @@ const ChatPage = () => {
         <div className="flex-shrink-0">
           <ChatChannel onJoinRoom={handleJoinRoom} currentRoom={currentRoom} />
         </div>
-        <div className="flex flex-col flex-1 bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl overflow-hidden shadow-xl">
+        <div className="flex flex-col flex-1 bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl overflow-hidden">
           <ChatMessage currentRoom={currentRoom} socket={socket} onReply={handleReply} />
           <ChatInput 
             currentRoom={currentRoom} 

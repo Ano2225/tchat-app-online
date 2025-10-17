@@ -102,11 +102,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
 
   return (
     <>
-      <header className="sticky top-0 bg-white/80 dark:bg-white/10 backdrop-blur-xl border-b border-gray-200 dark:border-white/20 px-6 py-4 shadow-lg z-[200]">
+      <header className="sticky top-0 bg-white/80 dark:bg-white/10 backdrop-blur-xl border-b border-gray-200 dark:border-white/20 px-6 py-4 z-[200]">
         <div className="flex items-center justify-between">
           {/* Logo et titre */}
           <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-secondary-500 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-secondary-500 rounded-xl flex items-center justify-center">
               <span className="text-xl font-bold text-white">T</span>
             </div>
             <div>
@@ -198,7 +198,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
         
         {/* Panel des messages privés */}
         {showMessages && (
-          <div className="absolute top-full right-6 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-[300]">
+          <div className="absolute top-full right-6 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg z-[300]">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="font-semibold text-gray-900 dark:text-white">Messages privés</h3>
             </div>

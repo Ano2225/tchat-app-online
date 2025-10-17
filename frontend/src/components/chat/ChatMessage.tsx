@@ -48,7 +48,9 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     axiosInstance
       .get(`/messages/${currentRoom}`)
       .then((res) => setMessages(res.data))
-      .catch(() => console.error('Failed to load messages'));
+      .catch((error) => {
+        console.error('Failed to load messages:', error?.message || 'Unknown error');
+      });
   }, [currentRoom]);
 
   useEffect(() => {
@@ -153,7 +155,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
       {/* Header du canal */}
-      <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-xl p-4 mb-4 shadow-sm">
+      <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-xl p-4 mb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full flex items-center justify-center">
@@ -224,7 +226,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            console.log('Setting context menu:', msg);
+                            // Context menu action
                             setContextMenu({
                               message: msg,
                               position: { x: e.clientX, y: e.clientY }
@@ -256,7 +258,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                   {/* Bulle de message */}
                   <div className={`${!isOwnMessage ? 'ml-10' : ''}`}>
                     <div
-                      className={`rounded-2xl p-3 shadow-sm ${getMessageColor(isOwnMessage)} ${
+                      className={`rounded-2xl p-3 ${getMessageColor(isOwnMessage)} ${
                         isOwnMessage ? 'rounded-br-md' : 'rounded-bl-md'
                       }`}
                     >
@@ -320,6 +322,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
             onReply={handleReply}
             onClose={() => setContextMenu(null)}
             position={contextMenu.position}
+            socket={socket}
           />
         </>
       )}
