@@ -90,6 +90,41 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom }) =>
 
       {/* Liste des salons */}
       <div className="p-2 space-y-1 max-h-96 overflow-y-auto">
+        {/* Canal Game spécial */}
+        <button
+          onClick={() => onJoinRoom('Game')}
+          className={`w-full text-left p-3 rounded-xl transition-all duration-200 group ${
+            currentRoom === 'Game'
+              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+              : 'hover:bg-purple-100 dark:hover:bg-purple-900/20 text-gray-700 dark:text-gray-300'
+          }`}
+        >
+          <div className="flex items-center space-x-3">
+            <span className="text-xl">🎮</span>
+            <div className="flex-1 min-w-0">
+              <p className={`font-medium truncate ${
+                currentRoom === 'Game' ? 'text-white' : 'text-gray-900 dark:text-white'
+              }`}>
+                #Game
+              </p>
+              <p className={`text-xs truncate ${
+                currentRoom === 'Game' 
+                  ? 'text-white/80' 
+                  : 'text-purple-600 dark:text-purple-400'
+              }`}>
+                Quiz en temps réel
+              </p>
+            </div>
+            {currentRoom === 'Game' && (
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            )}
+          </div>
+        </button>
+        
+        {/* Séparateur */}
+        <div className="border-t border-gray-200 dark:border-white/20 my-2"></div>
+        
+        {/* Autres canaux */}
         {channels.map((channel) => (
           <button
             key={channel._id}

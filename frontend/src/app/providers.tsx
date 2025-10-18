@@ -8,7 +8,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const publicPaths = ['/', '/login', '/register', '/anonymous'];
+const publicPaths = ['/', '/login', '/register', '/anonymous', '/forgot-password', '/reset-password'];
 
 export default function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);

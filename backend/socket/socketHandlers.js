@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const Message = require("../models/Message");
+const gameHandlers = require('./gameHandlers');
 
 // username -> Set of socket IDs
 const connectedUsers = new Map();
@@ -11,6 +12,9 @@ module.exports = (io, socket) => {
 
   let currentUsername = null;
   let currentUserId = null;
+
+  // Initialiser les handlers de jeu
+  gameHandlers(io, socket);
 
   // --- Join a public room ---
   socket.on('join_room', (room) => {
@@ -35,6 +39,15 @@ module.exports = (io, socket) => {
       try {
         const user = await User.findById(sender.id);
         if (!user) return;
+
+        // Si c'est le canal Game, traiter comme une réponse de quiz
+        if (room === 'Game') {
+          // S'assurer que socket a les bonnes infos
+          socket.userId = user._id.toString();
+          socket.username = user.username;
+          // Traiter le message comme une réponse de quiz
+          gameHandlers.handleChatMessage(socket, { room, message: content }, io);
+        }
 
         // Sauvegarder le message en base
         const newMessage = await Message.create({
@@ -127,6 +140,8 @@ module.exports = (io, socket) => {
         }
         
         currentUserId = user._id.toString();
+        socket.userId = currentUserId;
+        socket.username = username;
         // Store in our mapping
         userIdToUsername.set(currentUserId, username);
         

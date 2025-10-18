@@ -217,6 +217,83 @@ class AuthController {
       }
     }  
 
+  // Demande de réinitialisation de mot de passe
+  async requestPasswordReset(req, res) {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: 'Email requis' });
+      }
+
+      const user = await User.findOne({ email, isAnonymous: false });
+      if (!user) {
+        // Pour des raisons de sécurité, on ne révèle pas si l'email existe
+        return res.json({ message: 'Si cet email existe, un lien de réinitialisation a été envoyé' });
+      }
+
+      // Générer un token de réinitialisation (valide 1h)
+      const resetToken = jwt.sign(
+        { id: user._id, type: 'password_reset' },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+
+      // Dans un vrai projet, on enverrait un email ici
+      // Pour le développement, on retourne le token
+      console.log(`🔑 Token de réinitialisation pour ${email}: ${resetToken}`);
+      
+      res.json({ 
+        message: 'Si cet email existe, un lien de réinitialisation a été envoyé',
+        // En développement seulement
+        resetToken: process.env.NODE_ENV === 'development' ? resetToken : undefined
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+    }
+  }
+
+  // Réinitialisation du mot de passe
+  async resetPassword(req, res) {
+    try {
+      const { token, newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: 'Token et nouveau mot de passe requis' });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 6 caractères' });
+      }
+
+      // Vérifier le token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded.type !== 'password_reset') {
+        return res.status(400).json({ message: 'Token invalide' });
+      }
+
+      const user = await User.findById(decoded.id);
+      if (!user || user.isAnonymous) {
+        return res.status(404).json({ message: 'Utilisateur non trouvé' });
+      }
+
+      // Hasher le nouveau mot de passe
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+      // Mettre à jour le mot de passe
+      user.password = hashedPassword;
+      await user.save();
+
+      res.json({ message: 'Mot de passe réinitialisé avec succès' });
+    } catch (error) {
+      if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+        return res.status(400).json({ message: 'Token invalide ou expiré' });
+      }
+      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+    }
+  }
+
 }
 
 module.exports = new AuthController();

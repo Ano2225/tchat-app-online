@@ -5,6 +5,7 @@ import axiosInstance from '@/utils/axiosInstance';
 import UserSelectedModal from '../UserSelected/UserSelectedModal';
 import MessageReactions from './MessageReactions';
 import MessageContextMenu from './MessageContextMenu';
+import GameMessage from '../Game/GameMessage';
 import toast from 'react-hot-toast';
 
 interface Reaction {
@@ -33,6 +34,7 @@ interface ChatMessagesProps {
 
 const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onReply }) => {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [gameMessages, setGameMessages] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<Message['sender'] | null>(null);
   const [contextMenu, setContextMenu] = useState<{ message: Message; position: { x: number; y: number } } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -75,12 +77,21 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
       );
     };
 
+    const handleGameMessage = (gameMessage: any) => {
+      setGameMessages((prev) => [...prev, { ...gameMessage, id: Date.now() }]);
+      setTimeout(() => {
+        setGameMessages((prev) => prev.filter(msg => msg.id !== gameMessage.id));
+      }, 10000); // Supprimer après 10 secondes
+    };
+
     socket.on('receive_message', handleReceiveMessage);
     socket.on('reaction_updated', handleReactionUpdated);
+    socket.on('game_message', handleGameMessage);
     
     return () => {
       socket.off('receive_message', handleReceiveMessage);
       socket.off('reaction_updated', handleReactionUpdated);
+      socket.off('game_message', handleGameMessage);
     };
   }, [socket]);
 
@@ -175,11 +186,28 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
         </div>
       </div>
 
+      {/* Messages de jeu */}
+      {gameMessages.map((gameMsg) => (
+        <GameMessage key={gameMsg.id} type={gameMsg.type} data={gameMsg.data} />
+      ))}
+
       {/* Messages */}
       {messages.length > 0 ? (
         <div className="space-y-3">
           {messages.map((msg) => {
             const isOwnMessage = msg.sender._id === user?.id;
+            const isQuizBot = msg.sender.username === 'Quiz Bot';
+
+            // Afficher les messages du Quiz Bot avec le composant GameMessage
+            if (isQuizBot) {
+              return (
+                <GameMessage
+                  key={msg._id}
+                  content={msg.content}
+                  timestamp={msg.createdAt}
+                />
+              );
+            }
 
             return (
               <div

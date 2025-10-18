@@ -17,6 +17,10 @@ router.post('/anonymous', authLimiter, csrfProtection, authController.anonymousL
 
 router.post('/logout', csrfProtection, authController.logout)
 
+// Password reset routes
+router.post('/request-password-reset', authLimiter, csrfProtection, authController.requestPasswordReset);
+router.post('/reset-password', authLimiter, csrfProtection, authController.resetPassword);
+
 // test user authentification
 router.get('/me', authMiddleware, (req, res) => {
   res.json({ user: req.user });

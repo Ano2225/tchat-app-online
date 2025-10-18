@@ -4,16 +4,20 @@ class UserController  {
 
   async updateUserInfo(req, res) {
       try {
-        const { username, age, ville, avatarUrl } = req.body;
+        const { username, age, ville, avatarUrl, bgColor } = req.body;
     
-        console.log("📥 Reçu côté serveur :", { username, age, ville, avatarUrl });
+        console.log("📥 Reçu côté serveur :", { username, age, ville, avatarUrl, bgColor });
         console.log("🔑 Utilisateur connecté :", req.user);
+    
+        const updateData = { username, age, ville };
+        if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+        if (bgColor) updateData.bgColor = bgColor;
     
         const updatedUser = await User.findByIdAndUpdate(
           req.user.id, 
-          { username, age, ville, avatarUrl },
+          updateData,
           { new: true }
-        );
+        ).select('-password');
     
         if (!updatedUser) {
           return res.status(404).json({ message: "Utilisateur introuvable" });

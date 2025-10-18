@@ -7,6 +7,7 @@ import ChatMessage from '@/components/chat/ChatMessage';
 import ChatChannel from '@/components/chat/ChatChannel';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ChatInput from '@/components/chat/ChatInput';
+import GamePanel from '@/components/Game/GamePanel';
 import axiosInstance from '@/utils/axiosInstance';
 import UsersOnline from '@/components/chat/UsersOnline';
 
@@ -18,6 +19,7 @@ interface Message {
   };
   content: string;
   createdAt: string;
+  room?: string;
   replyTo?: Message;
   reactions?: Array<{
     emoji: string;
@@ -113,14 +115,26 @@ const ChatPage = () => {
         <div className="flex-shrink-0">
           <ChatChannel onJoinRoom={handleJoinRoom} currentRoom={currentRoom} />
         </div>
-        <div className="flex flex-col flex-1 bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl overflow-hidden">
-          <ChatMessage currentRoom={currentRoom} socket={socket} onReply={handleReply} />
-          <ChatInput 
-            currentRoom={currentRoom} 
-            socket={socket} 
-            replyTo={replyTo}
-            onCancelReply={handleCancelReply}
-          />
+        <div className="flex flex-1 gap-1">
+          {/* Chat principal */}
+          <div className="flex flex-col flex-1 bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl overflow-hidden">
+            <ChatMessage currentRoom={currentRoom} socket={socket} onReply={handleReply} />
+            <ChatInput 
+              currentRoom={currentRoom} 
+              socket={socket} 
+              replyTo={replyTo}
+              onCancelReply={handleCancelReply}
+            />
+          </div>
+          
+          {/* GamePanel seulement pour le canal Game */}
+          {currentRoom === 'Game' && (
+            <div className="w-80 bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl overflow-hidden">
+              <div className="p-4 h-full overflow-y-auto">
+                <GamePanel channel={currentRoom} socket={socket} />
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex-shrink-0">
           <UsersOnline socket={socket} />

@@ -37,7 +37,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
     }
 
     try {
-      await axiosInstance.put(`/user/avatar`, { avatar, bgColor: selectedBg });
+      await axiosInstance.put(`/user`, { 
+        username: user.username,
+        age: user.age,
+        ville: user.ville,
+        avatarUrl: avatar, 
+        bgColor: selectedBg 
+      });
       setSelectedAvatar(avatar);
       updateUser({ ...user, avatarUrl: avatar, bgColor: selectedBg });
     } catch (error) {
@@ -52,7 +58,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
     }
 
     try {
-      await axiosInstance.put(`/user/avatar`, { avatar: selectedAvatar, bgColor });
+      await axiosInstance.put(`/user`, { 
+        username: user.username,
+        age: user.age,
+        ville: user.ville,
+        avatarUrl: selectedAvatar, 
+        bgColor 
+      });
       setSelectedBg(bgColor);
       updateUser({ ...user, bgColor });
     } catch (error) {
