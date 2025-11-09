@@ -22,6 +22,7 @@ interface GameState {
   lastAnswer: { isCorrect: boolean; points: number; correctAnswer: number; isWinner?: boolean } | null;
   winner: string | null;
   explanation: string | null;
+  error: string | null;
   
   setGameState: (state: { isActive: boolean; currentQuestion?: any; leaderboard: Player[] }) => void;
   setQuestion: (question: Question) => void;
@@ -32,6 +33,7 @@ interface GameState {
   setExplanation: (explanation: string | null) => void;
   updateLeaderboard: (leaderboard: Player[]) => void;
   resetGame: () => void;
+  setError: (error: string | null) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -43,11 +45,19 @@ export const useGameStore = create<GameState>((set) => ({
   lastAnswer: null,
   winner: null,
   explanation: null,
+  error: null,
 
   setGameState: (state) => set({
     isActive: state.isActive,
-    currentQuestion: state.currentQuestion || null,
-    leaderboard: state.leaderboard || []
+    leaderboard: state.leaderboard || [],
+    currentQuestion: state.currentQuestion ? {
+      question: state.currentQuestion.question,
+      options: [],
+      duration: 15000,
+      explanation: state.currentQuestion.explanation
+    } : null,
+    timeLeft: state.currentQuestion?.startTime ? 
+      Math.max(0, Math.floor((15000 - (Date.now() - new Date(state.currentQuestion.startTime).getTime())) / 1000)) : 0
   }),
 
   setQuestion: (question) => set({
@@ -77,6 +87,9 @@ export const useGameStore = create<GameState>((set) => ({
     hasAnswered: false,
     lastAnswer: null,
     winner: null,
-    explanation: null
-  })
+    explanation: null,
+    error: null
+  }),
+
+  setError: (error) => set({ error })
 }));

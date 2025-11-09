@@ -1,0 +1,34 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.2.4
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.141:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 4.8s
+ ○ Compiling / ...
+ ✓ Compiled / in 4.4s (945 modules)
+ GET / 200 in 5643ms
+ ○ Compiling /chat ...
+ ✓ Compiled /chat in 3.8s (1741 modules)
+ GET /chat 200 in 4753ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 997ms (1745 modules)
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 1406ms
+ ○ Compiling /anonymous ...
+ ✓ Compiled /anonymous in 590ms (975 modules)
+ ✓ Compiled in 845ms (788 modules)
+ GET /anonymous 200 in 1819ms
+ GET /favicon.ico 200 in 2236ms
+ GET /favicon.ico 200 in 229ms
+ GET /chat 200 in 55ms
+ GET /chat 200 in 844ms
+ GET /.well-known/appspecific/com.chrome.devtools.json 404 in 119ms
+ GET /favicon.ico 200 in 285ms
+ GET /anonymous 200 in 100ms
+ GET /favicon.ico 200 in 253ms
+ GET /chat 200 in 43ms
+[?25h

@@ -1,6 +1,7 @@
 'use client';
 
 import { useGame } from '@/hooks/useGame';
+import { useGameStore } from '@/store/gameStore';
 import { motion } from 'framer-motion';
 
 interface GamePanelProps {
@@ -9,22 +10,22 @@ interface GamePanelProps {
 }
 
 export default function GamePanel({ channel, socket }: GamePanelProps) {
-  const {
-    isActive,
-    currentQuestion,
-    leaderboard,
-    timeLeft,
-    hasAnswered,
-    lastAnswer,
-    winner,
-    explanation,
-    submitAnswer
-  } = useGame(channel, socket);
-
   // Ne pas afficher le panel si ce n'est pas le canal Game
   if (channel !== 'Game') {
     return null;
   }
+  
+  // Initialiser le hook useGame pour connecter les événements socket
+  const gameData = useGame(channel, socket);
+  
+  // Utiliser des sélecteurs spécifiques pour éviter les re-renders
+  const isActive = useGameStore(state => state.isActive);
+  const currentQuestion = useGameStore(state => state.currentQuestion);
+  const leaderboard = useGameStore(state => state.leaderboard);
+  const timeLeft = useGameStore(state => state.timeLeft);
+  const winner = useGameStore(state => state.winner);
+  const explanation = useGameStore(state => state.explanation);
+  const hasAnswered = useGameStore(state => state.hasAnswered);
 
   if (!isActive) {
     return (
@@ -39,8 +40,13 @@ export default function GamePanel({ channel, socket }: GamePanelProps) {
             💬 Tapez votre réponse • 🏆 Premier = 10 points
           </div>
           <div className="mt-3 text-xs text-purple-600 dark:text-purple-400">
-            🔄 Le quiz démarre automatiquement...
+            {socket?.connected ? '🔄 Le quiz démarre automatiquement...' : '⚠️ Connexion en cours...'}
           </div>
+          {!socket?.connected && (
+            <div className="mt-2 text-xs text-red-500">
+              Problème de connexion - Rechargez la page
+            </div>
+          )}
         </div>
         
         {/* Classement même quand le jeu n'est pas actif */}

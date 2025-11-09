@@ -40,13 +40,16 @@ module.exports = (io, socket) => {
         const user = await User.findById(sender.id);
         if (!user) return;
 
+        // S'assurer que socket a les bonnes infos utilisateur
+        socket.userId = user._id.toString();
+        socket.username = user.username;
+        
         // Si c'est le canal Game, traiter comme une réponse de quiz
+        let isGameResponse = false;
         if (room === 'Game') {
-          // S'assurer que socket a les bonnes infos
-          socket.userId = user._id.toString();
-          socket.username = user.username;
-          // Traiter le message comme une réponse de quiz
-          gameHandlers.handleChatMessage(socket, { room, message: content }, io);
+          console.log(`[SOCKET] Processing game message from ${user.username}: "${content}"`);
+          isGameResponse = await gameHandlers.handleChatMessage(socket, { room, message: content }, io);
+          console.log(`[SOCKET] Is game response: ${isGameResponse}`);
         }
 
         // Sauvegarder le message en base
@@ -62,20 +65,23 @@ module.exports = (io, socket) => {
           await newMessage.populate('replyTo');
         }
 
-        const enrichedMessage = {
-          _id: newMessage._id.toString(),
-          sender: {
-            _id: newMessage.sender._id.toString(),
-            username: newMessage.sender.username,
-          },
-          content: newMessage.content,
-          room: newMessage.room,
-          replyTo: newMessage.replyTo,
-          reactions: newMessage.reactions || [],
-          createdAt: newMessage.createdAt,
-        };
+        // Toujours sauvegarder et afficher les messages, même dans le canal Game
+        if (true) {
+          const enrichedMessage = {
+            _id: newMessage._id.toString(),
+            sender: {
+              _id: newMessage.sender._id.toString(),
+              username: newMessage.sender.username,
+            },
+            content: newMessage.content,
+            room: newMessage.room,
+            replyTo: newMessage.replyTo,
+            reactions: newMessage.reactions || [],
+            createdAt: newMessage.createdAt,
+          };
 
-        io.to(room).emit('receive_message', enrichedMessage);
+          io.to(room).emit('receive_message', enrichedMessage);
+        }
       } catch (error) {
         console.error('Error saving message:', error);
       }

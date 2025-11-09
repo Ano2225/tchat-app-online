@@ -4,19 +4,32 @@ const { getRandomQuestion } = require('../services/questionService');
 const activeGames = new Map();
 const gameTimers = new Map();
 
-const QUESTION_DURATION = 10000; // 10 secondes
-const PAUSE_BETWEEN_QUESTIONS = 2000; // 2 secondes pour voir l'explication
+const QUESTION_DURATION = 15000; // 15 secondes
+const PAUSE_BETWEEN_QUESTIONS = 8000; // 8 secondes pour lire l'explication
 
 const handleChatMessage = async (socket, data, io) => {
   const { room: channel, message } = data;
-  const game = activeGames.get(channel);
+  let game = activeGames.get(channel);
+  
+  // Si le jeu n'est pas en mémoire, le charger depuis la DB
+  if (!game && channel === 'Game') {
+    try {
+      game = await Game.findOne({ channel });
+      if (game) {
+        activeGames.set(channel, game);
+        console.log(`[GAME] Game loaded from DB for channel: ${channel}`);
+      }
+    } catch (error) {
+      console.error('Error loading game from DB:', error);
+    }
+  }
   
   console.log(`[GAME] Message received in channel ${channel}: "${message}"`);
   console.log(`[GAME] Game exists: ${!!game}, isActive: ${game?.isActive}, hasQuestion: ${!!game?.currentQuestion}`);
   
   if (!game || !game.isActive || !game.currentQuestion) {
     console.log(`[GAME] Ignoring message - game not ready`);
-    return;
+    return false;
   }
   
   // Vérifier si c'est une réponse à la question
@@ -33,7 +46,7 @@ const handleChatMessage = async (socket, data, io) => {
   const existingAnswer = game.currentQuestion.answers.find(a => a.userId?.toString() === socket.userId);
   if (existingAnswer) {
     console.log(`[GAME] User ${socket.username} already answered`);
-    return;
+    return false;
   }
   
   const responseTime = Date.now() - game.currentQuestion.startTime.getTime();
@@ -101,15 +114,18 @@ const handleChatMessage = async (socket, data, io) => {
         room: channel
       });
       
-      // Terminer la question immédiatement
+      // Terminer la question après un court délai
       const currentTimer = gameTimers.get(channel);
       if (currentTimer) {
         clearTimeout(currentTimer);
         gameTimers.delete(channel);
       }
-      setTimeout(() => {
+      
+      const endTimer = setTimeout(() => {
         endQuestion(channel, io);
-      }, 2000); // 2 secondes pour voir le gagnant
+      }, 5000); // 5 secondes pour voir le gagnant
+      
+      gameTimers.set(channel, endTimer);
     }
   }
   
@@ -119,41 +135,47 @@ const handleChatMessage = async (socket, data, io) => {
   } catch (error) {
     if (error.name === 'VersionError') {
       console.log('Version conflict detected, reloading game state');
-      // Recharger le jeu depuis la base de données
-      const freshGame = await Game.findOne({ channel });
-      if (freshGame) {
-        activeGames.set(channel, freshGame);
+      try {
+        const freshGame = await Game.findOne({ channel });
+        if (freshGame) {
+          activeGames.set(channel, freshGame);
+        }
+      } catch (reloadError) {
+        console.error('Error reloading game:', reloadError);
       }
     } else {
       console.error('Error saving game:', error);
     }
   }
+  
+  return false; // Toujours permettre l'affichage du message
 };
 
 module.exports = (io, socket) => {
   console.log('Game handlers initialized for socket:', socket.id);
   
   socket.on('join_game_channel', async (channel) => {
-    console.log(`User joining game channel: ${channel}`);
+    console.log(`User ${socket.username || socket.id} joining game channel: ${channel}`);
     socket.join(`game_${channel}`);
     
     let game = activeGames.get(channel);
     if (!game) {
       try {
-        game = await Game.findOne({ channel }) || await Game.create({ channel });
+        game = await Game.findOne({ channel });
+        if (!game) {
+          game = await Game.create({ 
+            channel,
+            isActive: false,
+            leaderboard: [],
+            questionHistory: []
+          });
+        }
         activeGames.set(channel, game);
         console.log(`Game created/loaded for channel: ${channel}`);
       } catch (error) {
         console.error('Error creating/loading game:', error);
-        // Créer un jeu temporaire en mémoire
-        game = {
-          channel,
-          isActive: false,
-          leaderboard: [],
-          questionHistory: [],
-          save: async () => {}
-        };
-        activeGames.set(channel, game);
+        socket.emit('game_error', { message: 'Erreur lors du chargement du jeu' });
+        return;
       }
     }
     
@@ -169,30 +191,31 @@ module.exports = (io, socket) => {
         try {
           await game.save();
         } catch (error) {
-          if (error.name === 'VersionError') {
-            console.log('Version conflict when adding player, reloading game');
-            const freshGame = await Game.findOne({ channel });
-            if (freshGame) {
-              activeGames.set(channel, freshGame);
-              game = freshGame;
-            }
-          } else {
-            console.error('Error saving game when adding player:', error);
-          }
+          console.error('Error saving game when adding player:', error);
         }
       }
     }
     
-    // Démarrer le jeu automatiquement
+    // Démarrer le jeu automatiquement avec un délai
     console.log(`Game status for ${channel}: isActive=${game.isActive}`);
     if (!game.isActive) {
       console.log(`Starting game for channel: ${channel}`);
-      startGame(channel, io);
+      setTimeout(() => startGame(channel, io), 1000);
     } else {
-      console.log(`Game already active for channel: ${channel}, checking current question`);
-      if (!game.currentQuestion) {
-        console.log(`No current question, starting new question`);
-        nextQuestion(channel, io);
+      console.log(`Game already active for channel: ${channel}`);
+      // Vérifier si une question est en cours
+      if (game.currentQuestion) {
+        const timeElapsed = Date.now() - new Date(game.currentQuestion.startTime).getTime();
+        const timeLeft = Math.max(0, Math.floor((QUESTION_DURATION - timeElapsed) / 1000));
+        
+        if (timeLeft > 0) {
+          socket.emit('new_question', {
+            question: game.currentQuestion.question,
+            duration: timeLeft * 1000
+          });
+        }
+      } else {
+        setTimeout(() => nextQuestion(channel, io), 2000);
       }
     }
     
@@ -203,8 +226,6 @@ module.exports = (io, socket) => {
       leaderboard: (game.leaderboard || []).sort((a, b) => (b.score || 0) - (a.score || 0))
     });
   });
-
-
 
   socket.on('start_game', async (channel) => {
     const game = activeGames.get(channel);
@@ -219,10 +240,10 @@ module.exports = (io, socket) => {
 };
 
 async function startGame(channel, io) {
-  console.log(`Starting game for channel: ${channel}`);
+  console.log(`[START_GAME] Starting game for channel: ${channel}`);
   const game = activeGames.get(channel);
   if (!game) {
-    console.log(`No game found for channel: ${channel}`);
+    console.log(`[START_GAME] No game found for channel: ${channel}`);
     return;
   }
   
@@ -231,17 +252,7 @@ async function startGame(channel, io) {
     await game.save();
     console.log(`Game activated for channel: ${channel}`);
   } catch (error) {
-    if (error.name === 'VersionError') {
-      console.log('Version conflict when starting game, reloading');
-      const freshGame = await Game.findOne({ channel });
-      if (freshGame) {
-        freshGame.isActive = true;
-        await freshGame.save();
-        activeGames.set(channel, freshGame);
-      }
-    } else {
-      console.error('Error starting game:', error);
-    }
+    console.error('Error starting game:', error);
   }
   
   io.to(`game_${channel}`).emit('game_started');
@@ -251,10 +262,10 @@ async function startGame(channel, io) {
 }
 
 async function nextQuestion(channel, io) {
-  console.log(`Next question for channel: ${channel}`);
+  console.log(`[NEXT_QUESTION] Starting for channel: ${channel}`);
   const game = activeGames.get(channel);
-  if (!game) {
-    console.log(`No game found for next question in channel: ${channel}`);
+  if (!game || !game.isActive) {
+    console.log(`[NEXT_QUESTION] No game or game not active for channel: ${channel}`);
     return;
   }
   
@@ -269,29 +280,17 @@ async function nextQuestion(channel, io) {
   try {
     await game.save();
   } catch (error) {
-    if (error.name === 'VersionError') {
-      console.log('Version conflict when setting question, reloading');
-      const freshGame = await Game.findOne({ channel });
-      if (freshGame) {
-        freshGame.currentQuestion = {
-          ...question,
-          startTime: new Date(),
-          answers: []
-        };
-        await freshGame.save();
-        activeGames.set(channel, freshGame);
-      }
-    } else {
-      console.error('Error saving question:', error);
-    }
+    console.error('Error saving question:', error);
   }
   
   // Envoyer la nouvelle question
-  io.to(`game_${channel}`).emit('new_question', {
+  const questionData = {
     question: question.question,
     duration: QUESTION_DURATION
-  });
-  console.log(`Question sent to game_${channel}`);
+  };
+  
+  console.log(`[NEXT_QUESTION] Sending question to game_${channel}:`, questionData);
+  io.to(`game_${channel}`).emit('new_question', questionData);
   
   // Annoncer la nouvelle question dans le chat
   io.to(channel).emit('receive_message', {
@@ -315,29 +314,11 @@ async function nextQuestion(channel, io) {
 }
 
 async function endQuestion(channel, io) {
+  console.log(`Ending question for channel: ${channel}`);
   const game = activeGames.get(channel);
-  if (!game || !game.currentQuestion) return;
-  
-  // Ajouter à l'historique
-  game.questionHistory.push({
-    question: game.currentQuestion.question,
-    correctAnswer: game.currentQuestion.correctAnswerText,
-    explanation: game.currentQuestion.explanation,
-    answers: game.currentQuestion.answers || []
-  });
-  
-  try {
-    await game.save();
-  } catch (error) {
-    if (error.name === 'VersionError') {
-      console.log('Version conflict when ending question, reloading');
-      const freshGame = await Game.findOne({ channel });
-      if (freshGame) {
-        activeGames.set(channel, freshGame);
-      }
-    } else {
-      console.error('Error saving question history:', error);
-    }
+  if (!game || !game.currentQuestion) {
+    console.log(`No game or question to end for channel: ${channel}`);
+    return;
   }
   
   // Envoyer les résultats avec explication
@@ -367,11 +348,16 @@ async function endQuestion(channel, io) {
     gameTimers.delete(channel);
   }
   
+  // Nettoyer la question actuelle
+  game.currentQuestion = null;
+  
   // Programmer la prochaine question
   console.log(`Scheduling next question in ${PAUSE_BETWEEN_QUESTIONS}ms for channel: ${channel}`);
-  setTimeout(() => {
+  const nextQuestionTimer = setTimeout(() => {
     nextQuestion(channel, io);
   }, PAUSE_BETWEEN_QUESTIONS);
+  
+  gameTimers.set(channel, nextQuestionTimer);
 }
 
 // Exporter la fonction pour l'utiliser dans socketHandlers

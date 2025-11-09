@@ -3,11 +3,6 @@ import { useGameStore } from '@/store/gameStore';
 import { useAuthStore } from '@/store/authStore';
 import { Socket } from 'socket.io-client';
 
-interface UseGameProps {
-  channel: string;
-  socket?: Socket | null;
-}
-
 export const useGame = (channel: string, socket?: Socket | null) => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const user = useAuthStore((state) => state.user);
@@ -34,22 +29,25 @@ export const useGame = (channel: string, socket?: Socket | null) => {
   } = useGameStore();
 
   useEffect(() => {
-    if (!socket || !user) return;
-
-    // Rejoindre le canal de jeu seulement si c'est le canal Game
-    if (isGameChannel) {
-      console.log('Joining game channel:', channel);
-      socket.emit('join_game_channel', channel);
-    } else {
-      // Si ce n'est pas le canal Game, réinitialiser l'état
-      resetGame();
+    if (!socket || !user || !isGameChannel) {
+      if (!isGameChannel) {
+        resetGame();
+      }
       return;
     }
 
+    console.log('Joining game channel:', channel);
+    socket.emit('join_game_channel', channel);
+
     // Écouter les événements de jeu
     const handleGameState = (state: any) => {
-      console.log('Game state received:', state);
-      setGameState(state);
+      console.log('[FRONTEND] Game state received:', state);
+      console.log('[FRONTEND] Current question details:', state.currentQuestion);
+      console.log('[FRONTEND] Channel:', channel, 'isGameChannel:', isGameChannel);
+      if (isGameChannel) {
+        setGameState(state);
+        console.log('[FRONTEND] After setGameState - currentQuestion:', currentQuestion);
+      }
     };
 
     const handleGameStarted = () => {
@@ -57,9 +55,16 @@ export const useGame = (channel: string, socket?: Socket | null) => {
     };
 
     const handleNewQuestion = (question: any) => {
-      console.log('New question received:', question);
-      setQuestion(question);
-      if (question.duration) {
+      console.log('[FRONTEND] New question received:', question);
+      if (isGameChannel && question.duration) {
+        console.log('[FRONTEND] Starting timer for:', question.duration / 1000, 'seconds');
+        // Update the question in the store
+        setQuestion({
+          question: question.question,
+          options: question.options || [],
+          duration: question.duration,
+          explanation: question.explanation
+        });
         startTimer(question.duration / 1000);
       }
     };
@@ -101,8 +106,9 @@ export const useGame = (channel: string, socket?: Socket | null) => {
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
-      if (socket && isGameChannel) {
+      if (socket) {
         socket.emit('leave_game_channel', channel);
         socket.off('game_state', handleGameState);
         socket.off('game_started', handleGameStarted);

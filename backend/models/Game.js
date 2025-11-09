@@ -11,6 +11,7 @@ const gameSchema = new mongoose.Schema({
   },
   currentQuestion: {
     question: String,
+    options: [String], // Options de réponse
     correctAnswer: Number, // Index de la réponse correcte
     correctAnswerText: String, // Texte de la réponse correcte
     explanation: String,

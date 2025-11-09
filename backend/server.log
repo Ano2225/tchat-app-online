@@ -1,0 +1,599 @@
+
+> tchat-app-online@1.0.0 dev
+> nodemon backend/server.js
+
+[33m[nodemon] 3.1.10[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+Game handlers module loaded
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::8000
+    at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+    at listenInCluster (node:net:1996:12)
+    at Server.listen (node:net:2101:7)
+    at ChatServer.start (/Users/macbook/Desktop/tchat-app-online/backend/server.js:93:17)
+    at Object.<anonymous> (/Users/macbook/Desktop/tchat-app-online/backend/server.js:100:12)
+    at Module._compile (node:internal/modules/cjs/loader:1734:14)
+    at Object..js (node:internal/modules/cjs/loader:1899:10)
+    at Module.load (node:internal/modules/cjs/loader:1469:32)
+    at Function._load (node:internal/modules/cjs/loader:1286:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1975:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 8000
+}
+
+Node.js v23.11.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+Game handlers module loaded
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::8000
+    at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+    at listenInCluster (node:net:1996:12)
+    at Server.listen (node:net:2101:7)
+    at ChatServer.start (/Users/macbook/Desktop/tchat-app-online/backend/server.js:93:17)
+    at Object.<anonymous> (/Users/macbook/Desktop/tchat-app-online/backend/server.js:100:12)
+    at Module._compile (node:internal/modules/cjs/loader:1734:14)
+    at Object..js (node:internal/modules/cjs/loader:1899:10)
+    at Module.load (node:internal/modules/cjs/loader:1469:32)
+    at Function._load (node:internal/modules/cjs/loader:1286:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1975:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 8000
+}
+
+Node.js v23.11.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+Game handlers module loaded
+Serveur démarré sur le port 8000
+MongoDB connecté avec succès
+Client connected with ID: yqyLwmunXLopn9FJAAAB
+Game handlers initialized for socket: yqyLwmunXLopn9FJAAAB
+Client connected with ID: 5SQ4BYPRC2wzArmsAAAD
+Game handlers initialized for socket: 5SQ4BYPRC2wzArmsAAAD
+Client connected with ID: i-JYT2EnPlKNV6ZeAAAF
+Game handlers initialized for socket: i-JYT2EnPlKNV6ZeAAAF
+User i-JYT2EnPlKNV6ZeAAAF joined room Game
+User i-JYT2EnPlKNV6ZeAAAF joining game channel: Game
+Game created/loaded for channel: Game
+Game status for Game: isActive=true
+Game already active for channel: Game
+Error saving message: CastError: Cast to ObjectId failed for value "test-user" (type string) at path "_id" for model "User"
+    at SchemaObjectId.cast (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/schema/objectId.js:251:11)
+    at SchemaType.applySetters (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/schemaType.js:1255:12)
+    at SchemaType.castForQuery (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/schemaType.js:1673:17)
+    at cast (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/cast.js:390:32)
+    at Query.cast (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/query.js:4907:12)
+    at Query._castConditions (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/query.js:2325:10)
+    at model.Query._findOne (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/query.js:2648:8)
+    at model.Query.exec (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/query.js:4456:80)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Socket.<anonymous> (/Users/macbook/Desktop/tchat-app-online/backend/socket/socketHandlers.js:40:22) {
+  stringValue: '"test-user"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'test-user',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at new ObjectId (/Users/macbook/Desktop/tchat-app-online/node_modules/bson/lib/bson.cjs:2523:23)
+      at castObjectId (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/cast/objectid.js:25:12)
+      at SchemaObjectId.cast (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/schema/objectId.js:249:12)
+      at SchemaType.applySetters (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/schemaType.js:1255:12)
+      at SchemaType.castForQuery (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/schemaType.js:1673:17)
+      at cast (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/cast.js:390:32)
+      at Query.cast (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/query.js:4907:12)
+      at Query._castConditions (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/query.js:2325:10)
+      at model.Query._findOne (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/query.js:2648:8)
+      at model.Query.exec (/Users/macbook/Desktop/tchat-app-online/node_modules/mongoose/lib/query.js:4456:80),
+  valueType: 'string'
+}
+Client i-JYT2EnPlKNV6ZeAAAF disconnected
+Client 5SQ4BYPRC2wzArmsAAAD disconnected
+Client connected with ID: kOVkPXBR_cxUjV0iAAAI
+Game handlers initialized for socket: kOVkPXBR_cxUjV0iAAAI
+{"method":"GET","url":"/","status":304,"duration":"29ms","ip":"::1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","timestamp":"2025-11-02T20:35:57.974Z"}
+User kOVkPXBR_cxUjV0iAAAI joined room General
+{"method":"GET","url":"/","status":304,"duration":"12ms","ip":"::1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","timestamp":"2025-11-02T20:35:58.023Z"}
+{"method":"GET","url":"/General","status":304,"duration":"163ms","ip":"::1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","timestamp":"2025-11-02T20:35:58.115Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"77ms","ip":"::1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","timestamp":"2025-11-02T20:35:58.196Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"105ms","ip":"::1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","timestamp":"2025-11-02T20:35:58.310Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"132ms","ip":"::1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","timestamp":"2025-11-02T20:35:58.444Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+Client kOVkPXBR_cxUjV0iAAAI disconnected
+Client connected with ID: eFGt_IELnrBRGL-2AAAL
+Game handlers initialized for socket: eFGt_IELnrBRGL-2AAAL
+User eFGt_IELnrBRGL-2AAAL joined room General
+{"method":"GET","url":"/","status":304,"duration":"36ms","ip":"::1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","timestamp":"2025-11-02T20:36:02.037Z"}
+{"method":"GET","url":"/","status":304,"duration":"17ms","ip":"::1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","timestamp":"2025-11-02T20:36:02.060Z"}
+{"method":"GET","url":"/General","status":304,"duration":"71ms","ip":"::1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","timestamp":"2025-11-02T20:36:02.080Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"31ms","ip":"::1","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36","timestamp":"2025-11-02T20:36:[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+Game handlers module loaded
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::8000
+    at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+    at listenInCluster (node:net:1996:12)
+    at Server.listen (node:net:2101:7)
+    at ChatServer.start (/Users/macbook/Desktop/tchat-app-online/backend/server.js:93:17)
+    at Object.<anonymous> (/Users/macbook/Desktop/tchat-app-online/backend/server.js:100:12)
+    at Module._compile (node:internal/modules/cjs/loader:1734:14)
+    at Object..js (node:internal/modules/cjs/loader:1899:10)
+    at Module.load (node:internal/modules/cjs/loader:1469:32)
+    at Function._load (node:internal/modules/cjs/loader:1286:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1975:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 8000
+}
+
+Node.js v23.11.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+Game handlers module loaded
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::8000
+    at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+    at listenInCluster (node:net:1996:12)
+    at Server.listen (node:net:2101:7)
+    at ChatServer.start (/Users/macbook/Desktop/tchat-app-online/backend/server.js:93:17)
+    at Object.<anonymous> (/Users/macbook/Desktop/tchat-app-online/backend/server.js:100:12)
+    at Module._compile (node:internal/modules/cjs/loader:1734:14)
+    at Object..js (node:internal/modules/cjs/loader:1899:10)
+    at Module.load (node:internal/modules/cjs/loader:1469:32)
+    at Function._load (node:internal/modules/cjs/loader:1286:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1975:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 8000
+}
+
+Node.js v23.11.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+Game handlers module loaded
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::8000
+    at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+    at listenInCluster (node:net:1996:12)
+    at Server.listen (node:net:2101:7)
+    at ChatServer.start (/Users/macbook/Desktop/tchat-app-online/backend/server.js:93:17)
+    at Object.<anonymous> (/Users/macbook/Desktop/tchat-app-online/backend/server.js:100:12)
+    at Module._compile (node:internal/modules/cjs/loader:1734:14)
+    at Object..js (node:internal/modules/cjs/loader:1899:10)
+    at Module.load (node:internal/modules/cjs/loader:1469:32)
+    at Function._load (node:internal/modules/cjs/loader:1286:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1975:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 8000
+}
+
+Node.js v23.11.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+Game handlers module loaded
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::8000
+    at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+    at listenInCluster (node:net:1996:12)
+    at Server.listen (node:net:2101:7)
+    at ChatServer.start (/Users/macbook/Desktop/tchat-app-online/backend/server.js:93:17)
+    at Object.<anonymous> (/Users/macbook/Desktop/tchat-app-online/backend/server.js:100:12)
+    at Module._compile (node:internal/modules/cjs/loader:1734:14)
+    at Object..js (node:internal/modules/cjs/loader:1899:10)
+    at Module.load (node:internal/modules/cjs/loader:1469:32)
+    at Function._load (node:internal/modules/cjs/loader:1286:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1975:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 8000
+}
+
+Node.js v23.11.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+Game handlers module loaded
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::8000
+    at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+    at listenInCluster (node:net:1996:12)
+    at Server.listen (node:net:2101:7)
+    at ChatServer.start (/Users/macbook/Desktop/tchat-app-online/backend/server.js:93:17)
+    at Object.<anonymous> (/Users/macbook/Desktop/tchat-app-online/backend/server.js:100:12)
+    at Module._compile (node:internal/modules/cjs/loader:1734:14)
+    at Object..js (node:internal/modules/cjs/loader:1899:10)
+    at Module.load (node:internal/modules/cjs/loader:1469:32)
+    at Function._load (node:internal/modules/cjs/loader:1286:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1975:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 8000
+}
+
+Node.js v23.11.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+serRole":"admin"}
+{"method":"GET","url":"/Game","status":304,"duration":"14ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:36:47.397Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+[SOCKET] Processing game message from admin: "ijj"
+[GAME] Message received in channel Game: "ijj"
+[GAME] Game exists: true, isActive: true, hasQuestion: true
+[GAME] User answer: "ijj", Correct answer: "yen"
+[GAME] User admin already answered
+[SOCKET] Is game response: false
+Client S_6XbDLIXJIXC3XMAAAR disconnected
+Client connected with ID: dT5qfCmjZ7JYZe6zAAAU
+Game handlers initialized for socket: dT5qfCmjZ7JYZe6zAAAU
+User dT5qfCmjZ7JYZe6zAAAU joined room General
+{"method":"GET","url":"/","status":304,"duration":"25ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:37:35.012Z"}
+{"method":"GET","url":"/","status":304,"duration":"15ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:37:35.033Z"}
+{"method":"GET","url":"/General","status":304,"duration":"81ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:37:35.082Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"97ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:37:35.182Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"44ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:37:35.230Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"51ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:37:35.283Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+Client dT5qfCmjZ7JYZe6zAAAU disconnected
+{"method":"GET","url":"/","status":304,"duration":"13ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:37:37.062Z"}
+Client connected with ID: QZjmRTdAxs9V1OTyAAAX
+Game handlers initialized for socket: QZjmRTdAxs9V1OTyAAAX
+{"method":"GET","url":"/","status":304,"duration":"22ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:37:37.090Z"}
+User QZjmRTdAxs9V1OTyAAAX joined room General
+{"method":"GET","url":"/General","status":304,"duration":"128ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:37:37.179Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"31ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:37:37.213Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"50ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:37:37.265Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"90ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:37:37.358Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+User QZjmRTdAxs9V1OTyAAAX left room General
+User admin joining game channel: Game
+Game status for Game: isActive=true
+Game already active for channel: Game
+User QZjmRTdAxs9V1OTyAAAX joined room Game
+User admin joining game channel: Game
+Game status for Game: isActive=true
+Game already active for channel: Game
+{"method":"GET","url":"/Game","status":200,"duration":"21ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:37:48.948Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/Game","status":304,"duration":"20ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:37:48.989Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+[SOCKET] Processing game message from admin: "hhhhj"
+[GAME] Message received in channel Game: "hhhhj"
+[GAME] Game exists: true, isActive: true, hasQuestion: true
+[GAME] User answer: "hhhhj", Correct answer: "yen"
+[GAME] User admin already answered
+[SOCKET] Is game response: false
+[SOCKET] Processing game message from admin: "ooppp"
+[GAME] Message received in channel Game: "ooppp"
+[GAME] Game exists: true, isActive: true, hasQuestion: true
+[GAME] User answer: "ooppp", Correct answer: "yen"
+[GAME] User admin already answered
+[SOCKET] Is game response: false
+User QZjmRTdAxs9V1OTyAAAX left room Game
+User QZjmRTdAxs9V1OTyAAAX joined room General
+{"method":"GET","url":"/General","status":304,"duration":"101ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:38:54.156Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"37ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:38:54.197Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+User QZjmRTdAxs9V1OTyAAAX left room General
+User QZjmRTdAxs9V1OTyAAAX joined room CausonsDeTout
+{"method":"GET","url":"/CausonsDeTout","status":304,"duration":"26ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:06.349Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/CausonsDeTout","status":304,"duration":"138ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:06.491Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+User QZjmRTdAxs9V1OTyAAAX left room CausonsDeTout
+User QZjmRTdAxs9V1OTyAAAX joined room eeee
+{"method":"GET","url":"/eeee","status":304,"duration":"14ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:07.883Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/eeee","status":304,"duration":"14ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:07.902Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+User QZjmRTdAxs9V1OTyAAAX left room eeee
+User QZjmRTdAxs9V1OTyAAAX joined room CausonsDeTout
+{"method":"GET","url":"/CausonsDeTout","status":304,"duration":"15ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:09.044Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/CausonsDeTout","status":304,"duration":"33ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:09.079Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+User QZjmRTdAxs9V1OTyAAAX left room CausonsDeTout
+User QZjmRTdAxs9V1OTyAAAX joined room eeee
+{"method":"GET","url":"/eeee","status":304,"duration":"32ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:24.477Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/eeee","status":304,"duration":"18ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:24.498Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+User QZjmRTdAxs9V1OTyAAAX left room eeee
+User QZjmRTdAxs9V1OTyAAAX joined room CausonsDeTout
+{"method":"GET","url":"/CausonsDeTout","status":200,"duration":"20ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:28.090Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/CausonsDeTout","status":304,"duration":"37ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:28.130Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+User QZjmRTdAxs9V1OTyAAAX left room CausonsDeTout
+User QZjmRTdAxs9V1OTyAAAX joined room General
+{"method":"GET","url":"/General","status":200,"duration":"35ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:29.153Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"130ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:29.285Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+User QZjmRTdAxs9V1OTyAAAX left room General
+User admin joining game channel: Game
+Game status for Game: isActive=true
+Game already active for channel: Game
+User QZjmRTdAxs9V1OTyAAAX joined room Game
+User admin joining game channel: Game
+Game status for Game: isActive=true
+Game already active for channel: Game
+{"method":"GET","url":"/Game","status":200,"duration":"39ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:31.381Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/Game","status":304,"duration":"14ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:31.401Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+Client QZjmRTdAxs9V1OTyAAAX disconnected
+[ADMIN] 2025-11-02T20:39:39.717Z - GET /api/admin/stats - IP: ::1 - User: admin
+[ADMIN] 2025-11-02T20:39:39.805Z - GET /api/admin/recent-activity - IP: ::1 - User: admin
+[ADMIN] 2025-11-02T20:39:39.807Z - GET /api/admin/reports - IP: ::1 - User: admin
+[ADMIN-SENSITIVE] 2025-11-02T20:39:39.807Z - GET /api/admin/reports - Admin: admin - Body: {}
+[ADMIN] 2025-11-02T20:39:39.818Z - GET /api/admin/users?page=1&limit=10&search= - IP: ::1 - User: admin
+{"method":"GET","url":"/","status":304,"duration":"68ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:39.824Z"}
+{"method":"GET","url":"/users?page=1&limit=10&search=","status":200,"duration":"89ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:39.836Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/stats","status":200,"duration":"139ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:39.843Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/","status":304,"duration":"13ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:39.851Z"}
+[ADMIN] 2025-11-02T20:39:39.858Z - GET /api/admin/stats - IP: ::1 - User: admin
+[ADMIN] 2025-11-02T20:39:39.865Z - GET /api/admin/users?page=1&limit=10&search= - IP: ::1 - User: admin
+{"method":"GET","url":"/reports","status":304,"duration":"143ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:39.881Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/recent-activity","status":200,"duration":"162ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:39.897Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/stats","status":304,"duration":"48ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:39.900Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/users?page=1&limit=10&search=","status":304,"duration":"60ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:39.905Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+[ADMIN] 2025-11-02T20:39:39.906Z - GET /api/admin/reports - IP: ::1 - User: admin
+[ADMIN-SENSITIVE] 2025-11-02T20:39:39.906Z - GET /api/admin/reports - Admin: admin - Body: {}
+[ADMIN] 2025-11-02T20:39:39.926Z - GET /api/admin/recent-activity - IP: ::1 - User: admin
+{"method":"GET","url":"/reports","status":304,"duration":"48ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:39.938Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/recent-activity","status":304,"duration":"40ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:39.951Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+[ADMIN] 2025-11-02T20:39:47.451Z - GET /api/admin/reports - IP: ::1 - User: admin
+[ADMIN-SENSITIVE] 2025-11-02T20:39:47.451Z - GET /api/admin/reports - Admin: admin - Body: {}
+[ADMIN] 2025-11-02T20:39:47.454Z - GET /api/admin/stats - IP: ::1 - User: admin
+[ADMIN] 2025-11-02T20:39:47.462Z - GET /api/admin/users?page=1&limit=10&search= - IP: ::1 - User: admin
+[ADMIN] 2025-11-02T20:39:47.466Z - GET /api/admin/recent-activity - IP: ::1 - User: admin
+{"method":"GET","url":"/","status":304,"duration":"26ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:47.474Z"}
+{"method":"GET","url":"/","status":304,"duration":"10ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:47.488Z"}
+{"method":"GET","url":"/reports","status":304,"duration":"84ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:47.494Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/users?page=1&limit=10&search=","status":304,"duration":"74ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:47.501Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+[ADMIN] 2025-11-02T20:39:47.531Z - GET /api/admin/reports - IP: ::1 - User: admin
+[ADMIN-SENSITIVE] 2025-11-02T20:39:47.531Z - GET /api/admin/reports - Admin: admin - Body: {}
+[ADMIN] 2025-11-02T20:39:47.535Z - GET /api/admin/users?page=1&limit=10&search= - IP: ::1 - User: admin
+{"method":"GET","url":"/stats","status":304,"duration":"122ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:47.538Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/users?page=1&limit=10&search=","status":304,"duration":"35ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:47.550Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/reports","status":304,"duration":"49ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:47.558Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/recent-activity","status":304,"duration":"124ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:47.560Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+[ADMIN] 2025-11-02T20:39:47.563Z - GET /api/admin/stats - IP: ::1 - User: admin
+[ADMIN] 2025-11-02T20:39:47.575Z - GET /api/admin/recent-activity - IP: ::1 - User: admin
+{"method":"GET","url":"/stats","status":304,"duration":"25ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:47.579Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/recent-activity","status":304,"duration":"30ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:47.598Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+[ADMIN] 2025-11-02T20:39:59.263Z - GET /api/admin/recent-activity - IP: ::1 - User: admin
+[ADMIN] 2025-11-02T20:39:59.268Z - GET /api/admin/users?page=1&limit=10&search= - IP: ::1 - User: admin
+[ADMIN] 2025-11-02T20:39:59.273Z - GET /api/admin/stats - IP: ::1 - User: admin
+[ADMIN] 2025-11-02T20:39:59.288Z - GET /api/admin/reports - IP: ::1 - User: admin
+[ADMIN-SENSITIVE] 2025-11-02T20:39:59.288Z - GET /api/admin/reports - Admin: admin - Body: {}
+{"method":"GET","url":"/","status":304,"duration":"34ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:59.291Z"}
+{"method":"GET","url":"/users?page=1&limit=10&search=","status":304,"duration":"58ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:59.307Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/","status":304,"duration":"41ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:59.334Z"}
+[ADMIN] 2025-11-02T20:39:59.338Z - GET /api/admin/users?page=1&limit=10&search= - IP: ::1 - User: admin
+{"method":"GET","url":"/reports","status":304,"duration":"89ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:59.342Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/users?page=1&limit=10&search=","status":304,"duration":"39ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:59.347Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/stats","status":304,"duration":"98ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:59.349Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+[ADMIN] 2025-11-02T20:39:59.358Z - GET /api/admin/reports - IP: ::1 - User: admin
+[ADMIN-SENSITIVE] 2025-11-02T20:39:59.358Z - GET /api/admin/reports - Admin: admin - Body: {}
+{"method":"GET","url":"/recent-activity","status":304,"duration":"115ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:59.360Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+[ADMIN] 2025-11-02T20:39:59.362Z - GET /api/admin/stats - IP: ::1 - User: admin
+[ADMIN] 2025-11-02T20:39:59.388Z - GET /api/admin/recent-activity - IP: ::1 - User: admin
+{"method":"GET","url":"/stats","status":304,"duration":"36ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:59.391Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/reports","status":304,"duration":"41ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:59.393Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/recent-activity","status":304,"duration":"63ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:39:59.431Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/","status":304,"duration":"34ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:40:01.437Z"}
+Client connected with ID: iNYvClgcMEGGt3cbAAAa
+Game handlers initialized for socket: iNYvClgcMEGGt3cbAAAa
+{"method":"GET","url":"/","status":304,"duration":"19ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:40:01.470Z"}
+{"method":"GET","url":"/General","status":304,"duration":"75ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:40:01.505Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+User iNYvClgcMEGGt3cbAAAa joined room General
+{"method":"GET","url":"/General","status":304,"duration":"47ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:40:01.557Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"53ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:40:01.612Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"29ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:40:01.643Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+User iNYvClgcMEGGt3cbAAAa left room General
+User admin joining game channel: Game
+Game status for Game: isActive=true
+Game already active for channel: Game
+User iNYvClgcMEGGt3cbAAAa joined room Game
+User admin joining game channel: Game
+Game status for Game: isActive=true
+Game already active for channel: Game
+{"method":"GET","url":"/Game","status":304,"duration":"15ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:40:06.493Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/Game","status":304,"duration":"35ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:40:06.530Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+Client iNYvClgcMEGGt3cbAAAa disconnected
+Client connected with ID: qjw4VTPW12XNo30iAAAd
+Game handlers initialized for socket: qjw4VTPW12XNo30iAAAd
+User qjw4VTPW12XNo30iAAAd joined room General
+{"method":"GET","url":"/","status":304,"duration":"25ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:41:32.038Z"}
+{"method":"GET","url":"/","status":304,"duration":"44ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:41:32.084Z"}
+{"method":"GET","url":"/General","status":304,"duration":"115ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:41:32.117Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"62ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:41:32.182Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"42ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:41:32.225Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"33ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:41:32.261Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+Client qjw4VTPW12XNo30iAAAd disconnected
+Client connected with ID: TaONaVBkd8OFtOp_AAAg
+Game handlers initialized for socket: TaONaVBkd8OFtOp_AAAg
+{"method":"GET","url":"/","status":304,"duration":"31ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:41:34.041Z"}
+User TaONaVBkd8OFtOp_AAAg joined room General
+{"method":"GET","url":"/","status":304,"duration":"18ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:41:34.070Z"}
+{"method":"GET","url":"/General","status":304,"duration":"104ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:41:34.115Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"39ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:41:34.166Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"42ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:41:34.211Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/General","status":304,"duration":"35ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:41:34.249Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+User TaONaVBkd8OFtOp_AAAg left room General
+User admin joining game channel: Game
+Game status for Game: isActive=true
+Game already active for channel: Game
+User TaONaVBkd8OFtOp_AAAg joined room Game
+User admin joining game channel: Game
+Game status for Game: isActive=true
+Game already active for channel: Game
+{"method":"GET","url":"/Game","status":304,"duration":"42ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:41:37.495Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+{"method":"GET","url":"/Game","status":304,"duration":"16ms","ip":"::1","userAgent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36","timestamp":"2025-11-02T20:41:37.515Z","userId":"68eb96121df3dfa069a56394","userRole":"admin"}
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+Game handlers module loaded
+Serveur démarré sur le port 8000
+MongoDB connecté avec succès
+Client connected with ID: qEE9DWRvrb9Fa3YLAAAB
+Game handlers initialized for socket: qEE9DWRvrb9Fa3YLAAAB
+Client connected with ID: LDEVx4rOWY-HwOMqAAAD
+Game handlers initialized for socket: LDEVx4rOWY-HwOMqAAAD
+Client connected with ID: 1uOqwROAZAcscooxAAAF
+Game handlers initialized for socket: 1uOqwROAZAcscooxAAAF
+User 1uOqwROAZAcscooxAAAF joined room Game
+User 1uOqwROAZAcscooxAAAF joining game channel: Game
+Game created/loaded for channel: Game
+Game status for Game: isActive=true
+Game already active for channel: Game
+Client 1uOqwROAZAcscooxAAAF disconnected
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+Game handlers module loaded
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::8000
+    at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+    at listenInCluster (node:net:1996:12)
+    at Server.listen (node:net:2101:7)
+    at ChatServer.start (/Users/macbook/Desktop/tchat-app-online/backend/server.js:93:17)
+    at Object.<anonymous> (/Users/macbook/Desktop/tchat-app-online/backend/server.js:100:12)
+    at Module._compile (node:internal/modules/cjs/loader:1734:14)
+    at Object..js (node:internal/modules/cjs/loader:1899:10)
+    at Module.load (node:internal/modules/cjs/loader:1469:32)
+    at Function._load (node:internal/modules/cjs/loader:1286:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1975:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 8000
+}
+
+Node.js v23.11.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+Game handlers module loaded
+Serveur démarré sur le port 8000
+MongoDB connecté avec succès
+Client connected with ID: fzJcz4oEfxvaHV0SAAAB
+Game handlers initialized for socket: fzJcz4oEfxvaHV0SAAAB
+Client connected with ID: 6LMeQ120-m4JG-2JAAAD
+Game handlers initialized for socket: 6LMeQ120-m4JG-2JAAAD
+Client connected with ID: q6AnqUaGE03K9KArAAAF
+Game handlers initialized for socket: q6AnqUaGE03K9KArAAAF
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+Game handlers module loaded
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::8000
+    at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+    at listenInCluster (node:net:1996:12)
+    at Server.listen (node:net:2101:7)
+    at ChatServer.start (/Users/macbook/Desktop/tchat-app-online/backend/server.js:93:17)
+    at Object.<anonymous> (/Users/macbook/Desktop/tchat-app-online/backend/server.js:100:12)
+    at Module._compile (node:internal/modules/cjs/loader:1734:14)
+    at Object..js (node:internal/modules/cjs/loader:1899:10)
+    at Module.load (node:internal/modules/cjs/loader:1469:32)
+    at Function._load (node:internal/modules/cjs/loader:1286:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1975:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 8000
+}
+
+Node.js v23.11.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m
+[32m[nodemon] restarting due to changes...[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+Game handlers module loaded
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::8000
+    at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+    at listenInCluster (node:net:1996:12)
+    at Server.listen (node:net:2101:7)
+    at ChatServer.start (/Users/macbook/Desktop/tchat-app-online/backend/server.js:93:17)
+    at Object.<anonymous> (/Users/macbook/Desktop/tchat-app-online/backend/server.js:100:12)
+    at Module._compile (node:internal/modules/cjs/loader:1734:14)
+    at Object..js (node:internal/modules/cjs/loader:1899:10)
+    at Module.load (node:internal/modules/cjs/loader:1469:32)
+    at Function._load (node:internal/modules/cjs/loader:1286:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1975:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '::',
+  port: 8000
+}
+
+Node.js v23.11.0
+[31m[nodemon] app crashed - waiting for file changes before starting...[39m

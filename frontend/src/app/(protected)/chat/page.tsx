@@ -51,7 +51,7 @@ const ChatPage = () => {
   };
 
   useEffect(() => {
-    const newSocket = io('http://localhost:8000');
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000');
     setSocket(newSocket);
     return () => {
       newSocket.disconnect();

@@ -1,0 +1,20 @@
+
+> tchat-app-online@1.0.0 dev
+> nodemon backend/server.js
+
+[33m[nodemon] 3.1.10[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node backend/server.js`[39m
+Game handlers module loaded
+Serveur démarré sur le port 8000
+MongoDB connecté avec succès
+Client connected with ID: 6LTFNeXTi_VSST_5AAAB
+Game handlers initialized for socket: 6LTFNeXTi_VSST_5AAAB
+Client connected with ID: 0-dgWABBm04HvAzMAAAD
+Game handlers initialized for socket: 0-dgWABBm04HvAzMAAAD
+{"method":"GET","url":"/health","status":200,"duration":"5ms","ip":"::1","userAgent":"curl/8.7.1","timestamp":"2025-11-02T20:59:41.338Z"}
+Client connected with ID: 0MprsU6V7fcLyOcqAAAF
+Game handlers initialized for socket: 0MprsU6V7fcLyOcqAAAF
+Client 0-dgWABBm04HvAzMAAAD disconnected
