@@ -18,9 +18,21 @@ module.exports = (io, socket) => {
 
   // --- Join a public room ---
   socket.on('join_room', (room) => {
+    // Validate authentication
+    if (!socket.userId || !socket.username) {
+      console.log(`[SECURITY] Unauthorized room join attempt from socket: ${socket.id}`);
+      return;
+    }
+    
+    // Validate room parameter
+    if (!room || typeof room !== 'string' || room.length > 50) {
+      console.log(`[SECURITY] Invalid room parameter from user: ${socket.username}`);
+      return;
+    }
+    
     socket.join(room);
     socket.currentRoom = room;
-    console.log(`User ${socket.id} joined room ${room}`);
+    console.log(`User ${socket.username} joined room ${room}`);
   });
 
   // --- Leave a public room ---
@@ -65,8 +77,8 @@ module.exports = (io, socket) => {
           await newMessage.populate('replyTo');
         }
 
-        // Toujours sauvegarder et afficher les messages, même dans le canal Game
-        if (true) {
+        // Only display the message if it's not a game response
+        if (!isGameResponse) {
           const enrichedMessage = {
             _id: newMessage._id.toString(),
             sender: {
@@ -134,7 +146,7 @@ module.exports = (io, socket) => {
   socket.on('user_connected', async (username) => {
     try {
       currentUsername = username;
-      
+
       // Find the user ID for this username
       const user = await User.findOne({ username });
       if (user) {
@@ -144,18 +156,24 @@ module.exports = (io, socket) => {
           socket.disconnect();
           return;
         }
-        
+
         currentUserId = user._id.toString();
         socket.userId = currentUserId;
         socket.username = username;
         // Store in our mapping
         userIdToUsername.set(currentUserId, username);
-        
+
         // Mettre à jour le statut en ligne dans la base de données
-        await User.findByIdAndUpdate(user._id, { 
+        await User.findByIdAndUpdate(user._id, {
           isOnline: true,
           lastSeen: new Date()
         });
+      } else {
+        // For anonymous users, use a temporary ID
+        currentUserId = `anon_${socket.id}`;
+        socket.userId = currentUserId;
+        socket.username = username;
+        // Don't store anonymous in userIdToUsername mapping
       }
 
       if (!connectedUsers.has(username)) {

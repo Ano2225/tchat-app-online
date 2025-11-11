@@ -70,9 +70,9 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
     if (!socket || !recipient?._id || !user?.id) return;
 
     const handleReceiveMessage = (message: Message) => {
-      console.log('Received message:', message);
-      console.log('Message media_url:', message.media_url);
-      console.log('Message media_type:', message.media_type);
+      console.log('Received message:', { id: message._id, sender: message.sender._id });
+      console.log('Message media_url:', message.media_url ? 'present' : 'none');
+      console.log('Message media_type:', message.media_type || 'none');
       setMessages(prev => [...prev, message]);
       scrollToBottom();
     };

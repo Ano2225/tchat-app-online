@@ -1,13 +1,17 @@
 // Secure logging utility to prevent log injection
 class Logger {
   private static sanitize(message: any): string {
-    if (typeof message === 'string') {
-      return message
-        .replace(/[\r\n\t]/g, ' ')
-        .replace(/[^\x20-\x7E]/g, '')
-        .substring(0, 1000);
+    try {
+      if (typeof message === 'string') {
+        return message
+          .replace(/[\r\n\t]/g, ' ')
+          .replace(/[^\x20-\x7E]/g, '')
+          .substring(0, 1000);
+      }
+      return JSON.stringify(message).substring(0, 1000);
+    } catch {
+      return '[Invalid message]';
     }
-    return JSON.stringify(message).substring(0, 1000);
   }
 
   static info(message: any, context?: string): void {

@@ -20,7 +20,7 @@ interface AuthState {
   isAnonymous: boolean;
   login: (userData: { user: User; token: string }) => void;
   logout: () => Promise<void>;
-  updateUser: (newUserData: Partial<User>) => void;
+  updateUser: (newUserData: Partial<User>) => Promise<void>;
   setIsAnonymous: (isAnonymous: boolean) => void;
 
 }
@@ -33,7 +33,14 @@ export const useAuthStore = create<AuthState>()(
       isAnonymous: false,
       setIsAnonymous: (isAnonymous) => set({ isAnonymous }),
 
-      login: ({ user, token }) => set({ user, token }),
+      login: ({ user, token }) => {
+        try {
+          set({ user, token });
+        } catch (error) {
+          console.error('Login failed:', error);
+          throw error;
+        }
+      },
 
       logout: async () => {
         const { user: currentUser, token: currentToken } = get();
@@ -61,18 +68,24 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await axiosInstance.put('/user', data);
       
-          set((state) => ({
-            user: {
-              ...state.user,
-              ...response.data,
-            },
-          }));
+          try {
+            set((state) => ({
+              user: {
+                ...state.user,
+                ...response.data,
+              },
+            }));
+          } catch (setError) {
+            console.error('Failed to update user state:', setError);
+            throw setError;
+          }
         } catch (error) {
           console.error('Failed to update user:', {
             error: error instanceof Error ? error.message : 'Unknown error',
             data,
             timestamp: new Date().toISOString()
           });
+          throw error;
         }
       }
       

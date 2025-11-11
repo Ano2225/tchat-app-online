@@ -3,12 +3,47 @@ const { getRandomQuestion } = require('../services/questionService');
 
 const activeGames = new Map();
 const gameTimers = new Map();
+const userActionTimestamps = new Map(); // Track user actions for rate limiting
 
 const QUESTION_DURATION = 15000; // 15 secondes
 const PAUSE_BETWEEN_QUESTIONS = 8000; // 8 secondes pour lire l'explication
+const RATE_LIMIT_WINDOW = 1000; // 1 second
+const MAX_ACTIONS_PER_WINDOW = 5; // Max 5 actions per second per user
 
 const handleChatMessage = async (socket, data, io) => {
+  // Validate authentication for game messages
+  if (!socket.userId || !socket.username) {
+    console.log(`[SECURITY] Unauthorized game message attempt from socket: ${socket.id}`);
+    return false;
+  }
+  
+  // Check rate limiting for game messages
+  const now = Date.now();
+  const userActions = userActionTimestamps.get(socket.userId) || [];
+  const recentActions = userActions.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
+  
+  if (recentActions.length >= MAX_ACTIONS_PER_WINDOW) {
+    console.log(`[SECURITY] Rate limit exceeded for game message from user: ${socket.username}`);
+    return true; // Suppress the message
+  }
+  
+  recentActions.push(now);
+  userActionTimestamps.set(socket.userId, recentActions);
+  
   const { room: channel, message } = data;
+  
+  // Validate input parameters
+  if (!channel || typeof channel !== 'string' || !message || typeof message !== 'string') {
+    console.log(`[SECURITY] Invalid parameters in game message from user: ${socket.username}`);
+    return false;
+  }
+  
+  // Sanitize message length
+  if (message.length > 500) {
+    console.log(`[SECURITY] Message too long from user: ${socket.username}`);
+    return false;
+  }
+  
   let game = activeGames.get(channel);
   
   // Si le jeu n'est pas en mémoire, le charger depuis la DB
@@ -29,7 +64,7 @@ const handleChatMessage = async (socket, data, io) => {
   
   if (!game || !game.isActive || !game.currentQuestion) {
     console.log(`[GAME] Ignoring message - game not ready`);
-    return false;
+    return false; // Allow normal chat message processing
   }
   
   // Vérifier si c'est une réponse à la question
@@ -46,7 +81,7 @@ const handleChatMessage = async (socket, data, io) => {
   const existingAnswer = game.currentQuestion.answers.find(a => a.userId?.toString() === socket.userId);
   if (existingAnswer) {
     console.log(`[GAME] User ${socket.username} already answered`);
-    return false;
+    return true; // Return true to indicate this was a game message that should be suppressed
   }
   
   const responseTime = Date.now() - game.currentQuestion.startTime.getTime();
@@ -148,22 +183,74 @@ const handleChatMessage = async (socket, data, io) => {
     }
   }
   
-  return false; // Toujours permettre l'affichage du message
+  return true; // Return true to indicate this was a game response that should be suppressed from normal chat
 };
 
 module.exports = (io, socket) => {
   console.log('Game handlers initialized for socket:', socket.id);
   
-  socket.on('join_game_channel', async (channel) => {
-    console.log(`User ${socket.username || socket.id} joining game channel: ${channel}`);
-    socket.join(`game_${channel}`);
+  // Helper function to validate authenticated user
+  const validateAuthenticatedUser = (socket) => {
+    if (!socket.userId || !socket.username) {
+      console.log(`[SECURITY] Unauthorized game action attempt from socket: ${socket.id}`);
+      socket.emit('game_error', { message: 'Authentication required for game actions' });
+      return false;
+    }
+    return true;
+  };
+  
+  // Helper function to check rate limiting
+  const checkRateLimit = (userId) => {
+    const now = Date.now();
+    const userActions = userActionTimestamps.get(userId) || [];
     
+    // Remove old timestamps outside the window
+    const recentActions = userActions.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
+    
+    if (recentActions.length >= MAX_ACTIONS_PER_WINDOW) {
+      console.log(`[SECURITY] Rate limit exceeded for user: ${userId}`);
+      return false;
+    }
+    
+    // Add current timestamp
+    recentActions.push(now);
+    userActionTimestamps.set(userId, recentActions);
+    
+    return true;
+  };
+  
+  socket.on('join_game_channel', async (channel) => {
+    // Only allow game functionality for the 'Game' channel
+    if (channel !== 'Game') {
+      return;
+    }
+
+    // Validate authentication
+    if (!validateAuthenticatedUser(socket)) {
+      return;
+    }
+
+    // Check rate limiting
+    if (!checkRateLimit(socket.userId)) {
+      socket.emit('game_error', { message: 'Too many requests. Please slow down.' });
+      return;
+    }
+
+    // Validate channel parameter
+    if (!channel || typeof channel !== 'string' || channel.length > 50) {
+      socket.emit('game_error', { message: 'Invalid channel parameter' });
+      return;
+    }
+
+    console.log(`User ${socket.username} joining game channel: ${channel}`);
+    socket.join(`game_${channel}`);
+
     let game = activeGames.get(channel);
     if (!game) {
       try {
         game = await Game.findOne({ channel });
         if (!game) {
-          game = await Game.create({ 
+          game = await Game.create({
             channel,
             isActive: false,
             leaderboard: [],
@@ -178,7 +265,7 @@ module.exports = (io, socket) => {
         return;
       }
     }
-    
+
     // Ajouter le joueur au leaderboard s'il n'y est pas déjà
     if (socket.userId && socket.username) {
       const existingPlayer = game.leaderboard.find(p => p.userId?.toString() === socket.userId);
@@ -195,7 +282,7 @@ module.exports = (io, socket) => {
         }
       }
     }
-    
+
     // Démarrer le jeu automatiquement avec un délai
     console.log(`Game status for ${channel}: isActive=${game.isActive}`);
     if (!game.isActive) {
@@ -207,7 +294,7 @@ module.exports = (io, socket) => {
       if (game.currentQuestion) {
         const timeElapsed = Date.now() - new Date(game.currentQuestion.startTime).getTime();
         const timeLeft = Math.max(0, Math.floor((QUESTION_DURATION - timeElapsed) / 1000));
-        
+
         if (timeLeft > 0) {
           socket.emit('new_question', {
             question: game.currentQuestion.question,
@@ -218,7 +305,7 @@ module.exports = (io, socket) => {
         setTimeout(() => nextQuestion(channel, io), 2000);
       }
     }
-    
+
     // Envoyer l'état actuel
     socket.emit('game_state', {
       isActive: game.isActive,
@@ -228,6 +315,28 @@ module.exports = (io, socket) => {
   });
 
   socket.on('start_game', async (channel) => {
+    // Only allow for 'Game' channel
+    if (channel !== 'Game') {
+      return;
+    }
+
+    // Validate authentication
+    if (!validateAuthenticatedUser(socket)) {
+      return;
+    }
+
+    // Check rate limiting
+    if (!checkRateLimit(socket.userId)) {
+      socket.emit('game_error', { message: 'Too many requests. Please slow down.' });
+      return;
+    }
+
+    // Validate channel parameter
+    if (!channel || typeof channel !== 'string' || channel.length > 50) {
+      socket.emit('game_error', { message: 'Invalid channel parameter' });
+      return;
+    }
+
     const game = activeGames.get(channel);
     if (game && !game.isActive) {
       startGame(channel, io);
@@ -235,6 +344,28 @@ module.exports = (io, socket) => {
   });
 
   socket.on('leave_game_channel', (channel) => {
+    // Only allow for 'Game' channel
+    if (channel !== 'Game') {
+      return;
+    }
+
+    // Validate authentication
+    if (!validateAuthenticatedUser(socket)) {
+      return;
+    }
+
+    // Check rate limiting
+    if (!checkRateLimit(socket.userId)) {
+      socket.emit('game_error', { message: 'Too many requests. Please slow down.' });
+      return;
+    }
+
+    // Validate channel parameter
+    if (!channel || typeof channel !== 'string' || channel.length > 50) {
+      socket.emit('game_error', { message: 'Invalid channel parameter' });
+      return;
+    }
+
     socket.leave(`game_${channel}`);
   });
 };

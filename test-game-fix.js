@@ -43,10 +43,9 @@ setTimeout(() => {
       // Test d'une réponse
       setTimeout(() => {
         console.log('4. Test d\'envoi de réponse...');
-        socket.emit('send_message', {
-          sender: { id: 'test-user', username: 'TestUser' },
-          content: 'Paris',
-          room: 'Game'
+        socket.emit('submit_answer', {
+          channel: 'Game',
+          answer: 0
         });
       }, 2000);
     }
@@ -73,8 +72,12 @@ setTimeout(() => {
     console.log('   2. Ouvrez http://localhost:3001');
     console.log('   3. Connectez-vous et rejoignez le canal "Game"');
     
-    socket.disconnect();
-    backend.kill();
+    try {
+      socket.disconnect();
+      backend.kill();
+    } catch (error) {
+      console.error('Cleanup error:', error.message);
+    }
     process.exit(0);
   }, 10000);
   

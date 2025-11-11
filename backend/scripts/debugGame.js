@@ -25,33 +25,39 @@ async function debugGame() {
       }
     }
 
-    // Nettoyer les jeux bloqués
+    // Supprimer tous les jeux qui ne sont pas dans le canal 'Game'
+    const deleteResult = await Game.deleteMany({ channel: { $ne: 'Game' } });
+    console.log(`\nDeleted ${deleteResult.deletedCount} non-Game games`);
+
+    // Nettoyer les jeux bloqués dans le canal Game
     const result = await Game.updateMany(
-      { 
+      {
         $or: [
           { 'currentQuestion.startTime': { $lt: new Date(Date.now() - 60000) } }, // Questions de plus d'1 minute
           { isActive: false }
         ]
       },
-      { 
+      {
         $unset: { currentQuestion: 1 },
         $set: { isActive: false }
       }
     );
 
-    console.log(`\nCleaned ${result.modifiedCount} games`);
+    console.log(`Cleaned ${result.modifiedCount} Game channel games`);
 
-    // Réactiver le jeu Game
+    // Forcer la réinitialisation du jeu Game
     await Game.findOneAndUpdate(
       { channel: 'Game' },
-      { 
+      {
         isActive: false,
-        $unset: { currentQuestion: 1 }
+        currentQuestion: null,
+        leaderboard: [],
+        questionHistory: []
       },
       { upsert: true }
     );
 
-    console.log('Game channel reset - restart server to reactivate');
+    console.log('Game channel fully reset - restart server to reactivate');
 
   } catch (error) {
     console.error('Error:', error);

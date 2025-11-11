@@ -36,29 +36,16 @@ export const useGame = (channel: string, socket?: Socket | null) => {
       return;
     }
 
-    console.log('Joining game channel:', channel);
     socket.emit('join_game_channel', channel);
 
-    // Écouter les événements de jeu
     const handleGameState = (state: any) => {
-      console.log('[FRONTEND] Game state received:', state);
-      console.log('[FRONTEND] Current question details:', state.currentQuestion);
-      console.log('[FRONTEND] Channel:', channel, 'isGameChannel:', isGameChannel);
       if (isGameChannel) {
         setGameState(state);
-        console.log('[FRONTEND] After setGameState - currentQuestion:', currentQuestion);
       }
     };
 
-    const handleGameStarted = () => {
-      console.log('Jeu démarré!');
-    };
-
     const handleNewQuestion = (question: any) => {
-      console.log('[FRONTEND] New question received:', question);
       if (isGameChannel && question.duration) {
-        console.log('[FRONTEND] Starting timer for:', question.duration / 1000, 'seconds');
-        // Update the question in the store
         setQuestion({
           question: question.question,
           options: question.options || [],
@@ -78,7 +65,6 @@ export const useGame = (channel: string, socket?: Socket | null) => {
 
     const handleWinnerAnnounced = (data: any) => {
       setWinner(data.winner);
-      console.log(`🎉 ${data.winner} a gagné ${data.points} points !`);
     };
 
     const handleQuestionEnded = (data: any) => {
@@ -87,7 +73,6 @@ export const useGame = (channel: string, socket?: Socket | null) => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
-      // Réinitialiser pour la prochaine question
       setTimeout(() => {
         setHasAnswered(false);
         setAnswerResult(null);
@@ -97,7 +82,6 @@ export const useGame = (channel: string, socket?: Socket | null) => {
     };
 
     socket.on('game_state', handleGameState);
-    socket.on('game_started', handleGameStarted);
     socket.on('new_question', handleNewQuestion);
     socket.on('answer_result', handleAnswerResult);
     socket.on('winner_announced', handleWinnerAnnounced);
@@ -108,17 +92,14 @@ export const useGame = (channel: string, socket?: Socket | null) => {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      if (socket) {
-        socket.emit('leave_game_channel', channel);
-        socket.off('game_state', handleGameState);
-        socket.off('game_started', handleGameStarted);
-        socket.off('new_question', handleNewQuestion);
-        socket.off('answer_result', handleAnswerResult);
-        socket.off('winner_announced', handleWinnerAnnounced);
-        socket.off('question_ended', handleQuestionEnded);
-      }
+      socket.emit('leave_game_channel', channel);
+      socket.off('game_state', handleGameState);
+      socket.off('new_question', handleNewQuestion);
+      socket.off('answer_result', handleAnswerResult);
+      socket.off('winner_announced', handleWinnerAnnounced);
+      socket.off('question_ended', handleQuestionEnded);
     };
-  }, [channel, socket, user, isGameChannel]);
+  }, [socket, user?.id, isGameChannel]);
 
   const startTimer = (duration: number) => {
     if (timerRef.current) {
@@ -130,11 +111,12 @@ export const useGame = (channel: string, socket?: Socket | null) => {
 
     timerRef.current = setInterval(() => {
       time -= 1;
-      setTimeLeft(Math.max(0, time));
-      
       if (time <= 0) {
         clearInterval(timerRef.current!);
         timerRef.current = null;
+        setTimeLeft(0);
+      } else {
+        setTimeLeft(time);
       }
     }, 1000);
   };

@@ -31,7 +31,9 @@ export const useOptimizedSocket = (options: UseOptimizedSocketOptions = {}) => {
   const connect = useCallback(() => {
     if (socketRef.current?.connected) return socketRef.current
 
-    socketRef.current = io(url, socketConfig)
+    if (!socketRef.current) {
+      socketRef.current = io(url, socketConfig)
+    }
 
     return socketRef.current
   }, [url, socketConfig])
@@ -71,12 +73,8 @@ export const useOptimizedSocket = (options: UseOptimizedSocketOptions = {}) => {
   }, [])
 
   useEffect(() => {
-    try {
-      if (autoConnect) {
-        connect()
-      }
-    } catch (error) {
-      console.error('Socket connection error:', error)
+    if (autoConnect) {
+      connect()
     }
 
     return () => {

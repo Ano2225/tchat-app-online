@@ -47,25 +47,37 @@ export const useGameStore = create<GameState>((set) => ({
   explanation: null,
   error: null,
 
-  setGameState: (state) => set({
-    isActive: state.isActive,
-    leaderboard: state.leaderboard || [],
-    currentQuestion: state.currentQuestion ? {
-      question: state.currentQuestion.question,
-      options: [],
-      duration: 15000,
-      explanation: state.currentQuestion.explanation
-    } : null,
-    timeLeft: state.currentQuestion?.startTime ? 
-      Math.max(0, Math.floor((15000 - (Date.now() - new Date(state.currentQuestion.startTime).getTime())) / 1000)) : 0
-  }),
+  setGameState: (state) => {
+    try {
+      set({
+        isActive: state.isActive,
+        leaderboard: state.leaderboard || [],
+        currentQuestion: state.currentQuestion ? {
+          question: state.currentQuestion.question,
+          options: [],
+          duration: 15000,
+          explanation: state.currentQuestion.explanation
+        } : null,
+        timeLeft: state.currentQuestion?.startTime ? 
+          Math.max(0, Math.floor((15000 - (Date.now() - new Date(state.currentQuestion.startTime).getTime())) / 1000)) : 0
+      });
+    } catch (error) {
+      set({ error: 'Failed to update game state' });
+    }
+  },
 
-  setQuestion: (question) => set({
-    currentQuestion: question,
-    timeLeft: question.duration / 1000,
-    hasAnswered: false,
-    lastAnswer: null
-  }),
+  setQuestion: (question) => {
+    try {
+      set({
+        currentQuestion: question,
+        timeLeft: question.duration / 1000,
+        hasAnswered: false,
+        lastAnswer: null
+      });
+    } catch (error) {
+      set({ error: 'Failed to set question' });
+    }
+  },
 
   setTimeLeft: (time) => set({ timeLeft: time }),
 
