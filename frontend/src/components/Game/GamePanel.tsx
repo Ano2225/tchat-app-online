@@ -3,7 +3,7 @@
 import { useGame } from '@/hooks/useGame';
 import { useGameStore } from '@/store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useMemo } from 'react';
 
 interface GamePanelProps {
   channel: string;
@@ -12,6 +12,7 @@ interface GamePanelProps {
 
 export default function GamePanel({ channel, socket }: GamePanelProps) {
   const [connectionStatus, setConnectionStatus] = useState('connecting');
+  const [showFullLeaderboard, setShowFullLeaderboard] = useState(false);
   
   if (channel !== 'Game') return null;
   
@@ -37,15 +38,15 @@ export default function GamePanel({ channel, socket }: GamePanelProps) {
   const TimeProgressBar = ({ timeLeft, maxTime = 15 }: { timeLeft: number; maxTime?: number }) => {
     const percentage = (timeLeft / maxTime) * 100;
     const getColor = () => {
-      if (percentage > 60) return 'bg-green-500';
-      if (percentage > 30) return 'bg-yellow-500';
-      return 'bg-red-500';
+      if (percentage > 60) return 'bg-green-400';
+      if (percentage > 30) return 'bg-yellow-400';
+      return 'bg-red-400';
     };
     
     return (
-      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
+      <div className="w-full bg-white/30 rounded-full h-3 mb-2">
         <motion.div
-          className={`h-2 rounded-full transition-colors duration-300 ${getColor()}`}
+          className={`h-3 rounded-full transition-colors duration-300 ${getColor()}`}
           initial={{ width: '100%' }}
           animate={{ width: `${percentage}%` }}
           transition={{ duration: 0.5 }}
@@ -53,6 +54,111 @@ export default function GamePanel({ channel, socket }: GamePanelProps) {
       </div>
     );
   };
+  
+  // Composant réutilisable pour le classement optimisé avec memo
+  const LeaderboardComponent = memo(({ title, showRank = false, maxPlayers = 5 }: { title: string; showRank?: boolean; maxPlayers?: number }) => {
+    const displayedPlayers = showFullLeaderboard ? leaderboard : leaderboard.slice(0, maxPlayers);
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800 overflow-hidden"
+      >
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold flex items-center">
+              <span className="text-2xl mr-2">🏆</span>
+              {title}
+            </h3>
+            {showRank && playerRank > 0 && (
+              <div className="text-xs bg-blue-100 dark:bg-blue-900/50 px-3 py-1 rounded-full">
+                Votre rang: #{playerRank}
+              </div>
+            )}
+          </div>
+          
+          {!leaderboard || leaderboard.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-2">🎯</div>
+              <p className="text-gray-600 dark:text-gray-400">Aucun joueur pour le moment</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                Soyez le premier à répondre correctement !
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {displayedPlayers.map((player, index) => {
+                  const isCurrentUser = player.userId === socket?.userId;
+                  const actualIndex = showFullLeaderboard ? index : leaderboard.findIndex(p => p.userId === player.userId);
+                  return (
+                    <motion.div
+                      key={`${player.userId || 'unknown'}-${index}`}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className={`flex justify-between items-center p-3 rounded-lg transition-all ${
+                        isCurrentUser
+                          ? 'bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-300 dark:border-blue-700'
+                          : actualIndex === 0
+                          ? 'bg-gradient-to-r from-yellow-200 to-yellow-100 dark:from-yellow-800/50 dark:to-yellow-700/30 shadow-md'
+                          : actualIndex === 1
+                          ? 'bg-gradient-to-r from-gray-200 to-gray-100 dark:from-gray-700/50 dark:to-gray-600/30'
+                          : actualIndex === 2
+                          ? 'bg-gradient-to-r from-orange-200 to-orange-100 dark:from-orange-800/50 dark:to-orange-700/30'
+                          : 'bg-white/70 dark:bg-gray-800/30'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <span className="text-xl font-bold">
+                          {actualIndex === 0 ? '🥇' : actualIndex === 1 ? '🥈' : actualIndex === 2 ? '🥉' : `${actualIndex + 1}`}
+                        </span>
+                        <div>
+                          <div className={`font-semibold ${isCurrentUser ? 'text-blue-700 dark:text-blue-300' : ''}`}>
+                            {player.username} {isCurrentUser && '(Vous)'}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {player.score > 0 ? `${Math.floor(player.score / 10)} bonnes réponses` : 'Nouveau joueur'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className={`font-bold text-lg ${isCurrentUser ? 'text-blue-700 dark:text-blue-300' : ''}`}>
+                          {player.score || 0}
+                        </div>
+                        <div className="text-xs text-gray-500">points</div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+              
+              {leaderboard.length > maxPlayers && !showFullLeaderboard && (
+                <button
+                  onClick={() => setShowFullLeaderboard(true)}
+                  className="w-full mt-3 py-2 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                >
+                  Voir tous les joueurs ({leaderboard.length})
+                </button>
+              )}
+              
+              {showFullLeaderboard && (
+                <button
+                  onClick={() => setShowFullLeaderboard(false)}
+                  className="w-full mt-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/20 rounded-lg transition-colors"
+                >
+                  Réduire
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </motion.div>
+    );
+  });
+  
+
   
   if (!isActive) {
     return (
@@ -114,55 +220,7 @@ export default function GamePanel({ channel, socket }: GamePanelProps) {
         
         <AnimatePresence>
           {leaderboard && leaderboard.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800 overflow-hidden"
-            >
-              <div className="p-4">
-                <h3 className="text-lg font-bold flex items-center mb-4">
-                  <span className="text-2xl mr-2">🏆</span>
-                  Classement Global
-                </h3>
-                
-                <div className="space-y-2">
-                  {leaderboard.slice(0, 5).map((player, index) => (
-                    <motion.div
-                      key={`inactive-${player.userId || 'unknown'}-${index}`}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className={`flex justify-between items-center p-3 rounded-lg transition-all hover:scale-[1.02] ${
-                        index === 0
-                          ? 'bg-gradient-to-r from-yellow-200 to-yellow-100 dark:from-yellow-800/50 dark:to-yellow-700/30 shadow-md'
-                          : index === 1
-                          ? 'bg-gradient-to-r from-gray-200 to-gray-100 dark:from-gray-700/50 dark:to-gray-600/30'
-                          : index === 2
-                          ? 'bg-gradient-to-r from-orange-200 to-orange-100 dark:from-orange-800/50 dark:to-orange-700/30'
-                          : 'bg-white/70 dark:bg-gray-800/30'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <span className="text-xl font-bold">
-                          {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`}
-                        </span>
-                        <div>
-                          <div className="font-semibold">{player.username}</div>
-                          <div className="text-xs text-gray-500">
-                            {player.score > 0 ? `${Math.floor(player.score / 10)} bonnes réponses` : 'Nouveau joueur'}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-lg">{player.score || 0}</div>
-                        <div className="text-xs text-gray-500">points</div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
+            <LeaderboardComponent title="Classement Global" showRank={true} maxPlayers={5} />
           )}
         </AnimatePresence>
       </div>
@@ -243,7 +301,7 @@ export default function GamePanel({ channel, socket }: GamePanelProps) {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.5 + index * 0.1 }}
-                      className="flex items-center space-x-3 p-3 bg-white/70 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800/70 transition-all"
+                      className="flex items-center space-x-3 p-3 bg-white/70 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 transition-all cursor-default"
                     >
                       <span className="font-bold text-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">
                         {String.fromCharCode(65 + index)}
@@ -264,80 +322,38 @@ export default function GamePanel({ channel, socket }: GamePanelProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
-                className={`p-4 rounded-lg border-2 border-dashed transition-all ${
+                className={`p-6 rounded-lg border-2 border-dashed transition-all ${
                   hasAnswered 
                     ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
-                    : 'bg-gray-50 dark:bg-gray-800/50 border-gray-300 dark:border-gray-600'
+                    : 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-600'
                 }`}
               >
                 <div className="text-center">
-                  <div className="text-2xl mb-2">{hasAnswered ? '✅' : '💬'}</div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <div className="text-3xl mb-3">{hasAnswered ? '✅' : '💬'}</div>
+                  <p className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-2">
                     {hasAnswered 
                       ? 'Réponse envoyée ! Attendez les résultats...' 
                       : 'Tapez votre réponse dans le chat pour participer !'
                     }
                   </p>
                   {!hasAnswered && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Vous pouvez taper la lettre (A, B, C, D) ou la réponse complète
-                    </p>
+                    <div className="bg-white/70 dark:bg-gray-800/70 rounded-lg p-3 mt-3">
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        💡 Vous pouvez taper :
+                      </p>
+                      <div className="flex flex-wrap justify-center gap-2 mt-2">
+                        <span className="bg-blue-100 dark:bg-blue-900/50 px-2 py-1 rounded text-xs font-mono">A</span>
+                        <span className="bg-blue-100 dark:bg-blue-900/50 px-2 py-1 rounded text-xs font-mono">B</span>
+                        <span className="bg-blue-100 dark:bg-blue-900/50 px-2 py-1 rounded text-xs font-mono">C</span>
+                        <span className="bg-blue-100 dark:bg-blue-900/50 px-2 py-1 rounded text-xs font-mono">D</span>
+                        <span className="text-xs text-gray-500 px-2 py-1">ou la réponse complète</span>
+                      </div>
+                    </div>
                   )}
                 </div>
               </motion.div>
               
-              <AnimatePresence>
-                {winner && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.8, y: -20 }}
-                    className="mt-4 p-4 bg-gradient-to-r from-yellow-100 to-orange-100 dark:from-yellow-900/30 dark:to-orange-900/30 border border-yellow-300 dark:border-yellow-700 rounded-lg text-center"
-                  >
-                    <motion.div 
-                      className="text-4xl mb-2"
-                      animate={{ rotate: [0, 10, -10, 0] }}
-                      transition={{ duration: 0.5, repeat: 2 }}
-                    >
-                      🎉
-                    </motion.div>
-                    <div className="font-bold text-lg text-yellow-800 dark:text-yellow-200">
-                      🏆 {winner} remporte cette manche !
-                    </div>
-                    <div className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                      +10 points • Première bonne réponse
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              
-              <AnimatePresence>
-                {explanation && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-700 rounded-lg"
-                  >
-                    <div className="flex items-start space-x-2">
-                      <span className="text-xl">💡</span>
-                      <div>
-                        <div className="font-semibold text-blue-800 dark:text-blue-200 mb-1">
-                          Explication
-                        </div>
-                        <div className="text-blue-700 dark:text-blue-300 text-sm leading-relaxed">
-                          {explanation}
-                        </div>
-                        {currentQuestion.source && (
-                          <div className="text-xs text-blue-600 dark:text-blue-400 mt-2 opacity-75">
-                            Source: {currentQuestion.source}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+
             </div>
           </motion.div>
         )}
@@ -366,80 +382,7 @@ export default function GamePanel({ channel, socket }: GamePanelProps) {
         )}
       </AnimatePresence>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-xl border border-yellow-200 dark:border-yellow-800 overflow-hidden"
-      >
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold flex items-center">
-              <span className="text-2xl mr-2">🏆</span>
-              Classement en Direct
-            </h3>
-            {playerRank > 0 && (
-              <div className="text-xs bg-blue-100 dark:bg-blue-900/50 px-3 py-1 rounded-full">
-                Votre rang: #{playerRank}
-              </div>
-            )}
-          </div>
-          
-          {!leaderboard || leaderboard.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-2">🎯</div>
-              <p className="text-gray-600 dark:text-gray-400">Aucun joueur pour le moment</p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                Soyez le premier à répondre correctement !
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {leaderboard.slice(0, 10).map((player, index) => {
-                const isCurrentUser = player.userId === socket?.userId;
-                return (
-                  <motion.div
-                    key={`${player.userId || 'unknown'}-${index}`}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    className={`flex justify-between items-center p-3 rounded-lg transition-all hover:scale-[1.02] ${
-                      isCurrentUser
-                        ? 'bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-300 dark:border-blue-700'
-                        : index === 0
-                        ? 'bg-gradient-to-r from-yellow-200 to-yellow-100 dark:from-yellow-800/50 dark:to-yellow-700/30 shadow-md'
-                        : index === 1
-                        ? 'bg-gradient-to-r from-gray-200 to-gray-100 dark:from-gray-700/50 dark:to-gray-600/30'
-                        : index === 2
-                        ? 'bg-gradient-to-r from-orange-200 to-orange-100 dark:from-orange-800/50 dark:to-orange-700/30'
-                        : 'bg-white/70 dark:bg-gray-800/30'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xl font-bold">
-                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`}
-                      </span>
-                      <div>
-                        <div className={`font-semibold ${isCurrentUser ? 'text-blue-700 dark:text-blue-300' : ''}`}>
-                          {player.username} {isCurrentUser && '(Vous)'}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {player.score > 0 ? `${Math.floor(player.score / 10)} bonnes réponses` : 'Nouveau joueur'}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className={`font-bold text-lg ${isCurrentUser ? 'text-blue-700 dark:text-blue-300' : ''}`}>
-                        {player.score || 0}
-                      </div>
-                      <div className="text-xs text-gray-500">points</div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </motion.div>
+
     </div>
   );
 }

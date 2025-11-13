@@ -1,16 +1,19 @@
 const Game = require('../models/Game');
 const User = require('../models/User');
 const { getRandomQuestion } = require('../services/questionService');
+const memoryCleanup = require('../utils/memoryCleanup');
 
 const activeGames = new Map();
 const gameTimers = new Map();
-const userActionTimestamps = new Map(); // Track user actions for rate limiting
+const userActionTimestamps = new Map();
+const gameCache = new Map(); // Cache pour éviter les requêtes DB répétées
 
-const QUESTION_DURATION = 15000; // 15 secondes
-const PAUSE_BETWEEN_QUESTIONS = 10000; // 10 secondes pour lire l'explication
-const NEXT_QUESTION_DELAY = 3000; // 3 secondes avant la prochaine question
-const RATE_LIMIT_WINDOW = 1000; // 1 second
-const MAX_ACTIONS_PER_WINDOW = 5; // Max 5 actions per second per user
+const QUESTION_DURATION = 15000;
+const PAUSE_BETWEEN_QUESTIONS = 8000; // Réduit pour plus de fluidité
+const RATE_LIMIT_WINDOW = 1000;
+const MAX_ACTIONS_PER_WINDOW = 3; // Plus strict pour éviter le spam
+const MAX_LEADERBOARD_SIZE = 100; // Limiter la taille du leaderboard
+const CACHE_TTL = 30000; // 30 secondes de cache
 
 const handleChatMessage = async (socket, data, io) => {
   // Validate authentication for game messages
@@ -48,16 +51,22 @@ const handleChatMessage = async (socket, data, io) => {
   
   let game = activeGames.get(channel);
   
-  // Si le jeu n'est pas en mémoire, le charger depuis la DB
+  // Utiliser le cache pour éviter les requêtes DB répétées
   if (!game && channel === 'Game') {
-    try {
-      game = await Game.findOne({ channel });
-      if (game) {
-        activeGames.set(channel, game);
-        console.log(`[GAME] Game loaded from DB for channel: ${channel}`);
+    const cached = gameCache.get(channel);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      game = cached.data;
+      activeGames.set(channel, game);
+    } else {
+      try {
+        game = await Game.findOne({ channel }).lean(); // .lean() pour de meilleures performances
+        if (game) {
+          activeGames.set(channel, game);
+          gameCache.set(channel, { data: game, timestamp: Date.now() });
+        }
+      } catch (error) {
+        console.error('Error loading game from DB:', error);
       }
-    } catch (error) {
-      console.error('Error loading game from DB:', error);
     }
   }
   
@@ -142,50 +151,66 @@ const handleChatMessage = async (socket, data, io) => {
       console.log(`[GAME] Announcing winner:`, winnerData);
       io.to(`game_${channel}`).emit('winner_announced', winnerData);
       
-      // Envoyer un message dans le chat
-      io.to(channel).emit('receive_message', {
-        _id: `game_${Date.now()}`,
-        sender: {
-          _id: 'system',
-          username: 'Quiz Bot'
-        },
-        content: `🏆 ${socket.username} a gagné cette manche ! (+${points} points)\nRéponse correcte: ${game.currentQuestion.correctAnswerText}`,
-        createdAt: new Date().toISOString(),
-        room: channel
+          // Optimiser le calcul du TOP 3 et utiliser setImmediate pour de meilleures performances
+      setImmediate(() => {
+        const topPlayers = game.leaderboard
+          .sort((a, b) => (b.score || 0) - (a.score || 0))
+          .slice(0, 3)
+          .map((p, i) => `${['🥇', '🥈', '🥉'][i]} ${p.username}: ${p.score} pts`)
+          .join('\n');
+        
+        io.to(channel).emit('receive_message', {
+          _id: `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          sender: { _id: 'system', username: 'Quiz Bot' },
+          content: `🎉 **BONNE RÉPONSE !**\n🏆 ${socket.username} remporte cette manche ! (+${points} points)\n\n✅ Réponse: ${game.currentQuestion.correctAnswerText}\n\n🏅 **TOP 3:**\n${topPlayers}`,
+          createdAt: new Date().toISOString(),
+          room: channel,
+          isGameMessage: true
+        });
       });
       
       // Terminer la question après un court délai
-      const currentTimer = gameTimers.get(channel);
-      if (currentTimer) {
-        clearTimeout(currentTimer);
-        gameTimers.delete(channel);
-      }
+      const timersToClean = [`next_${channel}`, `transition_${channel}`, channel];
+      timersToClean.forEach(timerKey => {
+        const timer = gameTimers.get(timerKey);
+        if (timer) {
+          clearTimeout(timer);
+          gameTimers.delete(timerKey);
+        }
+      });
       
       const endTimer = setTimeout(() => {
         endQuestion(channel, io);
-      }, 5000); // 5 secondes pour voir le gagnant
+      }, 5500); // 5.5 secondes pour voir le gagnant
       
-      gameTimers.set(channel, endTimer);
+      gameTimers.set(`winner_${channel}`, endTimer);
     }
   }
   
-  // Sauvegarder avec findOneAndUpdate pour éviter les conflits
-  try {
-    const updatedGame = await Game.findOneAndUpdate(
-      { channel },
-      { 
-        'currentQuestion.answers': game.currentQuestion.answers,
-        leaderboard: game.leaderboard
-      },
-      { new: true }
-    );
-    
-    if (updatedGame) {
-      activeGames.set(channel, updatedGame);
+  // Sauvegarder de manière asynchrone pour ne pas bloquer
+  setImmediate(async () => {
+    try {
+      // Limiter la taille du leaderboard pour les performances
+      const trimmedLeaderboard = game.leaderboard
+        .sort((a, b) => (b.score || 0) - (a.score || 0))
+        .slice(0, MAX_LEADERBOARD_SIZE);
+      
+      await Game.findOneAndUpdate(
+        { channel },
+        { 
+          'currentQuestion.answers': game.currentQuestion.answers,
+          leaderboard: trimmedLeaderboard
+        },
+        { new: false } // Pas besoin de retourner le document
+      );
+      
+      // Mettre à jour le cache
+      game.leaderboard = trimmedLeaderboard;
+      gameCache.set(channel, { data: game, timestamp: Date.now() });
+    } catch (error) {
+      console.error('Error saving game:', error);
     }
-  } catch (error) {
-    console.error('Error saving game:', error);
-  }
+  });
   
   return false; // Allow all messages to appear in chat for better multiplayer experience
 };
@@ -203,22 +228,32 @@ module.exports = (io, socket) => {
     return true;
   };
   
-  // Helper function to check rate limiting
+  // Rate limiting optimisé avec nettoyage automatique
   const checkRateLimit = (userId) => {
     const now = Date.now();
     const userActions = userActionTimestamps.get(userId) || [];
     
-    // Remove old timestamps outside the window
+    // Nettoyage efficace des anciens timestamps
     const recentActions = userActions.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
     
     if (recentActions.length >= MAX_ACTIONS_PER_WINDOW) {
-      console.log(`[SECURITY] Rate limit exceeded for user: ${userId}`);
       return false;
     }
     
-    // Add current timestamp
     recentActions.push(now);
     userActionTimestamps.set(userId, recentActions);
+    
+    // Nettoyage périodique de la mémoire
+    if (Math.random() < 0.01) { // 1% de chance
+      for (const [key, actions] of userActionTimestamps.entries()) {
+        const validActions = actions.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
+        if (validActions.length === 0) {
+          userActionTimestamps.delete(key);
+        } else {
+          userActionTimestamps.set(key, validActions);
+        }
+      }
+    }
     
     return true;
   };
@@ -265,7 +300,7 @@ module.exports = (io, socket) => {
     let game = activeGames.get(channel);
     if (!game) {
       try {
-        game = await Game.findOne({ channel });
+        game = await Game.findOne({ channel }).lean();
         if (!game) {
           game = await Game.create({
             channel,
@@ -288,16 +323,23 @@ module.exports = (io, socket) => {
       const existingPlayer = game.leaderboard.find(p => p.userId?.toString() === socket.userId);
       if (!existingPlayer) {
         try {
-          const updatedGame = await Game.findOneAndUpdate(
-            { channel, 'leaderboard.userId': { $ne: socket.userId } },
-            { $push: { leaderboard: { userId: socket.userId, username: socket.username, score: 0 } } },
-            { new: true }
-          );
-          if (updatedGame) {
-            activeGames.set(channel, updatedGame);
-            game = updatedGame;
-            console.log(`[GAME] Added ${socket.username} to leaderboard`);
-          }
+          // Optimiser l'ajout au leaderboard
+          game.leaderboard.push({ userId: socket.userId, username: socket.username, score: 0 });
+          activeGames.set(channel, game);
+          
+          // Sauvegarder de manière asynchrone
+          setImmediate(async () => {
+            try {
+              await Game.findOneAndUpdate(
+                { channel, 'leaderboard.userId': { $ne: socket.userId } },
+                { $push: { leaderboard: { userId: socket.userId, username: socket.username, score: 0 } } },
+                { new: false }
+              );
+              console.log(`[GAME] Added ${socket.username} to leaderboard`);
+            } catch (error) {
+              console.error('Error adding player to leaderboard:', error);
+            }
+          });
         } catch (error) {
           console.error('Error adding player to leaderboard:', error);
         }
@@ -463,88 +505,74 @@ async function startGame(channel, io) {
 }
 
 async function nextQuestion(channel, io) {
-  console.log(`[NEXT_QUESTION] Starting for channel: ${channel}`);
-  
   try {
     const question = await getRandomQuestion();
-    console.log(`Generated question: ${question.question}`);
+    const game = activeGames.get(channel);
     
-    const updatedGame = await Game.findOneAndUpdate(
-      { channel, isActive: true },
-      {
-        currentQuestion: {
-          question: question.question,
-          options: question.options,
-          correctAnswer: question.correctAnswer,
-          correctAnswerText: question.correctAnswerText,
-          category: question.category,
-          categoryEmoji: question.categoryEmoji,
-          difficulty: question.difficulty,
-          explanation: question.explanation,
-          source: question.source,
-          startTime: new Date(),
-          answers: []
-        }
-      },
-      { new: true }
-    );
-    
-    if (!updatedGame) {
-      console.log(`[NEXT_QUESTION] Game not found or not active for channel: ${channel}`);
+    if (!game || !game.isActive) {
       return;
     }
     
-    activeGames.set(channel, updatedGame);
-    
-    // Envoyer la nouvelle question avec les options
-    const questionData = {
-      question: updatedGame.currentQuestion.question,
-      options: updatedGame.currentQuestion.options || [],
-      duration: QUESTION_DURATION,
-      startTime: updatedGame.currentQuestion.startTime,
-      category: updatedGame.currentQuestion.category || 'Quiz',
-      categoryEmoji: updatedGame.currentQuestion.categoryEmoji || '❓',
-      difficulty: updatedGame.currentQuestion.difficulty || 'Moyen',
-      source: updatedGame.currentQuestion.source || 'Local'
+    // Mettre à jour en mémoire d'abord
+    game.currentQuestion = {
+      question: question.question,
+      options: question.options,
+      correctAnswer: question.correctAnswer,
+      correctAnswerText: question.correctAnswerText,
+      category: question.category,
+      categoryEmoji: question.categoryEmoji,
+      difficulty: question.difficulty,
+      explanation: question.explanation,
+      source: question.source,
+      startTime: new Date(),
+      answers: []
     };
     
-    console.log(`[NEXT_QUESTION] Sending question to game_${channel}:`, questionData);
+    activeGames.set(channel, game);
+    
+    // Sauvegarder en base de manière asynchrone
+    setImmediate(async () => {
+      try {
+        await Game.findOneAndUpdate(
+          { channel, isActive: true },
+          { currentQuestion: game.currentQuestion },
+          { new: false }
+        );
+        gameCache.set(channel, { data: game, timestamp: Date.now() });
+      } catch (error) {
+        console.error('Error saving question:', error);
+      }
+    });
+    
+    // Envoyer la question de manière optimisée
+    const questionData = {
+      question: game.currentQuestion.question,
+      options: game.currentQuestion.options || [],
+      duration: QUESTION_DURATION,
+      startTime: game.currentQuestion.startTime,
+      category: game.currentQuestion.category || 'Quiz',
+      categoryEmoji: game.currentQuestion.categoryEmoji || '❓',
+      difficulty: game.currentQuestion.difficulty || 'Moyen'
+    };
+    
     io.to(`game_${channel}`).emit('new_question', questionData);
     
-    // Envoyer aussi l'état du jeu mis à jour
+    // État du jeu optimisé
     io.to(`game_${channel}`).emit('game_state', {
-      isActive: updatedGame.isActive,
-      currentQuestion: updatedGame.currentQuestion,
-      leaderboard: updatedGame.leaderboard.sort((a, b) => (b.score || 0) - (a.score || 0))
+      isActive: game.isActive,
+      currentQuestion: game.currentQuestion,
+      leaderboard: game.leaderboard.sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, 20)
     });
     
-    // Annoncer la nouvelle question dans le chat
-    const categoryInfo = (updatedGame.currentQuestion?.categoryEmoji || '❓') + ' ' + (updatedGame.currentQuestion?.category || 'Quiz');
-    const difficultyInfo = updatedGame.currentQuestion?.difficulty ? ` (${updatedGame.currentQuestion.difficulty})` : '';
+    // La question est affichée uniquement dans le GamePanel
     
-    io.to(channel).emit('receive_message', {
-      _id: `game_question_${Date.now()}`,
-      sender: {
-        _id: 'system',
-        username: 'Quiz Bot'
-      },
-      content: `❓ **QUESTION ${categoryInfo.toUpperCase()}${difficultyInfo}**\n${updatedGame.currentQuestion.question}\n\n💬 Tapez votre réponse dans le chat !`,
-      createdAt: new Date().toISOString(),
-      room: channel
-    });
-    
-    // Timer pour la fin de la question
-    const timer = setTimeout(() => {
-      console.log(`Timer expired for question in channel: ${channel}`);
-      endQuestion(channel, io);
-    }, QUESTION_DURATION);
-    
+    // Timer optimisé
+    const timer = setTimeout(() => endQuestion(channel, io), QUESTION_DURATION);
     gameTimers.set(channel, timer);
+    
   } catch (error) {
-    console.error('Error generating or saving question:', error);
-    // Réessayer dans 10 secondes
-    setTimeout(() => nextQuestion(channel, io), 10000);
-    return;
+    console.error('Error generating question:', error);
+    setTimeout(() => nextQuestion(channel, io), 5000);
   }
 }
 
@@ -567,65 +595,88 @@ async function endQuestion(channel, io) {
   console.log(`[GAME] Sending question ended data:`, endData);
   io.to(`game_${channel}`).emit('question_ended', endData);
   
-  // Envoyer l'explication dans le chat
-  io.to(channel).emit('receive_message', {
-    _id: `game_explanation_${Date.now()}`,
-    sender: {
-      _id: 'system',
-      username: 'Quiz Bot'
-    },
-    content: `💡 **EXPLICATION**\n${game.currentQuestion.explanation}`,
-    createdAt: new Date().toISOString(),
-    room: channel
+  // Optimiser l'envoi des résultats
+  const hasWinner = game.currentQuestion.answers?.some(a => a.isCorrect) || false;
+  
+  if (!hasWinner) {
+    const finalLeaderboard = game.leaderboard
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
+      .slice(0, 5)
+      .map((p, i) => `${i + 1}. ${p.username}: ${p.score} pts`)
+      .join('\n');
+    
+    const explanation = game.currentQuestion.explanation || 'Aucune explication disponible.';
+    
+    io.to(channel).emit('receive_message', {
+      _id: `explanation_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      sender: { _id: 'system', username: 'Quiz Bot' },
+      content: `⏰ **TEMPS ÉCOULÉ !**\n\n✅ Réponse: ${game.currentQuestion.correctAnswerText}\n\n💡 **EXPLICATION**\n${explanation}\n\n🏆 **TOP 5:**\n${finalLeaderboard}`,
+      createdAt: new Date().toISOString(),
+      room: channel,
+      isGameMessage: true
+    });
+  }
+  
+  // Nettoyer tous les timers pour ce canal
+  const timersToClean = [`next_${channel}`, `transition_${channel}`, channel];
+  timersToClean.forEach(timerKey => {
+    const timer = gameTimers.get(timerKey);
+    if (timer) {
+      clearTimeout(timer);
+      gameTimers.delete(timerKey);
+    }
   });
   
-  // Nettoyer le timer actuel
-  const currentTimer = gameTimers.get(channel);
-  if (currentTimer) {
-    clearTimeout(currentTimer);
-    gameTimers.delete(channel);
-  }
+  // Nettoyer la question de manière asynchrone
+  delete game.currentQuestion;
+  activeGames.set(channel, game);
   
-  // Nettoyer la question actuelle en base
-  try {
-    const updatedGame = await Game.findOneAndUpdate(
-      { channel },
-      { $unset: { currentQuestion: 1 } },
-      { new: true }
-    );
-    if (updatedGame) {
-      activeGames.set(channel, updatedGame);
+  setImmediate(async () => {
+    try {
+      await Game.findOneAndUpdate(
+        { channel },
+        { $unset: { currentQuestion: 1 } },
+        { new: false }
+      );
+      gameCache.set(channel, { data: game, timestamp: Date.now() });
+    } catch (error) {
+      console.error('Error clearing current question:', error);
     }
-  } catch (error) {
-    console.error('Error clearing current question:', error);
-  }
+  });
   
-  // Envoyer un message de transition
-  setTimeout(() => {
+  // Message de transition optimisé
+  const transitionTimer = setTimeout(() => {
     io.to(channel).emit('receive_message', {
-      _id: `game_next_${Date.now()}`,
-      sender: {
-        _id: 'system',
-        username: 'Quiz Bot'
-      },
-      content: `⏳ **Prochaine question dans 3 secondes...**`,
+      _id: `transition_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      sender: { _id: 'system', username: 'Quiz Bot' },
+      content: `⏳ **Prochaine question dans 3 secondes...**\n🎯 Préparez-vous !`,
       createdAt: new Date().toISOString(),
-      room: channel
+      room: channel,
+      isGameMessage: true
     });
-  }, PAUSE_BETWEEN_QUESTIONS - NEXT_QUESTION_DELAY);
+  }, 5000); // Réduit à 5 secondes
   
-  // Programmer la prochaine question
-  console.log(`Scheduling next question in ${PAUSE_BETWEEN_QUESTIONS}ms for channel: ${channel}`);
+  gameTimers.set(`transition_${channel}`, transitionTimer);
+  
+  // Programmer la prochaine question de manière optimisée
   const nextQuestionTimer = setTimeout(() => {
+    const transTimer = gameTimers.get(`transition_${channel}`);
+    if (transTimer) {
+      clearTimeout(transTimer);
+      gameTimers.delete(`transition_${channel}`);
+    }
     nextQuestion(channel, io);
   }, PAUSE_BETWEEN_QUESTIONS);
   
-  gameTimers.set(channel, nextQuestionTimer);
+  gameTimers.set(`next_${channel}`, nextQuestionTimer);
 }
 
-// Exporter les fonctions pour l'utiliser dans socketHandlers
+// Démarrer le nettoyage automatique de la mémoire
+memoryCleanup.start(activeGames, gameTimers, userActionTimestamps);
+
+// Exporter les fonctions
 module.exports.handleChatMessage = handleChatMessage;
 module.exports.activeGames = activeGames;
 module.exports.gameTimers = gameTimers;
 
-console.log('Game handlers module loaded');
+console.log('Game handlers module loaded with memory optimization');

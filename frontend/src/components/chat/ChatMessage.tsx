@@ -216,12 +216,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
             const isOwnMessage = msg.sender._id === user?.id;
             const isQuizBot = msg.sender.username === 'Quiz Bot';
 
-            // Ne pas afficher les messages du Quiz Bot dans le canal Game (ils sont gérés par GamePanel)
-            if (isQuizBot && currentRoom === 'Game') {
-              return <div key={msg._id} style={{ display: 'none' }} />;
-            }
-            
-            // Afficher les messages du Quiz Bot normalement dans les autres canaux
+            // Afficher les messages du Quiz Bot avec le composant GameMessage
             if (isQuizBot) {
               return (
                 <GameMessage
