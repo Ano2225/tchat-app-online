@@ -169,9 +169,9 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         </div>
       )}
       
-      <div className="fixed bottom-0 right-4 w-80 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 shadow-2xl z-50 rounded-t-lg overflow-hidden">
+      <div className="fixed bottom-4 right-4 w-96 max-w-[calc(100vw-2rem)] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-600/50 shadow-2xl z-50 rounded-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
         {/* Header */}
-        <div className="bg-orange-400 text-white px-4 py-3 flex items-center justify-between">
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
               <span className="text-sm font-bold">{recipient.username.charAt(0).toUpperCase()}</span>
@@ -188,7 +188,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         </div>
 
         {/* Messages */}
-        <div className="h-64 overflow-y-auto bg-gray-50 dark:bg-gray-900 p-3">
+        <div className="h-80 overflow-y-auto bg-gray-50/50 dark:bg-gray-900/50 p-4">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full text-gray-500 text-sm">
               Aucun message
@@ -199,24 +199,24 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                 const isOwn = message.sender._id === user?.id;
                 return (
                   <div key={message._id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${
+                    <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm break-words ${
                       isOwn 
-                        ? 'bg-orange-400 text-white' 
-                        : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600'
+                        ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-br-md' 
+                        : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 rounded-bl-md shadow-sm'
                     }`}>
                       {message.media_url && (
                         <div className="mb-2">
                           <img 
                             src={message.media_url.replace(/&#x2F;/g, '/').replace(/&amp;/g, '&')} 
                             alt="Image" 
-                            className="max-w-[180px] h-auto rounded cursor-pointer" 
+                            className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity" 
                             onClick={() => window.open(message?.media_url?.replace(/&#x2F;/g, '/').replace(/&amp;/g, '&'), '_blank')}
                           />
                         </div>
                       )}
                       {message.content && <div>{message.content}</div>}
-                      <div className={`text-xs mt-1 ${isOwn ? 'text-orange-100' : 'text-gray-500'}`}>
-                        {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <div className={`text-xs mt-2 ${isOwn ? 'text-blue-100' : 'text-gray-500'}`}>
+                        {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         {isOwn && <span className="ml-1">{message.read ? '✓✓' : '✓'}</span>}
                       </div>
                     </div>
@@ -229,7 +229,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         </div>
 
         {/* Input */}
-        <div className="border-t border-gray-200 dark:border-gray-600 p-3">
+        <div className="border-t border-gray-200/50 dark:border-gray-600/50 p-4 bg-white/50 dark:bg-gray-800/50">
           {selectedFile && (
             <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs flex items-center justify-between">
               <span>Image: {selectedFile.name}</span>
@@ -253,14 +253,16 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-2 rounded text-sm hover:bg-gray-200 dark:hover:bg-gray-600"
+              className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 p-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              title="Joindre une image"
             >
               📎
             </button>
             <button
               type="button"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-2 rounded text-sm hover:bg-gray-200 dark:hover:bg-gray-600"
+              className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 p-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              title="Ajouter un emoji"
             >
               😊
             </button>
@@ -269,7 +271,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Tapez votre message..."
-              className="flex-1 border border-gray-300 dark:border-gray-600 rounded px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:border-orange-400"
+              className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               onKeyPress={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
@@ -280,9 +282,16 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
             <button
               onClick={handleSendMessage}
               disabled={(!newMessage.trim() && !selectedFile) || uploading}
-              className="bg-orange-400 text-white px-2 py-2 rounded text-sm hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white p-2 rounded-lg text-sm transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              title="Envoyer le message"
             >
-              {uploading ? '...' : '→'}
+              {uploading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              )}
             </button>
           </div>
         </div>

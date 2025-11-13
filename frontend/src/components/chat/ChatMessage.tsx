@@ -4,7 +4,6 @@ import { Socket } from 'socket.io-client';
 import axiosInstance from '@/utils/axiosInstance';
 import UserSelectedModal from '../UserSelected/UserSelectedModal';
 import MessageReactions from './MessageReactions';
-import MessageContextMenu from './MessageContextMenu';
 import GameMessage from '../Game/GameMessage';
 import toast from 'react-hot-toast';
 
@@ -36,7 +35,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
   const [messages, setMessages] = useState<Message[]>([]);
   const [gameMessages, setGameMessages] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<Message['sender'] | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ message: Message; position: { x: number; y: number } } | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const user = useAuthStore((state) => state.user);
 
@@ -114,6 +113,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     return new Date(dateString).toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
+      second: '2-digit',
     });
   };
 
@@ -139,15 +139,6 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     });
   };
 
-  const handleContextMenu = (e: React.MouseEvent, message: Message) => {
-    e.preventDefault();
-    setContextMenu({
-      message,
-      position: { x: e.clientX, y: e.clientY }
-    });
-  };
-
-
 
   const handleReply = (message: Message) => {
     if (onReply) {
@@ -155,28 +146,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     }
   };
 
-  // Close context menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      // Don't close if clicking on the context menu itself or on a modal
-      const target = e.target as Element;
-      if (target.closest('[data-context-menu]') || 
-          target.closest('.fixed.inset-0') || 
-          target.closest('[role="dialog"]')) return;
-      setContextMenu(null);
-    };
-    
-    if (contextMenu) {
-      // Add delay to prevent immediate closing
-      setTimeout(() => {
-        document.addEventListener('click', handleClickOutside);
-      }, 100);
-    }
-    
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [contextMenu]);
+
   
   // Nettoyer la connexion au canal de jeu lors du changement de canal
   useEffect(() => {
@@ -247,11 +217,20 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                   {!isOwnMessage && (
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gradient-to-r from-gray-700 to-gray-600 dark:from-turquoise-500 dark:to-primary-500 rounded-full flex items-center justify-center shadow-sm">
+                        <button
+                          onClick={() => {
+                            console.log('Clicked on user:', msg.sender);
+                            if (msg.sender._id !== user?.id) {
+                              setSelectedUser(msg.sender);
+                            }
+                          }}
+                          className="w-8 h-8 bg-gradient-to-r from-gray-700 to-gray-600 dark:from-turquoise-500 dark:to-primary-500 rounded-full flex items-center justify-center shadow-sm hover:scale-110 transition-transform cursor-pointer"
+                          title="Voir le profil"
+                        >
                           <span className="text-sm font-bold text-white">
                             {msg.sender?.username?.charAt(0)?.toUpperCase() || '?'}
                           </span>
-                        </div>
+                        </button>
                         <span className="text-sm font-semibold text-gray-900 dark:text-white">
                           {msg.sender?.username || 'Utilisateur inconnu'}
                         </span>
@@ -262,37 +241,11 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                       <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleReply(msg)}
-                          className="p-1 hover:bg-gray-200 dark:hover:bg-white/20 rounded transition-all"
+                          className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 group"
                           title="Répondre"
                         >
-                          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => setSelectedUser(msg.sender)}
-                          className="p-1 hover:bg-gray-200 dark:hover:bg-white/20 rounded transition-all"
-                          title="Message privé"
-                        >
-                          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            // Context menu action
-                            setContextMenu({
-                              message: msg,
-                              position: { x: e.clientX, y: e.clientY }
-                            });
-                          }}
-                          className="p-1 hover:bg-gray-200 dark:hover:bg-white/20 rounded transition-all"
-                          title="Plus d'options"
-                        >
-                          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                           </svg>
                         </button>
                       </div>
@@ -372,18 +325,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
         />
       )}
       
-      {contextMenu && (
-        <>
-          {console.log('Rendering context menu:', contextMenu)}
-          <MessageContextMenu
-            message={contextMenu.message}
-            onReply={handleReply}
-            onClose={() => setContextMenu(null)}
-            position={contextMenu.position}
-            socket={socket}
-          />
-        </>
-      )}
+
     </div>
   );
 };

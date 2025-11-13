@@ -4,6 +4,7 @@ import ReportModal from '@/components/ui/ReportModal';
 import UserSelectedModal from '../UserSelected/UserSelectedModal';
 import axiosInstance from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
+import styles from './MessageContextMenu.module.css';
 
 interface Message {
   _id: string;
@@ -21,6 +22,7 @@ interface MessageContextMenuProps {
   onClose: () => void;
   position: { x: number; y: number };
   socket: any;
+  isOwnMessage?: boolean;
 }
 
 const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
@@ -29,12 +31,15 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
   onClose,
   position,
   socket,
+  isOwnMessage: isOwnMessageProp,
 }) => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Message['sender'] | null>(null);
   const user = useAuthStore((state) => state.user);
 
-  const isOwnMessage = message.sender._id === user?.id;
+  const isOwnMessage = isOwnMessageProp ?? message.sender._id === user?.id;
+  
+
 
   const handleReply = () => {
     onReply(message);
@@ -66,10 +71,10 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
     <>
       <div
         data-context-menu
-        className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl py-1 z-[9999] min-w-[180px]"
+        className={`fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 z-[9999] w-40 ${styles.contextMenu}`}
         style={{
           left: position.x,
-          top: position.y,
+          top: position.y
         }}
       >
         <button
@@ -94,6 +99,7 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
               <span>Message privé</span>
             </button>
 
+            <hr className="border-gray-200 dark:border-gray-600 my-1" />
             <button
               onClick={handleBlock}
               className="w-full px-3 py-2 text-left text-sm hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2 text-red-600 dark:text-red-400 transition-colors"
@@ -101,7 +107,7 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
               </svg>
-              <span>Bloquer utilisateur</span>
+              <span>Bloquer</span>
             </button>
 
             <button
@@ -111,7 +117,7 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
-              <span>Signaler message</span>
+              <span>Signaler</span>
             </button>
           </>
         )}

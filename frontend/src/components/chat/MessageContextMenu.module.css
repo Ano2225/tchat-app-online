@@ -1,0 +1,82 @@
+/* Animation pour le menu contextuel */
+.contextMenu {
+  animation: contextMenuAppear 0.2s ease-out forwards;
+  transform-origin: top left;
+}
+
+@keyframes contextMenuAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.contextMenu.closing {
+  animation: contextMenuDisappear 0.15s ease-in forwards;
+}
+
+@keyframes contextMenuDisappear {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+}
+
+/* Effet de survol pour les boutons */
+.menuButton {
+  position: relative;
+  overflow: hidden;
+}
+
+.menuButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.menuButton:hover::before {
+  left: 100%;
+}
+
+/* Séparateur avec animation */
+.separator {
+  position: relative;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(156, 163, 175, 0.3), transparent);
+  margin: 8px 16px;
+}
+
+.separator::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.5), rgba(16, 185, 129, 0.5));
+  animation: separatorGlow 2s ease-in-out infinite;
+}
+
+@keyframes separatorGlow {
+  0%, 100% {
+    width: 0;
+    left: 0;
+  }
+  50% {
+    width: 100%;
+    left: 0;
+  }
+}
