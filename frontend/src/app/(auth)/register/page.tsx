@@ -278,18 +278,34 @@ export default function RegisterPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Sexe</label>
-                    <select
-                      name="sexe"
-                      value={formData.sexe}
-                      onChange={handleChange}
-                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl px-3 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-secondary-500 transition-all"
-                      required
-                    >
-                      <option value="" className="bg-white dark:bg-gray-800">Sélectionnez</option>
-                      <option value="homme" className="bg-white dark:bg-gray-800">Homme</option>
-                      <option value="femme" className="bg-white dark:bg-gray-800">Femme</option>
-                      <option value="autre" className="bg-white dark:bg-gray-800">Autre</option>
-                    </select>
+                    <div className="relative">
+                      <select
+                        name="sexe"
+                        value={formData.sexe}
+                        onChange={handleChange}
+                        className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 pr-10 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-secondary-500 transition-all cursor-pointer"
+                        style={{
+                          appearance: 'none',
+                          WebkitAppearance: 'none',
+                          MozAppearance: 'none',
+                          backgroundImage: 'none'
+                        }}
+                        required
+                      >
+                        <option value="" className="text-gray-500">Sélectionnez</option>
+                        <option value="homme" className="text-gray-900 dark:text-white">Homme</option>
+                        <option value="femme" className="text-gray-900 dark:text-white">Femme</option>
+                        <option value="autre" className="text-gray-900 dark:text-white">Autre</option>
+                      </select>
+                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 dark:text-gray-400">👤</span>
+                      </div>
+                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                        <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

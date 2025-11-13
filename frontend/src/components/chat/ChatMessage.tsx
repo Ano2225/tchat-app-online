@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 
 interface Reaction {
   emoji: string;
-  users: string[];
+  users: { id: string; username: string }[];
   count: number;
 }
 
@@ -75,11 +75,18 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     };
 
     const handleReactionUpdated = ({ messageId, reactions }: { messageId: string; reactions: Reaction[] }) => {
-      setMessages((prev) => 
-        prev.map(msg => 
-          msg._id === messageId ? { ...msg, reactions } : msg
-        )
-      );
+      console.log('🎉 Reaction updated received:', { messageId, reactions, reactionsCount: reactions.length });
+      setMessages((prev) => {
+        const updated = prev.map(msg => {
+          if (msg._id === messageId) {
+            console.log('📝 Updating message:', msg._id, 'with reactions:', reactions);
+            return { ...msg, reactions };
+          }
+          return msg;
+        });
+        console.log('📋 Messages after update:', updated.length);
+        return updated;
+      });
     };
 
     const handleGameMessage = (gameMessage: any) => {
@@ -121,6 +128,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
   const handleAddReaction = (messageId: string, emoji: string) => {
     if (!socket || !user?.id) return;
     
+    console.log('Emitting add_reaction:', { messageId, emoji, userId: user.id, room: currentRoom });
     socket.emit('add_reaction', {
       messageId,
       emoji,
@@ -326,6 +334,8 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                         messageId={msg._id}
                         reactions={msg.reactions || []}
                         onAddReaction={handleAddReaction}
+                        isOwn={isOwnMessage}
+                        senderId={msg.sender._id}
                       />
                     </div>
                   </div>

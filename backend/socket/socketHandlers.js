@@ -134,26 +134,53 @@ module.exports = (io, socket) => {
       const message = await Message.findById(messageId);
       if (!message) return;
 
-      const existingReaction = message.reactions.find(r => r.emoji === emoji);
-      
-      if (existingReaction) {
-        if (existingReaction.users.includes(userId)) {
-          // Remove reaction
-          existingReaction.users = existingReaction.users.filter(id => id.toString() !== userId);
-          existingReaction.count = existingReaction.users.length;
-          if (existingReaction.count === 0) {
-            message.reactions = message.reactions.filter(r => r.emoji !== emoji);
-          }
-        } else {
-          // Add reaction
-          existingReaction.users.push(userId);
-          existingReaction.count = existingReaction.users.length;
+      const user = await User.findById(userId).select('username');
+      if (!user) return;
+      // Empêcher les utilisateurs de réagir à leurs propres messages
+      if (message.sender.toString() === userId) {
+        return;
+      }
+
+      // Trouver si l'utilisateur a déjà une réaction sur ce message
+      const userExistingReaction = message.reactions.find(r => 
+        r.users.some(u => u.id === userId)
+      );
+
+      // Si l'utilisateur a déjà une réaction
+      if (userExistingReaction) {
+        // Supprimer l'utilisateur de sa réaction actuelle
+        const userIndex = userExistingReaction.users.findIndex(u => u.id === userId);
+        userExistingReaction.users.splice(userIndex, 1);
+        userExistingReaction.count = userExistingReaction.users.length;
+        
+        // Supprimer la réaction si plus personne ne l'utilise
+        if (userExistingReaction.count === 0) {
+          message.reactions = message.reactions.filter(r => r.emoji !== userExistingReaction.emoji);
         }
+        
+        // Si c'est la même emoji, on s'arrête là (suppression)
+        if (userExistingReaction.emoji === emoji) {
+          await message.save();
+          io.to(room).emit('reaction_updated', {
+            messageId,
+            reactions: message.reactions
+          });
+          return;
+        }
+      }
+
+      // Ajouter la nouvelle réaction
+      const targetReaction = message.reactions.find(r => r.emoji === emoji);
+      
+      if (targetReaction) {
+        // Ajouter l'utilisateur à la réaction existante
+        targetReaction.users.push({ id: userId, username: user.username });
+        targetReaction.count = targetReaction.users.length;
       } else {
-        // Create new reaction
+        // Créer une nouvelle réaction
         message.reactions.push({
           emoji,
-          users: [userId],
+          users: [{ id: userId, username: user.username }],
           count: 1
         });
       }

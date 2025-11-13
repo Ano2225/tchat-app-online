@@ -36,8 +36,14 @@ const MessageSchema = new mongoose.Schema({
       required: true,
     },
     users: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      id: {
+        type: String,
+        required: true,
+      },
+      username: {
+        type: String,
+        required: true,
+      }
     }],
     count: {
       type: Number,

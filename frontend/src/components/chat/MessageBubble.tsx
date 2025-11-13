@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { MoreVertical, Reply, Heart, Copy, Trash2, Edit3 } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
+import MessageReactions from './MessageReactions'
 import { formatTime } from '@/lib/utils'
 import { Menu, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
@@ -19,7 +20,7 @@ interface Message {
   timestamp: Date | string
   isOwn: boolean
   type?: 'text' | 'image' | 'file'
-  reactions?: { emoji: string; count: number; users: string[] }[]
+  reactions?: { emoji: string; count: number; users: { id: string; username: string }[] }[]
   replyTo?: {
     id: string
     content: string
@@ -49,7 +50,7 @@ const MessageBubble = ({ message, onReply, onEdit, onDelete, onReact }: MessageB
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className={`flex items-start space-x-3 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 group ${
+      className={`flex items-start space-x-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800 group relative ${
         message.isOwn ? 'flex-row-reverse space-x-reverse' : ''
       }`}
       onMouseEnter={() => setShowActions(true)}
@@ -115,11 +116,11 @@ const MessageBubble = ({ message, onReply, onEdit, onDelete, onReact }: MessageB
               message.isOwn ? '-left-20' : '-right-20'
             }`}>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-600 p-1 flex items-center space-x-1">
-                {reactions.slice(0, 3).map((emoji) => (
+                {['❤️', '👍', '😂'].map((emoji) => (
                   <button
                     key={emoji}
                     onClick={() => onReact?.(message.id, emoji)}
-                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm"
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm transition-all hover:scale-110"
                   >
                     {emoji}
                   </button>
@@ -210,20 +211,13 @@ const MessageBubble = ({ message, onReply, onEdit, onDelete, onReact }: MessageB
         </div>
 
         {/* Reactions */}
-        {message.reactions && message.reactions.length > 0 && (
-          <div className="flex items-center space-x-1 mt-2">
-            {message.reactions.map((reaction, index) => (
-              <button
-                key={index}
-                onClick={() => onReact?.(message.id, reaction.emoji)}
-                className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full px-2 py-1 text-xs transition-colors"
-              >
-                <span>{reaction.emoji}</span>
-                <span className="text-gray-600 dark:text-gray-400">{reaction.count}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        <MessageReactions
+          messageId={message.id}
+          reactions={message.reactions || []}
+          onAddReaction={onReact || (() => {})}
+          isOwn={message.isOwn}
+          senderId={message.sender.id}
+        />
       </div>
 
       {message.isOwn && (

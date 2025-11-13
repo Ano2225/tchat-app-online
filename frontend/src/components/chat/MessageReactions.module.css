@@ -1,0 +1,198 @@
+/* Styles pour les réactions de messages */
+.reactionsContainer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  min-height: 0;
+  transition: all 0.2s ease;
+}
+
+.reactionsContainer.isOwn {
+  justify-content: flex-end;
+}
+
+.reactionButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+}
+
+.reactionButton:hover {
+  transform: scale(1.05);
+}
+
+.reactionButton.active {
+  background-color: rgba(251, 146, 60, 0.1);
+  color: rgb(194, 65, 12);
+  border-color: rgba(251, 146, 60, 0.3);
+}
+
+.reactionButton.inactive {
+  background-color: rgba(156, 163, 175, 0.1);
+  color: rgb(107, 114, 128);
+}
+
+.reactionButton.inactive:hover {
+  background-color: rgba(156, 163, 175, 0.2);
+}
+
+.addReactionButton {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: rgba(156, 163, 175, 0.2);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  opacity: 0.7;
+  font-size: 12px;
+  color: rgb(107, 114, 128);
+  font-weight: bold;
+}
+
+.reactionsContainer:hover .addReactionButton,
+.addReactionButton:hover {
+  opacity: 1;
+  background-color: rgba(156, 163, 175, 0.3);
+}
+
+.addReactionButton:hover {
+  background-color: rgba(156, 163, 175, 0.2);
+  transform: scale(1.1);
+}
+
+.emojiPicker {
+  position: absolute;
+  bottom: 100%;
+  margin-bottom: 8px;
+  background: white;
+  border: 1px solid rgba(156, 163, 175, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  padding: 8px;
+  z-index: 50;
+  min-width: 160px;
+}
+
+.emojiPicker.isOwn {
+  right: 0;
+}
+
+.emojiPicker.isNotOwn {
+  left: 0;
+}
+
+.emojiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.emojiButton {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.15s ease;
+}
+
+.emojiButton:hover {
+  background-color: rgba(156, 163, 175, 0.1);
+  transform: scale(1.1);
+}
+
+.tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.tooltipContent {
+  background-color: rgba(17, 24, 39, 0.9);
+  color: white;
+  font-size: 12px;
+  border-radius: 6px;
+  padding: 6px 12px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.tooltipArrow {
+  width: 8px;
+  height: 8px;
+  background-color: rgba(17, 24, 39, 0.9);
+  transform: rotate(45deg);
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -4px;
+  margin-top: -4px;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .reactionButton.active {
+    background-color: rgba(251, 146, 60, 0.2);
+    color: rgb(251, 146, 60);
+    border-color: rgba(251, 146, 60, 0.4);
+  }
+  
+  .reactionButton.inactive {
+    background-color: rgba(75, 85, 99, 0.3);
+    color: rgb(156, 163, 175);
+  }
+  
+  .reactionButton.inactive:hover {
+    background-color: rgba(75, 85, 99, 0.5);
+  }
+  
+  .addReactionButton {
+    background-color: rgba(75, 85, 99, 0.3);
+    color: rgb(156, 163, 175);
+  }
+  
+  .addReactionButton:hover {
+    background-color: rgba(75, 85, 99, 0.5);
+  }
+  
+  .emojiPicker {
+    background: rgb(31, 41, 55);
+    border-color: rgba(75, 85, 99, 0.3);
+  }
+  
+  .emojiButton:hover {
+    background-color: rgba(75, 85, 99, 0.3);
+  }
+  
+  .tooltipContent {
+    background-color: rgba(55, 65, 81, 0.95);
+  }
+  
+  .tooltipArrow {
+    background-color: rgba(55, 65, 81, 0.95);
+  }
+}
