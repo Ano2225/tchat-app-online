@@ -185,7 +185,7 @@ export default function GamePanel({ channel, socket }: GamePanelProps) {
                 <div className="flex items-center space-x-2">
                   <span className="text-2xl">{currentQuestion.categoryEmoji || '❓'}</span>
                   <div>
-                    <h3 className="font-bold text-lg">Question </h3>
+                    <h3 className="font-bold text-lg">Question</h3>
                     <div className="text-xs opacity-90">
                       {currentQuestion.category && (
                         <span className="bg-white/20 px-2 py-1 rounded-full mr-2">

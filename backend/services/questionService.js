@@ -1,5 +1,8 @@
 const axios = require('axios');
 
+// 🔑 Clé API DeepL (à mettre dans ton .env)
+const DEEPL_API_KEY = process.env.DEEPL_API_KEY;
+
 // Configuration des catégories Open Trivia DB
 const TRIVIA_CATEGORIES = {
   9: { name: 'Culture générale', emoji: '🧠' },
@@ -144,6 +147,48 @@ const translateDifficulty = (difficulty) => {
   return translations[difficulty] || difficulty;
 };
 
+/**
+ * Traduire un tableau de textes en français avec DeepL.
+ * Si DEEPL_API_KEY est absente ou en cas d'erreur, on renvoie les textes d'origine.
+ */
+const translateTextsToFrench = async (texts) => {
+  // Si pas de clé configurée → on ne traduit pas
+  if (!DEEPL_API_KEY) {
+    console.warn('[TRIVIA_API] DEEPL_API_KEY not set, skipping translation');
+    return texts;
+  }
+
+  try {
+    const params = new URLSearchParams();
+    texts.forEach((t) => params.append('text', t));
+    params.append('target_lang', 'FR');
+
+    const response = await axios.post(
+      'https://api-free.deepl.com/v2/translate', // si tu as un plan Pro: https://api.deepl.com/v2/translate
+      params,
+      {
+        headers: {
+          'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        timeout: 5000
+      }
+    );
+
+    const translations = response.data.translations || [];
+    if (translations.length !== texts.length) {
+      console.warn('[TRIVIA_API] DeepL returned unexpected number of translations, using original texts');
+      return texts;
+    }
+
+    return translations.map((t) => t.text);
+
+  } catch (err) {
+    console.error('[TRIVIA_API] Error translating with DeepL:', err.message);
+    return texts;
+  }
+};
+
 // Fonction principale pour récupérer une question
 const getRandomQuestion = async () => {
   try {
@@ -186,31 +231,39 @@ const getRandomQuestion = async () => {
       questionCache.delete(firstKey);
     }
     
-    // Décoder les entités HTML
-    const question = decodeHtml(triviaQuestion.question);
-    const correctAnswer = decodeHtml(triviaQuestion.correct_answer);
-    const incorrectAnswers = triviaQuestion.incorrect_answers.map(decodeHtml);
-    
-    // Créer le tableau d'options mélangées
-    const allOptions = [correctAnswer, ...incorrectAnswers];
-    const shuffledOptions = shuffleArray(allOptions);
-    const correctIndex = shuffledOptions.findIndex(option => option === correctAnswer);
+    // Décoder les entités HTML (version originale EN)
+    const questionEn = decodeHtml(triviaQuestion.question);
+    const correctAnswerEn = decodeHtml(triviaQuestion.correct_answer);
+    const incorrectAnswersEn = triviaQuestion.incorrect_answers.map(decodeHtml);
+
+    // 🔁 Traduction en FR (question + bonne réponse + mauvaises réponses)
+    const textsToTranslate = [questionEn, correctAnswerEn, ...incorrectAnswersEn];
+    const translated = await translateTextsToFrench(textsToTranslate);
+
+    const questionFr = translated[0];
+    const correctAnswerFr = translated[1];
+    const incorrectAnswersFr = translated.slice(2);
+
+    // Créer le tableau d'options mélangées (en FR)
+    const allOptionsFr = [correctAnswerFr, ...incorrectAnswersFr];
+    const shuffledOptions = shuffleArray(allOptionsFr);
+    const correctIndex = shuffledOptions.findIndex(option => option === correctAnswerFr);
     
     const categoryInfo = TRIVIA_CATEGORIES[randomCategoryId] || { name: 'Divers', emoji: '❓' };
     
     const formattedQuestion = {
-      question,
+      question: questionFr,
       options: shuffledOptions,
       correctAnswer: correctIndex,
-      correctAnswerText: correctAnswer,
+      correctAnswerText: correctAnswerFr,
       category: categoryInfo.name,
       categoryEmoji: categoryInfo.emoji,
       difficulty: translateDifficulty(triviaQuestion.difficulty),
-      explanation: `La bonne réponse était : ${correctAnswer}`,
-      source: 'Open Trivia DB'
+      explanation: `La bonne réponse était : ${correctAnswerFr}`,
+      source: 'Open Trivia DB + DeepL'
     };
     
-    console.log(`[TRIVIA_API] ✅ Question generated: ${question}`);
+    console.log(`[TRIVIA_API] ✅ Question generated: ${questionFr}`);
     console.log(`[TRIVIA_API] Category: ${categoryInfo.emoji} ${categoryInfo.name} | Difficulty: ${translateDifficulty(triviaQuestion.difficulty)}`);
     
     return formattedQuestion;
