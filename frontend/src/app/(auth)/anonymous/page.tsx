@@ -69,14 +69,14 @@ export default function AnonymousPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-bg via-gray-100 to-neutral-bg dark:from-neutral-dark dark:via-gray-900 dark:to-neutral-dark flex items-center justify-center p-4">
       <div className="absolute inset-0">
-        <div className="absolute top-1/3 left-1/3 w-96 h-96 bg-turquoise-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse"></div>
+        <div className="absolute top-1/3 left-1/3 w-96 h-96 bg-gray-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse"></div>
         <div className="absolute bottom-1/3 right-1/3 w-96 h-96 bg-primary-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse delay-1000"></div>
       </div>
 
       <div className="relative w-full max-w-md">
         <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-3xl p-8 shadow-2xl">
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-to-r from-turquoise-500 to-primary-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <div className="w-20 h-20 bg-gradient-to-r from-gray-700 to-gray-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
               <span className="text-3xl">👤</span>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Mode Anonyme</h1>
@@ -95,7 +95,7 @@ export default function AnonymousPage() {
                   value={formData.username}
                   onChange={handleChange}
                   placeholder="Votre pseudo temporaire"
-                  className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-turquoise-500 transition-all"
+                  className="w-full bg-white dark:bg-white/10 border border-gray-400 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all shadow-sm"
                   required
                   maxLength={20}
                 />
@@ -116,7 +116,7 @@ export default function AnonymousPage() {
                   value={formData.age}
                   onChange={handleChange}
                   placeholder="18"
-                  className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-turquoise-500 transition-all"
+                  className="w-full bg-white dark:bg-white/10 border border-gray-400 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all shadow-sm"
                   required
                   min="13"
                   max="25"
@@ -138,7 +138,7 @@ export default function AnonymousPage() {
                 name="sexe"
                 value={formData.sexe}
                 onChange={handleChange}
-                className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl px-3 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-turquoise-500 transition-all"
+                className="w-full bg-white dark:bg-white/10 border border-gray-400 dark:border-white/20 rounded-xl px-3 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all shadow-sm"
               >
                 <option value="" className="bg-white dark:bg-gray-800">Sélectionnez</option>
                 <option value="homme" className="bg-white dark:bg-gray-800">Homme</option>
@@ -150,7 +150,7 @@ export default function AnonymousPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-turquoise-600 to-turquoise-500 text-white font-semibold py-3 rounded-xl hover:from-turquoise-700 hover:to-turquoise-600 transition-all disabled:opacity-50 shadow-lg"
+              className="w-full bg-gradient-to-r from-gray-700 to-gray-600 text-white font-semibold py-3 rounded-xl hover:from-gray-800 hover:to-gray-700 transition-all disabled:opacity-50 shadow-lg hover:shadow-xl"
             >
               {loading ? (
                 <div className="flex items-center justify-center">
@@ -188,11 +188,11 @@ export default function AnonymousPage() {
             </div>
           </div>
 
-          <div className="mt-6 p-4 bg-turquoise-500/10 border border-turquoise-500/20 rounded-xl">
+          <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-500/10 border border-gray-200 dark:border-gray-500/20 rounded-xl">
             <div className="flex items-start space-x-3">
-              <span className="text-turquoise-500 text-lg">ℹ️</span>
+              <span className="text-gray-600 dark:text-gray-400 text-lg">ℹ️</span>
               <div>
-                <h4 className="text-sm font-medium text-turquoise-600 dark:text-turquoise-300 mb-1">Mode Anonyme</h4>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mode Anonyme</h4>
                 <p className="text-xs text-gray-600 dark:text-gray-300">
                   Vos messages ne seront pas sauvegardés. Créez un compte pour conserver votre historique.
                 </p>

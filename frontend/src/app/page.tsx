@@ -7,7 +7,7 @@ const NavigationCards = () => {
   const cards = [
     { href: '/login', icon: '🔐', title: 'Connexion', desc: 'Accédez à votre compte', colors: 'from-primary-600 to-primary-500' },
     { href: '/register', icon: '✨', title: 'Inscription', desc: 'Créez votre compte', colors: 'from-secondary-600 to-secondary-500' },
-    { href: '/anonymous', icon: '👤', title: 'Anonyme', desc: 'Essayez sans compte', colors: 'from-turquoise-600 to-turquoise-500' }
+    { href: '/anonymous', icon: '👤', title: 'Anonyme', desc: 'Essayez sans compte', colors: 'from-gray-700 to-gray-600' }
   ];
 
   return (
