@@ -29,25 +29,32 @@ const MessageReactions: React.FC<MessageReactionsProps> = ({
 
   const commonEmojis = ['👍', '❤️', '😂', '😮', '😢', '😡', '👏', '🔥'];
 
+  // Debug log pour voir les réactions reçues
+  React.useEffect(() => {
+    if (reactions && reactions.length > 0) {
+      console.log('MessageReactions - reactions received:', reactions);
+    }
+  }, [reactions]);
+
   const handleEmojiClick = (emoji: string) => {
     onAddReaction(messageId, emoji);
     setShowEmojiPicker(false);
   };
 
   const hasUserReacted = (reaction: Reaction) => {
-    return user?.id && reaction.users.some(u => u.id === user.id);
+    if (!user?.id || !reaction.users) return false;
+    return reaction.users.some(u => u.id === user.id);
   };
 
   const getUserCurrentReaction = () => {
-    return reactions.find(reaction => user?.id && reaction.users.some(u => u.id === user.id));
+    if (!user?.id || !reactions) return null;
+    return reactions.find(reaction => reaction.users && reaction.users.some(u => u.id === user.id));
   };
 
-  const canUserReact = () => {
-    return user?.id && user.id !== senderId;
-  };
+
 
   const formatUsersList = (users: { id: string; username: string }[]) => {
-    if (users.length === 0) return '';
+    if (!users || users.length === 0) return '';
     if (users.length === 1) return users[0].username;
     if (users.length === 2) return `${users[0].username} et ${users[1].username}`;
     return `${users[0].username}, ${users[1].username} et ${users.length - 2} autre${users.length - 2 > 1 ? 's' : ''}`;
@@ -55,7 +62,9 @@ const MessageReactions: React.FC<MessageReactionsProps> = ({
 
   return (
     <div className={`${styles.reactionsContainer} ${isOwn ? styles.isOwn : ''} group`}>
-      {reactions && reactions.length > 0 && reactions.map((reaction) => (
+      {reactions && reactions.length > 0 && reactions
+        .filter(reaction => reaction.count > 0 && reaction.users && reaction.users.length > 0)
+        .map((reaction) => (
         <div key={reaction.emoji} className="relative">
           <button
             onClick={() => handleEmojiClick(reaction.emoji)}
@@ -70,7 +79,7 @@ const MessageReactions: React.FC<MessageReactionsProps> = ({
           </button>
           
           {/* Tooltip avec les utilisateurs */}
-          {hoveredReaction === reaction.emoji && reaction.users.length > 0 && (
+          {hoveredReaction === reaction.emoji && reaction.users && reaction.users.length > 0 && (
             <div className={styles.tooltip}>
               <div className={styles.tooltipContent}>
                 {reaction.emoji} {formatUsersList(reaction.users)}
@@ -81,8 +90,8 @@ const MessageReactions: React.FC<MessageReactionsProps> = ({
         </div>
       ))}
       
-      {/* Add reaction button - only if user can react */}
-      {canUserReact() && (
+      {/* Add reaction button - show for all authenticated users */}
+      {user?.id && (
         <div className="relative">
           <button
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -103,15 +112,17 @@ const MessageReactions: React.FC<MessageReactionsProps> = ({
                   {commonEmojis.map((emoji) => {
                     const currentReaction = getUserCurrentReaction();
                     const isCurrentReaction = currentReaction?.emoji === emoji;
+                    const existingReaction = reactions?.find(r => r.emoji === emoji);
+                    const hasThisReaction = hasUserReacted(existingReaction || { emoji, users: [], count: 0 });
                     
                     return (
                       <button
                         key={emoji}
                         onClick={() => handleEmojiClick(emoji)}
                         className={`${styles.emojiButton} ${
-                          isCurrentReaction ? 'bg-orange-100 dark:bg-orange-900/30' : ''
+                          hasThisReaction ? 'bg-orange-100 dark:bg-orange-900/30' : ''
                         }`}
-                        title={isCurrentReaction ? 'Supprimer cette réaction' : `Réagir avec ${emoji}`}
+                        title={hasThisReaction ? 'Supprimer cette réaction' : `Réagir avec ${emoji}`}
                       >
                         {emoji}
                       </button>

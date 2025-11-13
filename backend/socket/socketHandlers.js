@@ -136,10 +136,8 @@ module.exports = (io, socket) => {
 
       const user = await User.findById(userId).select('username');
       if (!user) return;
-      // Empêcher les utilisateurs de réagir à leurs propres messages
-      if (message.sender.toString() === userId) {
-        return;
-      }
+      
+      console.log('Adding reaction:', { messageId, emoji, userId, username: user.username });
 
       // Trouver si l'utilisateur a déjà une réaction sur ce message
       const userExistingReaction = message.reactions.find(r => 
@@ -161,6 +159,7 @@ module.exports = (io, socket) => {
         // Si c'est la même emoji, on s'arrête là (suppression)
         if (userExistingReaction.emoji === emoji) {
           await message.save();
+          console.log('Reaction removed, emitting to room:', room, 'reactions:', message.reactions);
           io.to(room).emit('reaction_updated', {
             messageId,
             reactions: message.reactions
@@ -186,6 +185,8 @@ module.exports = (io, socket) => {
       }
 
       await message.save();
+      
+      console.log('Reaction updated, emitting to room:', room, 'reactions:', message.reactions);
       
       // Emit to all users in the room
       io.to(room).emit('reaction_updated', {

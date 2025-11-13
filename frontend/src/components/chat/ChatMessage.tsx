@@ -75,16 +75,15 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     };
 
     const handleReactionUpdated = ({ messageId, reactions }: { messageId: string; reactions: Reaction[] }) => {
-      console.log('🎉 Reaction updated received:', { messageId, reactions, reactionsCount: reactions.length });
+      console.log('🎉 Reaction updated received:', { messageId, reactions, reactionsCount: reactions?.length || 0 });
       setMessages((prev) => {
         const updated = prev.map(msg => {
           if (msg._id === messageId) {
-            console.log('📝 Updating message:', msg._id, 'with reactions:', reactions);
-            return { ...msg, reactions };
+            console.log('📝 Updating message:', msg._id, 'old reactions:', msg.reactions, 'new reactions:', reactions);
+            return { ...msg, reactions: reactions || [] };
           }
           return msg;
         });
-        console.log('📋 Messages after update:', updated.length);
         return updated;
       });
     };
@@ -126,7 +125,10 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
   };
 
   const handleAddReaction = (messageId: string, emoji: string) => {
-    if (!socket || !user?.id) return;
+    if (!socket || !user?.id) {
+      console.log('Cannot add reaction: missing socket or user', { socket: !!socket, userId: user?.id });
+      return;
+    }
     
     console.log('Emitting add_reaction:', { messageId, emoji, userId: user.id, room: currentRoom });
     socket.emit('add_reaction', {
