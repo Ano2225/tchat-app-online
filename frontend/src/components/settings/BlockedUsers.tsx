@@ -12,6 +12,7 @@ interface BlockedUser {
 const BlockedUsers: React.FC = () => {
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadBlockedUsers();
@@ -19,10 +20,16 @@ const BlockedUsers: React.FC = () => {
 
   const loadBlockedUsers = async () => {
     try {
+      console.log('🔍 Chargement des utilisateurs bloqués...');
       const users = await reportService.getBlockedUsers();
+      console.log('✅ Utilisateurs bloqués récupérés:', users);
       setBlockedUsers(users);
-    } catch (error) {
-      toast.error('Erreur lors du chargement');
+      setError(null);
+    } catch (error: any) {
+      console.error('❌ Erreur lors du chargement des utilisateurs bloqués:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Erreur lors du chargement';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -40,7 +47,29 @@ const BlockedUsers: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="text-center py-4">Chargement...</div>;
+    return (
+      <div className="text-center py-8">
+        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+        <p className="text-sm text-gray-600 dark:text-gray-400">Chargement des utilisateurs bloqués...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
+          <span className="text-xl">⚠️</span>
+        </div>
+        <p className="text-red-600 dark:text-red-400 text-sm mb-4">{error}</p>
+        <button 
+          onClick={loadBlockedUsers}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+        >
+          Réessayer
+        </button>
+      </div>
+    );
   }
 
   return (

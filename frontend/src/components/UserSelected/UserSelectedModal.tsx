@@ -5,6 +5,7 @@ import ReportModal from '@/components/ui/ReportModal';
 import { Socket } from 'socket.io-client';
 import axiosInstance from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
+import { getAvatarColor, getInitials } from '@/utils/avatarUtils';
 
 interface Props {
   userId: string;
@@ -97,11 +98,21 @@ const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
             </svg>
           </button>
           
-          {/* Avatar avec gradient */}
-          <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
-            <span className="text-2xl font-bold text-white">
-              {profile.username.charAt(0).toUpperCase()}
-            </span>
+          {/* Avatar */}
+          <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-3 shadow-lg border-4 border-white/20">
+            {profile.avatarUrl && profile.avatarUrl.startsWith('http') ? (
+              <img 
+                src={profile.avatarUrl.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} 
+                alt={profile.username}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className={`w-full h-full bg-gradient-to-br ${getAvatarColor(profile.username)} flex items-center justify-center`}>
+                <span className="text-2xl font-bold text-white">
+                  {getInitials(profile.username)}
+                </span>
+              </div>
+            )}
           </div>
           <h3 className="font-bold text-gray-900 dark:text-white text-xl mb-1">
             {profile.username}
@@ -112,60 +123,30 @@ const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
           </div>
         </div>
 
-        {/* Infos avec icônes */}
-        <div className="px-6 pb-6 space-y-3">
-          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                <span className="text-sm">🎂</span>
-              </div>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Âge</span>
-            </div>
-            <span className="text-sm font-semibold text-gray-900 dark:text-white">{profile.age || 'Non renseigné'}</span>
-          </div>
-          
-          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center">
-                <span className="text-sm">{profile.sexe === 'homme' ? '👨' : profile.sexe === 'femme' ? '👩' : '👤'}</span>
-              </div>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Sexe</span>
-            </div>
-            <span className="text-sm font-semibold text-gray-900 dark:text-white capitalize">{profile.sexe || 'Non renseigné'}</span>
-          </div>
-          
-          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center">
-                <span className="text-sm">📍</span>
-              </div>
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Ville</span>
-            </div>
-            <span className="text-sm font-semibold text-gray-900 dark:text-white">{profile.ville || 'Non renseignée'}</span>
+        {/* Infos simples */}
+        <div className="px-6 pb-6 text-center space-y-2">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            {profile.age && <span>🎂 {profile.age} ans</span>}
+            {profile.age && profile.ville && <span> • </span>}
+            {profile.ville && <span>📍 {profile.ville}</span>}
           </div>
         </div>
 
         {/* Action buttons */}
-        <div className="p-6 pt-0 space-y-3">
+        <div className="p-6 pt-0 space-y-2">
           <button
             onClick={() => setShowChat(true)}
-            className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-3 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg text-sm font-medium transition-colors"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            <span>Envoyer un message</span>
+            💬 Envoyer un message
           </button>
           
           <div className="flex space-x-2">
             <button
               onClick={() => setShowReportModal(true)}
-              className="flex-1 bg-orange-100 dark:bg-orange-900/30 hover:bg-orange-200 dark:hover:bg-orange-800/40 text-orange-600 dark:text-orange-400 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-1"
+              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg text-sm font-medium transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-              <span>Signaler</span>
+              ⚠️ Signaler
             </button>
             
             <button
@@ -178,12 +159,9 @@ const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
                   toast.error(error.response?.data?.message || 'Erreur lors du blocage');
                 }
               }}
-              className="flex-1 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/40 text-red-600 dark:text-red-400 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center space-x-1"
+              className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-medium transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
-              </svg>
-              <span>Bloquer</span>
+              🚫 Bloquer
             </button>
           </div>
         </div>

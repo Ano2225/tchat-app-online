@@ -61,6 +61,27 @@ class UserController  {
         res.status(500).json({ message: "Erreur serveur" });
       }
     }
+
+    async updateUserAvatar(req, res) {
+      try {
+        const { avatarUrl } = req.body;
+
+        const user = await User.findByIdAndUpdate(
+          req.user.id,
+          { avatarUrl: avatarUrl || null },
+          { new: true }
+        ).select('-password');
+
+        if (!user) {
+          return res.status(404).json({ message: 'Utilisateur non trouvé' });
+        }
+
+        res.json({ message: 'Avatar mis à jour avec succès', user });
+      } catch (error) {
+        console.error('❌ Erreur updateUserAvatar:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
+      }
+    }
 }
 
 module.exports = new UserController();

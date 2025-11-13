@@ -6,6 +6,7 @@ import UserSelectedModal from '../UserSelected/UserSelectedModal';
 import MessageReactions from './MessageReactions';
 import GameMessage from '../Game/GameMessage';
 import toast from 'react-hot-toast';
+import { getAvatarColor, getInitials } from '@/utils/avatarUtils';
 
 interface Reaction {
   emoji: string;
@@ -18,6 +19,7 @@ interface Message {
   sender: {
     _id: string;
     username: string;
+    avatarUrl?: string;
   };
   content: string;
   createdAt: string;
@@ -163,7 +165,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
       <div className="bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl p-4 mb-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-gray-700 to-gray-600 dark:from-primary-500 dark:to-secondary-500 rounded-full flex items-center justify-center shadow-sm">
+            <div className="w-10 h-10 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full flex items-center justify-center shadow-sm">
               <span className="text-white font-bold">#</span>
             </div>
             <div>
@@ -224,12 +226,22 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                               setSelectedUser(msg.sender);
                             }
                           }}
-                          className="w-8 h-8 bg-gradient-to-r from-gray-700 to-gray-600 dark:from-turquoise-500 dark:to-primary-500 rounded-full flex items-center justify-center shadow-sm hover:scale-110 transition-transform cursor-pointer"
+                          className="w-8 h-8 rounded-full shadow-sm hover:scale-110 transition-transform cursor-pointer overflow-hidden border-2 border-white/20"
                           title="Voir le profil"
                         >
-                          <span className="text-sm font-bold text-white">
-                            {msg.sender?.username?.charAt(0)?.toUpperCase() || '?'}
-                          </span>
+                          {msg.sender?.avatarUrl && msg.sender.avatarUrl.startsWith('http') ? (
+                            <img 
+                              src={msg.sender.avatarUrl.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} 
+                              alt={msg.sender.username}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className={`w-full h-full bg-gradient-to-r ${getAvatarColor(msg.sender?.username || '')} flex items-center justify-center`}>
+                              <span className="text-sm font-bold text-white">
+                                {getInitials(msg.sender?.username || '')}
+                              </span>
+                            </div>
+                          )}
                         </button>
                         <span className="text-sm font-semibold text-gray-900 dark:text-white">
                           {msg.sender?.username || 'Utilisateur inconnu'}

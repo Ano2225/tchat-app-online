@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react'
 import { Socket } from 'socket.io-client'
+import { getAvatarColor, getInitials } from '@/utils/avatarUtils'
 
 interface User {
   id: string
   username: string
   isOnline: boolean
+  avatarUrl?: string
 }
 
 interface UsersOnlineProps {
@@ -41,9 +43,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket }) => {
     return isOnline ? 'bg-green-500' : 'bg-gray-400'
   }
 
-  const getInitials = (username: string) => {
-    return username.charAt(0).toUpperCase()
-  }
+
 
   return (
     <div className={`h-full bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-400 dark:border-white/20 rounded-xl overflow-hidden transition-all duration-300 shadow-lg ${
@@ -104,11 +104,19 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket }) => {
             >
               {/* Avatar */}
               <div className="relative flex-shrink-0">
-                <div className="w-7 h-7 bg-gradient-to-r from-gray-700 to-gray-600 dark:from-turquoise-500 dark:to-primary-500 rounded-full flex items-center justify-center shadow-sm">
-                  <span className="text-xs font-bold text-white">
-                    {getInitials(user.username)}
-                  </span>
-                </div>
+                {user.avatarUrl && user.avatarUrl.startsWith('http') ? (
+                  <img 
+                    src={user.avatarUrl.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} 
+                    alt={user.username}
+                    className="w-7 h-7 rounded-full object-cover shadow-sm"
+                  />
+                ) : (
+                  <div className={`w-7 h-7 bg-gradient-to-r ${getAvatarColor(user.username)} rounded-full flex items-center justify-center shadow-sm`}>
+                    <span className="text-xs font-bold text-white">
+                      {getInitials(user.username)}
+                    </span>
+                  </div>
+                )}
                 <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 ${getStatusColor(user.isOnline)} rounded-full border-2 border-white dark:border-gray-800 shadow-sm`}></div>
               </div>
 

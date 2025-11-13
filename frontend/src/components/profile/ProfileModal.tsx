@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import axiosInstance from '@/utils/axiosInstance';
 import BlockedUsers from '@/components/settings/BlockedUsers';
+import AvatarUpload from '@/components/ui/AvatarUpload';
+import { getAvatarColor, getInitials } from '@/utils/avatarUtils';
 
 interface ProfileModalProps {
   onClose: () => void;
@@ -10,7 +12,7 @@ interface ProfileModalProps {
 const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
   const { user, updateUser } = useAuthStore();
   const [selectedAvatar, setSelectedAvatar] = useState(user?.avatarUrl || '');
-  const [selectedBg, setSelectedBg] = useState(user?.bgColor || 'bg-orange-400');
+
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'blocked'>('profile');
   
@@ -22,13 +24,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
   const predefinedAvatars = [
     '👤', '👨', '👩', '🧑', '👦', '👧',
     '🐶', '🐱', '🐭', '🐹', '🐰', '🦊',
-    '🌟', '⭐', '🔥', '💎', '🎯', '🚀'
   ];
   
-  const backgroundColors = [
-    'bg-orange-400', 'bg-red-400', 'bg-blue-400', 'bg-green-400',
-    'bg-purple-400', 'bg-pink-400', 'bg-yellow-400', 'bg-indigo-400'
-  ];
+
 
   const handleAvatarSelect = async (avatar: string) => {
     if (!user?.id || user?.isAnonymous === true) {
@@ -37,40 +35,23 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
     }
 
     try {
+      setUploading(true);
       await axiosInstance.put(`/user`, { 
         username: user.username,
         age: user.age,
         ville: user.ville,
-        avatarUrl: avatar, 
-        bgColor: selectedBg 
+        avatarUrl: avatar 
       });
       setSelectedAvatar(avatar);
-      updateUser({ ...user, avatarUrl: avatar, bgColor: selectedBg });
+      updateUser({ ...user, avatarUrl: avatar });
     } catch (error) {
       console.error('Error updating avatar:', error);
+    } finally {
+      setUploading(false);
     }
   };
   
-  const handleBgSelect = async (bgColor: string) => {
-    if (!user?.id || user?.isAnonymous === true) {
-      console.log('Utilisateur non autorisé');
-      return;
-    }
 
-    try {
-      await axiosInstance.put(`/user`, { 
-        username: user.username,
-        age: user.age,
-        ville: user.ville,
-        avatarUrl: selectedAvatar, 
-        bgColor 
-      });
-      setSelectedBg(bgColor);
-      updateUser({ ...user, bgColor });
-    } catch (error) {
-      console.error('Error updating background:', error);
-    }
-  };
 
 
 
@@ -81,9 +62,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Profil</h2>
           <div className="text-center mb-4">
-            <div className="w-16 h-16 bg-orange-400 rounded-full flex items-center justify-center mx-auto mb-2">
+            <div className={`w-16 h-16 bg-gradient-to-r ${getAvatarColor(user?.username || '')} rounded-full flex items-center justify-center mx-auto mb-2`}>
               <span className="text-xl font-bold text-white">
-                {user?.username?.charAt(0).toUpperCase()}
+                {getInitials(user?.username || '')}
               </span>
             </div>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
@@ -102,101 +83,128 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Paramètres</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
+    <>
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]" onClick={onClose} />
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 w-96 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto z-[9999] animate-in fade-in-0 zoom-in-95 duration-300">
+        
+        {/* Header avec gradient */}
+        <div className="bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-700 p-6 text-center rounded-t-2xl">
+          <button 
+            onClick={onClose} 
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-all duration-200 hover:scale-110"
+          >
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          <h2 className="text-xl font-bold text-white mb-2">⚙️ Paramètres</h2>
+          <p className="text-white/80 text-sm">Personnalisez votre profil</p>
         </div>
 
-        {/* Onglets */}
-        <div className="flex mb-4 border-b border-gray-200 dark:border-gray-600">
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`px-4 py-2 text-sm font-medium ${
-              activeTab === 'profile'
-                ? 'text-orange-500 border-b-2 border-orange-500'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
-            }`}
-          >
-            Profil
-          </button>
-          <button
-            onClick={() => setActiveTab('blocked')}
-            className={`px-4 py-2 text-sm font-medium ${
-              activeTab === 'blocked'
-                ? 'text-orange-500 border-b-2 border-orange-500'
-                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
-            }`}
-          >
-            Utilisateurs bloqués
-          </button>
+        {/* Onglets modernes */}
+        <div className="p-6 pb-0">
+          <div className="flex bg-gray-100 dark:bg-gray-700/50 rounded-xl p-1 mb-6">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                activeTab === 'profile'
+                  ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              👤 Profil
+            </button>
+            <button
+              onClick={() => setActiveTab('blocked')}
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                activeTab === 'blocked'
+                  ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              🚫 Bloqués
+            </button>
+          </div>
         </div>
 
         {/* Contenu des onglets */}
-        {activeTab === 'profile' ? (
-          <>
-            {/* Avatar actuel */}
-            <div className="text-center mb-6">
-              <div className={`w-20 h-20 mx-auto mb-2 rounded-full flex items-center justify-center ${selectedBg}`}>
-                <span className="text-2xl text-white">{selectedAvatar || user?.username?.charAt(0).toUpperCase()}</span>
+        <div className="px-6 pb-6">
+          
+          {activeTab === 'profile' ? (
+            <div className="space-y-6">
+              {/* Section Avatar avec upload */}
+              <div className="text-center">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">📸 Photo de profil</h3>
+                <div className="flex justify-center mb-4">
+                  <div className="relative">
+                    {/* Avatar actuel */}
+                    <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white/20 shadow-lg mb-2">
+                      {(selectedAvatar && selectedAvatar.startsWith('http')) || (user?.avatarUrl && user.avatarUrl.startsWith('http')) ? (
+                        <img src={(selectedAvatar || user?.avatarUrl || '').replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className={`w-full h-full flex items-center justify-center bg-gradient-to-r ${getAvatarColor(user?.username || '')}`}>
+                          <span className="text-2xl text-white">
+                            {selectedAvatar && !selectedAvatar.startsWith('http') ? selectedAvatar : getInitials(user?.username || '')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <AvatarUpload
+                      currentAvatar={(selectedAvatar && selectedAvatar.startsWith('http')) ? selectedAvatar : (user?.avatarUrl && user.avatarUrl.startsWith('http')) ? user.avatarUrl : undefined}
+                      onAvatarUpdate={(avatarUrl) => {
+                        if (avatarUrl && user) {
+                          setSelectedAvatar(avatarUrl);
+                          updateUser({ ...user, avatarUrl });
+                        } else if (user) {
+                          setSelectedAvatar('');
+                          updateUser({ ...user, avatarUrl: undefined });
+                        }
+                      }}
+                      className="absolute -bottom-2 -right-2"
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{user?.username}</p>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{user?.username}</p>
+
+              {/* Avatars prédéfinis */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">😀 Avatars prédéfinis</h3>
+                <div className="grid grid-cols-6 gap-3">
+                  {predefinedAvatars.map((avatar, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleAvatarSelect(avatar)}
+                      disabled={uploading}
+                      className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center text-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-110 ${
+                        selectedAvatar === avatar ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-300 dark:border-gray-600'
+                      }`}
+                    >
+                      {avatar}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+
+
+              {uploading && (
+                <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-sm text-blue-600 dark:text-blue-400">Mise à jour en cours...</span>
+                  </div>
+                </div>
+              )}
             </div>
+          ) : (
+            <BlockedUsers />
+          )}
+        </div>
 
-            {/* Avatars prédéfinis */}
-            <div className="mb-4">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Avatars prédéfinis</h3>
-              <div className="grid grid-cols-6 gap-2">
-                {predefinedAvatars.map((avatar, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleAvatarSelect(avatar)}
-                    disabled={uploading}
-                    className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-lg hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                      selectedAvatar === avatar ? 'border-orange-400' : 'border-gray-300 dark:border-gray-600'
-                    }`}
-                  >
-                    {avatar}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Couleurs de fond */}
-            <div className="mb-4">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Couleur de fond</h3>
-              <div className="grid grid-cols-4 gap-2">
-                {backgroundColors.map((bgColor, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleBgSelect(bgColor)}
-                    className={`w-10 h-10 rounded-full border-2 ${bgColor} ${
-                      selectedBg === bgColor ? 'border-gray-800 dark:border-white' : 'border-gray-300 dark:border-gray-600'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {uploading && (
-              <div className="text-center text-sm text-gray-500 mb-4">
-                Mise à jour en cours...
-              </div>
-            )}
-          </>
-        ) : (
-          <BlockedUsers />
-        )}
-
-        <button
-          onClick={onClose}
-          className="w-full bg-orange-400 text-white py-2 rounded hover:bg-orange-500"
-        >
-          Fermer
-        </button>
       </div>
-    </div>
+    </>
   );
 };
 

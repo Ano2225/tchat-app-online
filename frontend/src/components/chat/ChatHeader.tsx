@@ -9,6 +9,7 @@ import PrivateChatBox from './PrivateChatBox'
 import Toast from '../ui/Toast'
 import ThemeToggle from '../ui/ThemeToggle'
 import ProfileModal from '../profile/ProfileModal'
+import { getAvatarColor, getInitials } from '@/utils/avatarUtils'
 
 interface ChatHeaderProps {
   users?: {
@@ -24,6 +25,7 @@ interface Conversation {
     _id: string
     username: string
     email: string
+    avatarUrl?: string
   }
   lastMessage?: {
     content: string
@@ -73,29 +75,19 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
   useEffect(() => {
     if (!socket || !user?.id) return
 
-    const handleNewMessage = (message: any) => {
-      // Ne compter que les messages reçus (pas envoyés)
-      if (message.sender?._id !== user.id) {
-        setUnreadCount(prev => prev + 1)
-      }
-      if (showMessages) {
-        fetchConversations()
-      }
-    }
-
     const handleNotification = (notification: any) => {
       // Notification = message reçu
+      console.log('🔔 Notification reçue:', notification);
       setUnreadCount(prev => prev + 1)
       if (showMessages) {
         fetchConversations()
       }
     }
 
-    socket.on('receive_private_message', handleNewMessage)
+    // Écouter seulement les notifications pour éviter les doublons
     socket.on('notify_user', handleNotification)
 
     return () => {
-      socket.off('receive_private_message', handleNewMessage)
       socket.off('notify_user', handleNotification)
     }
   }, [socket, showMessages, user?.id])
@@ -120,8 +112,12 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
             {/* Bouton Messages privés */}
             <button
               onClick={() => {
-                setShowMessages(!showMessages)
-                if (!showMessages) setUnreadCount(0)
+                const newShowMessages = !showMessages;
+                setShowMessages(newShowMessages);
+                if (newShowMessages) {
+                  // Quand on ouvre le panneau, remettre le compteur à zéro
+                  setUnreadCount(0);
+                }
               }}
               className="p-2 bg-turquoise-500/10 hover:bg-turquoise-500/20 border border-turquoise-500/20 rounded-xl transition-all duration-200 relative"
               title="Messages privés"
@@ -140,10 +136,20 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
               onClick={() => setShowProfile(true)}
               className="flex items-center space-x-3 bg-gray-100 dark:bg-white/10 rounded-full px-4 py-2 border border-gray-200 dark:border-white/20 hover:bg-gray-200 dark:hover:bg-white/20 transition-all cursor-pointer"
             >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${user?.bgColor || 'bg-gradient-to-r from-secondary-500 to-turquoise-500'}`}>
-                <span className="text-sm font-bold text-white">
-                  {user?.avatarUrl || users?.username?.charAt(0).toUpperCase()}
-                </span>
+              <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20">
+                {user?.avatarUrl && user.avatarUrl.startsWith('http') ? (
+                  <img 
+                    src={user.avatarUrl.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} 
+                    alt={user.username}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className={`w-full h-full flex items-center justify-center bg-gradient-to-r ${getAvatarColor(user?.username || '')}`}>
+                    <span className="text-sm font-bold text-white">
+                      {getInitials(user?.username || '')}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="hidden sm:block">
                 <p className="text-sm font-medium text-gray-900 dark:text-white">
@@ -223,11 +229,19 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
                       className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-600 last:border-b-0"
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-orange-400 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-bold text-white">
-                            {conversation.user.username.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
+                        {conversation.user.avatarUrl && conversation.user.avatarUrl.startsWith('http') ? (
+                          <img 
+                            src={conversation.user.avatarUrl.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} 
+                            alt={conversation.user.username}
+                            className="w-10 h-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className={`w-10 h-10 bg-gradient-to-r ${getAvatarColor(conversation.user.username)} rounded-full flex items-center justify-center`}>
+                            <span className="text-sm font-bold text-white">
+                              {getInitials(conversation.user.username)}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                             {conversation.user.username}

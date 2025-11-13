@@ -4,11 +4,13 @@ import { Socket } from 'socket.io-client';
 import chatService from '@/services/chatServices';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import axiosInstance from '@/utils/axiosInstance';
+import { getAvatarColor, getInitials } from '@/utils/avatarUtils';
 
 interface PrivateChatBoxProps {
   recipient: {
     _id: string;
     username: string;
+    avatarUrl?: string;
   };
   socket: Socket | null;
   onClose: () => void;
@@ -20,6 +22,7 @@ interface Message {
   sender: {
     _id: string;
     username: string;
+    avatarUrl?: string;
   };
   media_url?: string;
   media_type?: string;
@@ -75,6 +78,23 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       console.log('Message media_type:', message.media_type || 'none');
       setMessages(prev => [...prev, message]);
       scrollToBottom();
+      
+      // Marquer automatiquement comme lu si la conversation est ouverte
+      if (socket && user?.id && message.sender._id !== user.id) {
+        socket.emit('mark_messages_read', {
+          senderId: user.id,
+          recipientId: message.sender._id
+        });
+      }
+    };
+
+    const handleMessagesRead = ({ readBy }: { readBy: string }) => {
+      if (readBy === recipient._id) {
+        // Mettre à jour les messages envoyés par l'utilisateur actuel comme lus
+        setMessages(prev => prev.map(msg => 
+          msg.sender._id === user?.id ? { ...msg, read: true } : msg
+        ));
+      }
     };
 
     const handleUserOnline = (userId: string) => {
@@ -86,6 +106,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
     };
 
     socket.on('receive_private_message', handleReceiveMessage);
+    socket.on('messages_read', handleMessagesRead);
     socket.on('user_online', handleUserOnline);
     socket.on('user_offline', handleUserOffline);
     socket.on('message_blocked', (data) => {
@@ -95,6 +116,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
 
     return () => {
       socket.off('receive_private_message', handleReceiveMessage);
+      socket.off('messages_read', handleMessagesRead);
       socket.off('user_online', handleUserOnline);
       socket.off('user_offline', handleUserOffline);
       socket.off('message_blocked');
@@ -178,8 +200,18 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <span className="text-sm font-bold">{recipient.username.charAt(0).toUpperCase()}</span>
+            <div className="w-8 h-8 rounded-full overflow-hidden border border-white/30">
+              {recipient.avatarUrl && recipient.avatarUrl.startsWith('http') ? (
+                <img 
+                  src={recipient.avatarUrl.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} 
+                  alt={recipient.username}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className={`w-full h-full bg-gradient-to-r ${getAvatarColor(recipient.username)} flex items-center justify-center`}>
+                  <span className="text-sm font-bold text-white">{getInitials(recipient.username)}</span>
+                </div>
+              )}
             </div>
             <div>
               <div className="font-medium text-sm">{recipient.username}</div>

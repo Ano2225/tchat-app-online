@@ -62,9 +62,13 @@ class ReportController {
   // Bloquer un utilisateur
   async blockUser(req, res) {
     try {
+      console.log('🚨 DEBUT BLOCAGE - userId:', req.params.userId, 'currentUser:', req.user.id);
+      
       const { userId } = req.params;
       const currentUserId = req.user.id;
       const currentUser = await User.findById(currentUserId);
+      
+      console.log('👤 Utilisateur actuel trouvé:', currentUser ? currentUser.username : 'NON TROUVÉ');
 
       if (currentUserId === userId) {
         return res.status(400).json({ message: 'Vous ne pouvez pas vous bloquer vous-même' });
@@ -75,13 +79,22 @@ class ReportController {
         return res.status(404).json({ message: 'Utilisateur non trouvé' });
       }
 
-      // Si c'est un admin qui bloque
+      // Blocage utilisateur (admin ou normal)
+      console.log('🔒 Blocage utilisateur:', { currentUserId, targetUserId: userId, isAdmin: currentUser.role === 'admin' });
+      
+      if (!currentUser.blockedUsers) {
+        currentUser.blockedUsers = [];
+      }
+
+      if (currentUser.blockedUsers.includes(userId)) {
+        return res.status(400).json({ message: 'Utilisateur déjà bloqué' });
+      }
+
+      // Si c'est un admin, bloquer aussi de la plateforme
       if (currentUser.role === 'admin') {
-        // Blocage complet de la plateforme
         targetUser.isBlocked = true;
         await targetUser.save();
         
-        // Créer une alerte
         await Alert.create({
           type: 'user_blocked',
           title: 'Utilisateur bloqué par admin',
@@ -89,23 +102,19 @@ class ReportController {
           severity: 'high',
           relatedUserId: userId
         });
-        
-        return res.json({ message: 'Utilisateur bloqué de la plateforme avec succès' });
-      } else {
-        // Blocage utilisateur normal (messages privés seulement)
-        if (!currentUser.blockedUsers) {
-          currentUser.blockedUsers = [];
-        }
-
-        if (currentUser.blockedUsers.includes(userId)) {
-          return res.status(400).json({ message: 'Utilisateur déjà bloqué' });
-        }
-
-        currentUser.blockedUsers.push(userId);
-        await currentUser.save();
-        
-        return res.json({ message: 'Utilisateur bloqué pour les messages privés' });
       }
+      
+      // Ajouter à la liste personnelle (admin et utilisateur normal)
+      currentUser.blockedUsers.push(userId);
+      await currentUser.save();
+      
+      console.log('✅ Utilisateur bloqué avec succès. Liste des bloqués:', currentUser.blockedUsers);
+      
+      const message = currentUser.role === 'admin' 
+        ? 'Utilisateur bloqué de la plateforme et personnellement'
+        : 'Utilisateur bloqué pour les messages privés';
+        
+      return res.json({ message });
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }
@@ -123,7 +132,15 @@ class ReportController {
         return res.status(404).json({ message: 'Utilisateur non trouvé' });
       }
 
-      // Si c'est un admin qui débloque
+      // Retirer de la liste personnelle
+      if (!currentUser.blockedUsers || !currentUser.blockedUsers.includes(userId)) {
+        return res.status(400).json({ message: 'Utilisateur non bloqué' });
+      }
+
+      currentUser.blockedUsers = currentUser.blockedUsers.filter(id => id.toString() !== userId);
+      await currentUser.save();
+
+      // Si c'est un admin, débloquer aussi de la plateforme
       if (currentUser.role === 'admin') {
         targetUser.isBlocked = false;
         await targetUser.save();
@@ -135,30 +152,38 @@ class ReportController {
           severity: 'low',
           relatedUserId: userId
         });
-        
-        return res.json({ message: 'Utilisateur débloqué de la plateforme avec succès' });
-      } else {
-        // Déblocage utilisateur normal
-        if (!currentUser.blockedUsers || !currentUser.blockedUsers.includes(userId)) {
-          return res.status(400).json({ message: 'Utilisateur non bloqué' });
-        }
-
-        currentUser.blockedUsers = currentUser.blockedUsers.filter(id => id.toString() !== userId);
-        await currentUser.save();
-
-        return res.json({ message: 'Utilisateur débloqué pour les messages privés' });
       }
+
+      const message = currentUser.role === 'admin'
+        ? 'Utilisateur débloqué de la plateforme et personnellement'
+        : 'Utilisateur débloqué pour les messages privés';
+        
+      return res.json({ message });
+
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }
   }
 
+
+
   // Récupérer la liste des utilisateurs bloqués
   async getBlockedUsers(req, res) {
     try {
+      console.log('🔍 Récupération des utilisateurs bloqués pour:', req.user.id);
+      
       const user = await User.findById(req.user.id).populate('blockedUsers', 'username');
-      res.json(user.blockedUsers || []);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'Utilisateur non trouvé' });
+      }
+      
+      console.log('📋 Utilisateurs bloqués trouvés:', user.blockedUsers);
+      
+      const blockedUsers = user.blockedUsers || [];
+      res.json(blockedUsers);
     } catch (error) {
+      console.error('❌ Erreur lors de la récupération des utilisateurs bloqués:', error);
       res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }
   }

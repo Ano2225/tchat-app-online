@@ -93,7 +93,7 @@ module.exports = (io, socket) => {
           replyTo: replyTo || null,
         });
 
-        await newMessage.populate('sender', 'username');
+        await newMessage.populate('sender', 'username avatarUrl');
         if (replyTo) {
           await newMessage.populate('replyTo');
         }
@@ -103,6 +103,7 @@ module.exports = (io, socket) => {
           sender: {
             _id: newMessage.sender._id.toString(),
             username: newMessage.sender.username,
+            avatarUrl: newMessage.sender.avatarUrl,
           },
           content: newMessage.content,
           room: newMessage.room,
@@ -294,10 +295,33 @@ module.exports = (io, socket) => {
   });
 
   // --- Join a private room (between two users) ---
-  socket.on('join_private_room', ({ senderId, recipientId }) => {
+  socket.on('join_private_room', async ({ senderId, recipientId }) => {
     const roomId = getPrivateRoomId(senderId, recipientId);
     socket.join(roomId);
     console.log(`📥 User ${senderId} joined private room: ${roomId}`);
+    
+    // Marquer les messages comme lus quand l'utilisateur rejoint la conversation
+    try {
+      await Message.updateMany(
+        {
+          sender: recipientId,
+          recipient: senderId,
+          read: false
+        },
+        { read: true }
+      );
+      
+      // Notifier l'expéditeur que ses messages ont été lus
+      const recipientUsername = userIdToUsername.get(recipientId.toString());
+      if (recipientUsername && connectedUsers.has(recipientUsername)) {
+        const recipientSockets = connectedUsers.get(recipientUsername);
+        recipientSockets.forEach(socketId => {
+          io.to(socketId).emit('messages_read', { readBy: senderId });
+        });
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
   });
 
   // --- Fetch message history between two users ---
@@ -349,7 +373,7 @@ module.exports = (io, socket) => {
         media_type,
       });
 
-      await newMessage.populate('sender', 'username email');
+      await newMessage.populate('sender', 'username email avatarUrl');
 
       const roomId = getPrivateRoomId(senderId, recipientId);
       io.to(roomId).emit('receive_private_message', newMessage);
@@ -402,6 +426,33 @@ module.exports = (io, socket) => {
       }
 
       emitUserList();
+    }
+  });
+
+  // --- Mark messages as read ---
+  socket.on('mark_messages_read', async ({ senderId, recipientId }) => {
+    try {
+      await Message.updateMany(
+        {
+          sender: recipientId,
+          recipient: senderId,
+          read: false
+        },
+        { read: true }
+      );
+      
+      // Notifier l'expéditeur que ses messages ont été lus
+      const recipientUsername = userIdToUsername.get(recipientId.toString());
+      if (recipientUsername && connectedUsers.has(recipientUsername)) {
+        const recipientSockets = connectedUsers.get(recipientUsername);
+        recipientSockets.forEach(socketId => {
+          io.to(socketId).emit('messages_read', { readBy: senderId });
+        });
+      }
+      
+      console.log(`✅ Messages marked as read between ${senderId} and ${recipientId}`);
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
     }
   });
 

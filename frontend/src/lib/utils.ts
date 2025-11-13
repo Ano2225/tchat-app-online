@@ -43,17 +43,33 @@ export function sanitizeInput(input: string): string {
 
 export function generateAvatar(name: string): string {
   try {
-    if (!name || typeof name !== 'string') return 'bg-gray-500';
+    if (!name || typeof name !== 'string') return 'bg-gradient-to-r from-gray-500 to-gray-600';
     
-    const colors = [
-      'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
-      'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500'
+    // Créer un hash simple du nom d'utilisateur
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Palette de couleurs prédéfinies pour les avatars
+    const colorPalettes = [
+      'bg-gradient-to-r from-blue-500 to-blue-600',
+      'bg-gradient-to-r from-green-500 to-green-600', 
+      'bg-gradient-to-r from-purple-500 to-purple-600',
+      'bg-gradient-to-r from-pink-500 to-pink-600',
+      'bg-gradient-to-r from-indigo-500 to-indigo-600',
+      'bg-gradient-to-r from-red-500 to-red-600',
+      'bg-gradient-to-r from-yellow-500 to-yellow-600',
+      'bg-gradient-to-r from-teal-500 to-teal-600',
+      'bg-gradient-to-r from-orange-500 to-orange-600',
+      'bg-gradient-to-r from-cyan-500 to-cyan-600'
     ];
     
-    const index = name.charCodeAt(0) % colors.length;
-    return colors[index];
+    // Utiliser le hash pour sélectionner une couleur de manière cohérente
+    const index = Math.abs(hash) % colorPalettes.length;
+    return colorPalettes[index];
   } catch (error) {
     console.error('Error generating avatar:', error);
-    return 'bg-gray-500';
+    return 'bg-gradient-to-r from-gray-500 to-gray-600';
   }
 }
