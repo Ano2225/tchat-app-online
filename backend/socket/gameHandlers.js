@@ -151,8 +151,8 @@ const handleChatMessage = async (socket, data, io) => {
       console.log(`[GAME] Announcing winner:`, winnerData);
       io.to(`game_${channel}`).emit('winner_announced', winnerData);
       
-          // Optimiser le calcul du TOP 3 et utiliser setImmediate pour de meilleures performances
-      setImmediate(() => {
+      // Délai plus long pour s'assurer que le message utilisateur arrive en premier
+      setTimeout(() => {
         const topPlayers = game.leaderboard
           .sort((a, b) => (b.score || 0) - (a.score || 0))
           .slice(0, 3)
@@ -167,7 +167,7 @@ const handleChatMessage = async (socket, data, io) => {
           room: channel,
           isGameMessage: true
         });
-      });
+      }, 1500); // Augmenté à 1.5 secondes
       
       // Terminer la question après un court délai
       const timersToClean = [`next_${channel}`, `transition_${channel}`, channel];

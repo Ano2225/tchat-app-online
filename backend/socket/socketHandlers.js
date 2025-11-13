@@ -85,43 +85,43 @@ module.exports = (io, socket) => {
         socket.userId = user._id.toString();
         socket.username = user.username;
         
-        // Si c'est le canal Game, traiter comme une réponse de quiz
-        let isGameResponse = false;
+        // Toujours sauvegarder et afficher le message d'abord
+        const newMessage = await Message.create({
+          sender: user._id,
+          content,
+          room,
+          replyTo: replyTo || null,
+        });
+
+        await newMessage.populate('sender', 'username');
+        if (replyTo) {
+          await newMessage.populate('replyTo');
+        }
+
+        const enrichedMessage = {
+          _id: newMessage._id.toString(),
+          sender: {
+            _id: newMessage.sender._id.toString(),
+            username: newMessage.sender.username,
+          },
+          content: newMessage.content,
+          room: newMessage.room,
+          replyTo: newMessage.replyTo,
+          reactions: newMessage.reactions || [],
+          createdAt: newMessage.createdAt,
+        };
+
+        // Envoyer le message immédiatement
+        io.to(room).emit('receive_message', enrichedMessage);
+        
+        // Puis traiter la logique de jeu si nécessaire
         if (room === 'Game') {
-          console.log(`[SOCKET] Processing game message from ${user.username}: "${content}"`);
-          isGameResponse = await gameHandlers.handleChatMessage(socket, { room, message: content }, io);
-          console.log(`[SOCKET] Is game response: ${isGameResponse}`);
-        }
-
-        // Sauvegarder le message en base seulement si ce n'est pas une réponse de jeu
-        if (!isGameResponse) {
-          const newMessage = await Message.create({
-            sender: user._id,
-            content,
-            room,
-            replyTo: replyTo || null,
+          // Traiter la réponse de jeu de manière asynchrone
+          setImmediate(() => {
+            gameHandlers.handleChatMessage(socket, { room, message: content }, io);
           });
-
-          await newMessage.populate('sender', 'username');
-          if (replyTo) {
-            await newMessage.populate('replyTo');
-          }
-
-          const enrichedMessage = {
-            _id: newMessage._id.toString(),
-            sender: {
-              _id: newMessage.sender._id.toString(),
-              username: newMessage.sender.username,
-            },
-            content: newMessage.content,
-            room: newMessage.room,
-            replyTo: newMessage.replyTo,
-            reactions: newMessage.reactions || [],
-            createdAt: newMessage.createdAt,
-          };
-
-          io.to(room).emit('receive_message', enrichedMessage);
         }
+
       } catch (error) {
         console.error('Error processing message:', error);
       }
