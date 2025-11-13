@@ -23,7 +23,7 @@ interface Message {
   replyTo?: Message;
   reactions?: Array<{
     emoji: string;
-    users: string[];
+    users: { id: string; username: string }[];
     count: number;
   }>;
 }
@@ -84,7 +84,9 @@ const ChatPage = () => {
     };
     
     const handleGameError = (error: any) => {
-      console.error('[GAME] Game error:', error);
+      if (error && Object.keys(error).length > 0) {
+        console.error('[GAME] Game error:', error);
+      }
     };
     
     socket.on('receive_message', handleReceive);

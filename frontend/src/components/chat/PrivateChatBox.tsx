@@ -88,11 +88,16 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
     socket.on('receive_private_message', handleReceiveMessage);
     socket.on('user_online', handleUserOnline);
     socket.on('user_offline', handleUserOffline);
+    socket.on('message_blocked', (data) => {
+      console.log('Message blocked:', data.message);
+      // Vous pouvez afficher une notification ici
+    });
 
     return () => {
       socket.off('receive_private_message', handleReceiveMessage);
       socket.off('user_online', handleUserOnline);
       socket.off('user_offline', handleUserOffline);
+      socket.off('message_blocked');
     };
   }, [socket, recipient, user]);
 

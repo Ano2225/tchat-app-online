@@ -106,12 +106,12 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
         <div className="flex items-center justify-between">
           {/* Logo et titre */}
           <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 bg-gradient-to-r from-orange-400 to-secondary-500 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-100 dark:from-blue-200/30 dark:to-indigo-500/30 border-blue-300 dark:border-blue-700 rounded-xl flex items-center justify-center">
               <span className="text-xl font-bold text-white">T</span>
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">TChat</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-300">Chat civilisé</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Tchattezzz et briser les frontieres </p>
             </div>
           </div>
 

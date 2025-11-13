@@ -64,24 +64,48 @@ class ReportController {
     try {
       const { userId } = req.params;
       const currentUserId = req.user.id;
+      const currentUser = await User.findById(currentUserId);
 
       if (currentUserId === userId) {
         return res.status(400).json({ message: 'Vous ne pouvez pas vous bloquer vous-même' });
       }
 
-      const user = await User.findById(currentUserId);
-      if (!user.blockedUsers) {
-        user.blockedUsers = [];
+      const targetUser = await User.findById(userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: 'Utilisateur non trouvé' });
       }
 
-      if (user.blockedUsers.includes(userId)) {
-        return res.status(400).json({ message: 'Utilisateur déjà bloqué' });
+      // Si c'est un admin qui bloque
+      if (currentUser.role === 'admin') {
+        // Blocage complet de la plateforme
+        targetUser.isBlocked = true;
+        await targetUser.save();
+        
+        // Créer une alerte
+        await Alert.create({
+          type: 'user_blocked',
+          title: 'Utilisateur bloqué par admin',
+          message: `${currentUser.username} (admin) a bloqué ${targetUser.username}`,
+          severity: 'high',
+          relatedUserId: userId
+        });
+        
+        return res.json({ message: 'Utilisateur bloqué de la plateforme avec succès' });
+      } else {
+        // Blocage utilisateur normal (messages privés seulement)
+        if (!currentUser.blockedUsers) {
+          currentUser.blockedUsers = [];
+        }
+
+        if (currentUser.blockedUsers.includes(userId)) {
+          return res.status(400).json({ message: 'Utilisateur déjà bloqué' });
+        }
+
+        currentUser.blockedUsers.push(userId);
+        await currentUser.save();
+        
+        return res.json({ message: 'Utilisateur bloqué pour les messages privés' });
       }
-
-      user.blockedUsers.push(userId);
-      await user.save();
-
-      res.json({ message: 'Utilisateur bloqué avec succès' });
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }
@@ -92,16 +116,38 @@ class ReportController {
     try {
       const { userId } = req.params;
       const currentUserId = req.user.id;
+      const currentUser = await User.findById(currentUserId);
+      const targetUser = await User.findById(userId);
 
-      const user = await User.findById(currentUserId);
-      if (!user.blockedUsers || !user.blockedUsers.includes(userId)) {
-        return res.status(400).json({ message: 'Utilisateur non bloqué' });
+      if (!targetUser) {
+        return res.status(404).json({ message: 'Utilisateur non trouvé' });
       }
 
-      user.blockedUsers = user.blockedUsers.filter(id => id.toString() !== userId);
-      await user.save();
+      // Si c'est un admin qui débloque
+      if (currentUser.role === 'admin') {
+        targetUser.isBlocked = false;
+        await targetUser.save();
+        
+        await Alert.create({
+          type: 'user_unblocked',
+          title: 'Utilisateur débloqué par admin',
+          message: `${currentUser.username} (admin) a débloqué ${targetUser.username}`,
+          severity: 'low',
+          relatedUserId: userId
+        });
+        
+        return res.json({ message: 'Utilisateur débloqué de la plateforme avec succès' });
+      } else {
+        // Déblocage utilisateur normal
+        if (!currentUser.blockedUsers || !currentUser.blockedUsers.includes(userId)) {
+          return res.status(400).json({ message: 'Utilisateur non bloqué' });
+        }
 
-      res.json({ message: 'Utilisateur débloqué avec succès' });
+        currentUser.blockedUsers = currentUser.blockedUsers.filter(id => id.toString() !== userId);
+        await currentUser.save();
+
+        return res.json({ message: 'Utilisateur débloqué pour les messages privés' });
+      }
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }

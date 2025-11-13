@@ -322,6 +322,25 @@ module.exports = (io, socket) => {
   // --- Send a private message ---
   socket.on('send_private_message', async ({ senderId, recipientId, content, media_url, media_type }) => {
     try {
+      // Vérifier si l'expéditeur ou le destinataire sont bloqués
+      const sender = await User.findById(senderId);
+      const recipient = await User.findById(recipientId);
+      
+      if (!sender || !recipient) {
+        console.log('Sender or recipient not found');
+        return;
+      }
+      
+      // Vérifier si l'un des utilisateurs a bloqué l'autre
+      const senderBlockedUsers = sender.blockedUsers || [];
+      const recipientBlockedUsers = recipient.blockedUsers || [];
+      
+      if (senderBlockedUsers.includes(recipientId) || recipientBlockedUsers.includes(senderId)) {
+        console.log('Message blocked: users have blocked each other');
+        socket.emit('message_blocked', { message: 'Impossible d\'envoyer le message. Utilisateur bloqué.' });
+        return;
+      }
+      
       const newMessage = await Message.create({
         sender: senderId,
         recipient: recipientId,

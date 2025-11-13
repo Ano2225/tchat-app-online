@@ -22,7 +22,7 @@ interface AuthState {
   logout: () => Promise<void>;
   updateUser: (newUserData: Partial<User>) => Promise<void>;
   setIsAnonymous: (isAnonymous: boolean) => void;
-
+  fetchUserProfile: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -36,6 +36,8 @@ export const useAuthStore = create<AuthState>()(
       login: ({ user, token }) => {
         try {
           set({ user, token });
+          // Récupérer le profil complet après le login
+          get().fetchUserProfile().catch(console.error);
         } catch (error) {
           console.error('Login failed:', error);
           throw error;
@@ -86,6 +88,23 @@ export const useAuthStore = create<AuthState>()(
             timestamp: new Date().toISOString()
           });
           throw error;
+        }
+      },
+
+      fetchUserProfile: async () => {
+        const { user, token } = get();
+        if (!user?.id || !token) return;
+        
+        try {
+          const response = await axiosInstance.get('/user/profile');
+          set((state) => ({
+            user: {
+              ...state.user,
+              ...response.data,
+            },
+          }));
+        } catch (error) {
+          console.error('Failed to fetch user profile:', error);
         }
       }
       
