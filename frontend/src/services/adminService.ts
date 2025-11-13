@@ -2,10 +2,12 @@ import axiosInstance from '@/utils/axiosInstance';
 
 export interface DashboardStats {
   totalUsers: number;
+  registeredUsers: number;
   activeUsers: number;
   onlineUsers: number;
   totalMessages: number;
   newUsersLast7d: number;
+  newRegisteredUsersLast7d: number;
   messagesLast24h: number;
   totalReports: number;
 }

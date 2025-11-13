@@ -77,14 +77,22 @@ const ChatPage = () => {
     if (!socket) return;
     
     const handleReceive = (msg: Message) => {
+      console.log('[CHAT] Message received:', msg);
       if (msg.room === currentRoom) {
         setMessages((prev) => [...prev, msg]);
       }
     };
     
+    const handleGameError = (error: any) => {
+      console.error('[GAME] Game error:', error);
+    };
+    
     socket.on('receive_message', handleReceive);
+    socket.on('game_error', handleGameError);
+    
     return () => {
       socket.off('receive_message', handleReceive);
+      socket.off('game_error', handleGameError);
     };
   }, [socket, currentRoom]);
   useEffect(() => {
@@ -109,15 +117,15 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="h-screen bg-gradient-to-br from-neutral-bg via-gray-100 to-neutral-bg dark:from-neutral-dark dark:via-gray-900 dark:to-neutral-dark">
+    <div className="h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-neutral-dark dark:via-gray-900 dark:to-neutral-dark">
       <ChatHeader users={user || undefined} socket={socket} />
-      <div className="flex h-[calc(100vh-80px)] gap-1 p-1">
+      <div className="flex h-[calc(100vh-80px)] gap-2 p-2">
         <div className="flex-shrink-0">
           <ChatChannel onJoinRoom={handleJoinRoom} currentRoom={currentRoom} />
         </div>
-        <div className="flex flex-1 gap-1">
+        <div className="flex flex-1 gap-2">
           {/* Chat principal */}
-          <div className="flex flex-col flex-1 bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl overflow-hidden">
+          <div className="flex flex-col flex-1 bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-400 dark:border-white/20 rounded-xl overflow-hidden shadow-lg">
             <ChatMessage currentRoom={currentRoom} socket={socket} onReply={handleReply} />
             <ChatInput 
               currentRoom={currentRoom} 
@@ -129,8 +137,8 @@ const ChatPage = () => {
           
           {/* GamePanel seulement pour le canal Game */}
           {currentRoom === 'Game' && (
-            <div className="w-80 bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl overflow-hidden">
-              <div className="p-4 h-full overflow-y-auto">
+            <div className="w-80 bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-400 dark:border-white/20 rounded-xl overflow-hidden shadow-lg">
+              <div className="p-3 h-full overflow-y-auto">
                 <GamePanel channel={currentRoom} socket={socket} />
               </div>
             </div>

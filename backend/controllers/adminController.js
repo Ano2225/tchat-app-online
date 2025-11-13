@@ -14,33 +14,44 @@ class AdminController {
 
       const [
         totalUsers,
+        registeredUsers,
         activeUsers,
         onlineUsers,
         totalMessages,
         newUsersLast7d,
+        newRegisteredUsersLast7d,
         messagesLast24h,
         totalReports
       ] = await Promise.all([
         User.countDocuments(),
+        User.countDocuments({ isAnonymous: false }),
         User.countDocuments({ 
           $and: [
             { isAnonymous: false },
-            { $or: [{ isEnabled: true }, { lastSeen: { $exists: true } }] }
+            { lastSeen: { $gte: last24h } }
           ]
         }),
         User.countDocuments({ isOnline: true }),
         Message.countDocuments(),
         User.countDocuments({ createdAt: { $gte: last7d } }),
+        User.countDocuments({ 
+          $and: [
+            { isAnonymous: false },
+            { createdAt: { $gte: last7d } }
+          ]
+        }),
         Message.countDocuments({ createdAt: { $gte: last24h } }),
         Report.countDocuments({ status: 'pending' })
       ]);
 
       res.json({
         totalUsers,
+        registeredUsers,
         activeUsers,
         onlineUsers,
         totalMessages,
         newUsersLast7d,
+        newRegisteredUsersLast7d,
         messagesLast24h,
         totalReports
       });

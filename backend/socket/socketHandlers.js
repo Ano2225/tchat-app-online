@@ -15,6 +15,13 @@ module.exports = (io, socket) => {
 
   // Initialiser les handlers de jeu
   gameHandlers(io, socket);
+  
+  // Rejoindre automatiquement le canal de jeu si l'utilisateur rejoint le canal Game
+  socket.on('auto_join_game', (channel) => {
+    if (channel === 'Game' && socket.userId && socket.username) {
+      socket.emit('join_game_channel', channel);
+    }
+  });
 
   // --- Join a public room ---
   socket.on('join_room', (room) => {
@@ -33,13 +40,35 @@ module.exports = (io, socket) => {
     socket.join(room);
     socket.currentRoom = room;
     console.log(`User ${socket.username} joined room ${room}`);
+    
+    // Si c'est le canal Game, rejoindre aussi le canal de jeu
+    if (room === 'Game') {
+      socket.emit('join_game_channel', room);
+    }
   });
 
   // --- Leave a public room ---
-  socket.on('leave_room', () => {
-    if (socket.currentRoom) {
+  socket.on('leave_room', (room) => {
+    if (room) {
+      socket.leave(room);
+      console.log(`User ${socket.id} left room ${room}`);
+      
+      // Si c'est le canal Game, quitter aussi le canal de jeu
+      if (room === 'Game') {
+        socket.emit('leave_game_channel', room);
+      }
+      
+      if (socket.currentRoom === room) {
+        delete socket.currentRoom;
+      }
+    } else if (socket.currentRoom) {
       socket.leave(socket.currentRoom);
       console.log(`User ${socket.id} left room ${socket.currentRoom}`);
+      
+      if (socket.currentRoom === 'Game') {
+        socket.emit('leave_game_channel', socket.currentRoom);
+      }
+      
       delete socket.currentRoom;
     }
   });
@@ -64,21 +93,20 @@ module.exports = (io, socket) => {
           console.log(`[SOCKET] Is game response: ${isGameResponse}`);
         }
 
-        // Sauvegarder le message en base
-        const newMessage = await Message.create({
-          sender: user._id,
-          content,
-          room,
-          replyTo: replyTo || null,
-        });
-
-        await newMessage.populate('sender', 'username');
-        if (replyTo) {
-          await newMessage.populate('replyTo');
-        }
-
-        // Only display the message if it's not a game response
+        // Sauvegarder le message en base seulement si ce n'est pas une réponse de jeu
         if (!isGameResponse) {
+          const newMessage = await Message.create({
+            sender: user._id,
+            content,
+            room,
+            replyTo: replyTo || null,
+          });
+
+          await newMessage.populate('sender', 'username');
+          if (replyTo) {
+            await newMessage.populate('replyTo');
+          }
+
           const enrichedMessage = {
             _id: newMessage._id.toString(),
             sender: {
@@ -95,7 +123,7 @@ module.exports = (io, socket) => {
           io.to(room).emit('receive_message', enrichedMessage);
         }
       } catch (error) {
-        console.error('Error saving message:', error);
+        console.error('Error processing message:', error);
       }
     }
   });

@@ -38,7 +38,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket }) => {
   }, [socket])
 
   const getStatusColor = (isOnline: boolean) => {
-    return isOnline ? 'bg-secondary-500' : 'bg-gray-400'
+    return isOnline ? 'bg-green-500' : 'bg-gray-400'
   }
 
   const getInitials = (username: string) => {
@@ -46,17 +46,17 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket }) => {
   }
 
   return (
-    <div className={`h-full bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl overflow-hidden transition-all duration-300 ${
-      isCollapsed ? 'w-16' : 'w-64'
+    <div className={`h-full bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-400 dark:border-white/20 rounded-xl overflow-hidden transition-all duration-300 shadow-lg ${
+      isCollapsed ? 'w-16' : 'w-56'
     }`}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-white/20 flex items-center justify-between">
+      <div className="p-3 border-b border-gray-300 dark:border-white/20 flex items-center justify-between">
         {!isCollapsed && (
           <div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">
               En ligne
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
+            <p className="text-xs text-gray-600 dark:text-gray-300">
               {users.length} utilisateur{users.length > 1 ? 's' : ''}
             </p>
           </div>
@@ -86,7 +86,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket }) => {
       </div>
 
       {/* Liste des utilisateurs */}
-      <div className="p-2 space-y-1 max-h-96 overflow-y-auto">
+      <div className="p-2 space-y-1 flex-1 overflow-y-auto">
         {users.length === 0 ? (
           <div className="p-4 text-center">
             {!isCollapsed && (
@@ -99,17 +99,17 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket }) => {
           users.map((user) => (
             <div
               key={user.id}
-              className="flex items-center space-x-3 p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-all duration-200 cursor-pointer group"
+              className="flex items-center space-x-2.5 p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-all duration-200 cursor-pointer group"
               title={isCollapsed ? user.username : undefined}
             >
               {/* Avatar */}
               <div className="relative flex-shrink-0">
-                <div className="w-8 h-8 bg-gradient-to-r from-turquoise-500 to-primary-500 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-bold text-white">
+                <div className="w-7 h-7 bg-gradient-to-r from-gray-700 to-gray-600 dark:from-turquoise-500 dark:to-primary-500 rounded-full flex items-center justify-center shadow-sm">
+                  <span className="text-xs font-bold text-white">
                     {getInitials(user.username)}
                   </span>
                 </div>
-                <div className={`absolute -bottom-1 -right-1 w-3 h-3 ${getStatusColor(user.isOnline)} rounded-full border-2 border-white dark:border-gray-800`}></div>
+                <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 ${getStatusColor(user.isOnline)} rounded-full border-2 border-white dark:border-gray-800 shadow-sm`}></div>
               </div>
 
               {/* Informations utilisateur */}
@@ -147,12 +147,12 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket }) => {
 
       {/* Footer avec statistiques */}
       {!isCollapsed && users.length > 0 && (
-        <div className="p-3 border-t border-gray-200 dark:border-white/20 bg-gray-50/50 dark:bg-white/5">
+        <div className="p-2.5 border-t border-gray-300 dark:border-white/20 bg-gray-100 dark:bg-white/5">
           <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>Total: {users.length}</span>
             <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-secondary-500 rounded-full animate-pulse"></div>
-              <span>Temps réel</span>
+              <div className="w-1.5 h-1.5 bg-secondary-500 rounded-full animate-pulse"></div>
+              <span>Live</span>
             </div>
           </div>
         </div>

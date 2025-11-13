@@ -129,7 +129,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ currentRoom, socket, replyTo, onC
             value={message}
             onChange={handleInputChange}
             onKeyPress={handleKeyPress}
-            placeholder={`Tapez votre message dans ${currentRoom}...`}
+            placeholder={currentRoom === 'Game' ? 'Tapez votre réponse ou message...' : `Tapez votre message dans ${currentRoom}...`}
             className="w-full bg-white dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl px-4 py-3 pr-12 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all resize-none"
             maxLength={1000}
             autoComplete="off"
@@ -161,7 +161,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ currentRoom, socket, replyTo, onC
                 ? 'bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white'
                 : 'bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-gray-500 cursor-not-allowed'
             }`}
-            title="Envoyer le message"
+            title={currentRoom === 'Game' ? 'Envoyer réponse/message' : 'Envoyer le message'}
           >
             <svg 
               className="w-5 h-5" 

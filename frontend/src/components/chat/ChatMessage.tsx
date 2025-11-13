@@ -47,13 +47,18 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
   useEffect(() => {
     if (!currentRoom) return;
 
+    // Si c'est le canal Game, rejoindre automatiquement le canal de jeu
+    if (currentRoom === 'Game' && socket) {
+      socket.emit('join_game_channel', currentRoom);
+    }
+
     axiosInstance
       .get(`/messages/${currentRoom}`)
       .then((res) => setMessages(res.data))
       .catch((error) => {
         console.error('Failed to load messages:', error?.message || 'Unknown error');
       });
-  }, [currentRoom]);
+  }, [currentRoom, socket]);
 
   useEffect(() => {
     if (!socket) return;
@@ -162,14 +167,23 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
       document.removeEventListener('click', handleClickOutside);
     };
   }, [contextMenu]);
+  
+  // Nettoyer la connexion au canal de jeu lors du changement de canal
+  useEffect(() => {
+    return () => {
+      if (currentRoom === 'Game' && socket) {
+        socket.emit('leave_game_channel', currentRoom);
+      }
+    };
+  }, [currentRoom, socket]);
 
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
       {/* Header du canal */}
-      <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-xl p-4 mb-4">
+      <div className="bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl p-4 mb-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-r from-gray-700 to-gray-600 dark:from-primary-500 dark:to-secondary-500 rounded-full flex items-center justify-center shadow-sm">
               <span className="text-white font-bold">#</span>
             </div>
             <div>
@@ -188,7 +202,11 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
 
       {/* Messages de jeu */}
       {gameMessages.map((gameMsg) => (
-        <GameMessage key={gameMsg.id} type={gameMsg.type} data={gameMsg.data} />
+        <GameMessage 
+          key={gameMsg.id} 
+          content={gameMsg.content || gameMsg.data?.content || ''} 
+          timestamp={gameMsg.timestamp || new Date().toISOString()} 
+        />
       ))}
 
       {/* Messages */}
@@ -198,7 +216,12 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
             const isOwnMessage = msg.sender._id === user?.id;
             const isQuizBot = msg.sender.username === 'Quiz Bot';
 
-            // Afficher les messages du Quiz Bot avec le composant GameMessage
+            // Ne pas afficher les messages du Quiz Bot dans le canal Game (ils sont gérés par GamePanel)
+            if (isQuizBot && currentRoom === 'Game') {
+              return <div key={msg._id} style={{ display: 'none' }} />;
+            }
+            
+            // Afficher les messages du Quiz Bot normalement dans les autres canaux
             if (isQuizBot) {
               return (
                 <GameMessage
@@ -219,7 +242,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                   {!isOwnMessage && (
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-gradient-to-r from-turquoise-500 to-primary-500 rounded-full flex items-center justify-center">
+                        <div className="w-8 h-8 bg-gradient-to-r from-gray-700 to-gray-600 dark:from-turquoise-500 dark:to-primary-500 rounded-full flex items-center justify-center shadow-sm">
                           <span className="text-sm font-bold text-white">
                             {msg.sender?.username?.charAt(0)?.toUpperCase() || '?'}
                           </span>

@@ -1,91 +1,264 @@
-const questions = [
+const axios = require('axios');
+
+// Configuration des catégories Open Trivia DB
+const TRIVIA_CATEGORIES = {
+  9: { name: 'Culture générale', emoji: '🧠' },
+  10: { name: 'Livres', emoji: '📚' },
+  11: { name: 'Films', emoji: '🎬' },
+  12: { name: 'Musique', emoji: '🎵' },
+  14: { name: 'Télévision', emoji: '📺' },
+  15: { name: 'Jeux vidéo', emoji: '🎮' },
+  17: { name: 'Sciences', emoji: '🔬' },
+  18: { name: 'Informatique', emoji: '💻' },
+  19: { name: 'Mathématiques', emoji: '🔢' },
+  20: { name: 'Mythologie', emoji: '⚡' },
+  21: { name: 'Sports', emoji: '⚽' },
+  22: { name: 'Géographie', emoji: '🌍' },
+  23: { name: 'Histoire', emoji: '📜' },
+  24: { name: 'Politique', emoji: '🏛️' },
+  25: { name: 'Art', emoji: '🎨' },
+  26: { name: 'Célébrités', emoji: '⭐' },
+  27: { name: 'Animaux', emoji: '🐾' },
+  28: { name: 'Véhicules', emoji: '🚗' }
+};
+
+const DIFFICULTIES = ['easy', 'medium', 'hard'];
+
+// Cache pour éviter les questions répétées
+const questionCache = new Set();
+const MAX_CACHE_SIZE = 1000;
+
+// Questions de secours en cas d'échec de l'API
+const fallbackQuestions = [
   {
     question: "Quelle est la capitale de la France ?",
     options: ["Paris", "Lyon", "Marseille", "Toulouse"],
     correctAnswer: 0,
-    explanation: "Paris est la capitale de la France depuis 987. C'est aussi la ville la plus peuplée du pays avec plus de 2 millions d'habitants."
-  },
-  {
-    question: "Combien font 2 + 2 ?",
-    options: ["3", "4", "5", "6"],
-    correctAnswer: 1,
-    explanation: "2 + 2 = 4. C'est l'une des premières opérations mathématiques que nous apprenons !"
-  },
-  {
-    question: "Quel est le plus grand océan du monde ?",
-    options: ["Atlantique", "Indien", "Arctique", "Pacifique"],
-    correctAnswer: 3,
-    explanation: "L'océan Pacifique couvre environ 46% de la surface des océans mondiaux et contient plus de la moitié de l'eau libre de la planète."
-  },
-  {
-    question: "En quelle année a eu lieu la Révolution française ?",
-    options: ["1789", "1792", "1804", "1815"],
-    correctAnswer: 0,
-    explanation: "La Révolution française a commencé en 1789 avec la prise de la Bastille le 14 juillet, date devenue fête nationale française."
-  },
-  {
-    question: "Quel est l'élément chimique de symbole 'O' ?",
-    options: ["Or", "Oxygène", "Osmium", "Ozone"],
-    correctAnswer: 1,
-    explanation: "L'oxygène (O) est essentiel à la vie. Il représente environ 21% de l'atmosphère terrestre et est nécessaire à la respiration."
-  },
-  {
-    question: "Combien de continents y a-t-il ?",
-    options: ["5", "6", "7", "8"],
-    correctAnswer: 2,
-    explanation: "Il y a 7 continents : Afrique, Antarctique, Asie, Europe, Amérique du Nord, Océanie et Amérique du Sud."
+    correctAnswerText: "Paris",
+    category: "Géographie",
+    categoryEmoji: "🌍",
+    difficulty: "Facile",
+    explanation: "Paris est la capitale de la France depuis 987."
   },
   {
     question: "Qui a peint la Joconde ?",
     options: ["Picasso", "Van Gogh", "Leonardo da Vinci", "Monet"],
     correctAnswer: 2,
-    explanation: "Leonardo da Vinci a peint la Joconde entre 1503 et 1519. Ce chef-d'œuvre est exposé au musée du Louvre à Paris."
+    correctAnswerText: "Leonardo da Vinci",
+    category: "Art",
+    categoryEmoji: "🎨",
+    difficulty: "Moyen",
+    explanation: "Leonardo da Vinci a peint la Joconde entre 1503 et 1519."
   },
   {
-    question: "Quelle planète est la plus proche du Soleil ?",
-    options: ["Vénus", "Mercure", "Mars", "Terre"],
-    correctAnswer: 1,
-    explanation: "Mercure est la planète la plus proche du Soleil, à environ 58 millions de kilomètres. Sa température peut atteindre 427°C."
-  },
-  {
-    question: "Quel est le plus petit pays du monde ?",
-    options: ["Monaco", "Vatican", "Nauru", "Saint-Marin"],
-    correctAnswer: 1,
-    explanation: "Le Vatican fait seulement 0,17 km² ! C'est un État enclavé dans Rome, siège de l'Église catholique."
-  },
-  {
-    question: "Combien de côtés a un hexagone ?",
+    question: "Combien de continents y a-t-il ?",
     options: ["5", "6", "7", "8"],
-    correctAnswer: 1,
-    explanation: "Un hexagone a 6 côtés. On peut en voir dans la nature, comme dans les alvéoles des ruches d'abeilles !"
-  },
-  {
-    question: "Quelle est la monnaie du Japon ?",
-    options: ["Won", "Yuan", "Yen", "Dong"],
     correctAnswer: 2,
-    explanation: "Le yen (¥) est la monnaie officielle du Japon depuis 1871. C'est la troisième devise la plus échangée au monde."
+    correctAnswerText: "7",
+    category: "Géographie",
+    categoryEmoji: "🌍",
+    difficulty: "Facile",
+    explanation: "Il y a 7 continents : Afrique, Antarctique, Asie, Europe, Amérique du Nord, Océanie et Amérique du Sud."
   },
   {
-    question: "Qui a écrit 'Les Misérables' ?",
-    options: ["Émile Zola", "Victor Hugo", "Gustave Flaubert", "Honoré de Balzac"],
+    question: "Quel est le plus grand océan du monde ?",
+    options: ["Atlantique", "Pacifique", "Indien", "Arctique"],
     correctAnswer: 1,
-    explanation: "Victor Hugo a publié 'Les Misérables' en 1862. Ce roman social suit l'histoire de Jean Valjean dans la France du 19ème siècle."
+    correctAnswerText: "Pacifique",
+    category: "Géographie",
+    categoryEmoji: "🌍",
+    difficulty: "Facile",
+    explanation: "L'océan Pacifique couvre environ 46% de la surface des océans."
   },
   {
-    question: "Quelle est la vitesse de la lumière ?",
-    options: ["300 000 km/s", "150 000 km/s", "450 000 km/s", "600 000 km/s"],
-    correctAnswer: 0,
-    explanation: "La lumière voyage à environ 299 792 458 m/s dans le vide, soit environ 300 000 km/s. Rien ne peut aller plus vite !"
+    question: "En quelle année a eu lieu la première mission sur la Lune ?",
+    options: ["1967", "1969", "1971", "1973"],
+    correctAnswer: 1,
+    correctAnswerText: "1969",
+    category: "Histoire",
+    categoryEmoji: "📜",
+    difficulty: "Moyen",
+    explanation: "Apollo 11 a atterri sur la Lune le 20 juillet 1969."
+  },
+  {
+    question: "Combien d'os y a-t-il dans le corps humain adulte ?",
+    options: ["186", "206", "226", "246"],
+    correctAnswer: 1,
+    correctAnswerText: "206",
+    category: "Sciences",
+    categoryEmoji: "🔬",
+    difficulty: "Moyen",
+    explanation: "Un adulte a 206 os, contre 270 à la naissance."
+  },
+  {
+    question: "Quel est l'élément chimique de symbole 'O' ?",
+    options: ["Or", "Oxygène", "Osmium", "Oxyde"],
+    correctAnswer: 1,
+    correctAnswerText: "Oxygène",
+    category: "Sciences",
+    categoryEmoji: "🔬",
+    difficulty: "Facile",
+    explanation: "L'oxygène a pour symbole O dans le tableau périodique."
+  },
+  {
+    question: "Combien de joueurs y a-t-il dans une équipe de football ?",
+    options: ["10", "11", "12", "13"],
+    correctAnswer: 1,
+    correctAnswerText: "11",
+    category: "Sports",
+    categoryEmoji: "⚽",
+    difficulty: "Facile",
+    explanation: "Une équipe de football compte 11 joueurs sur le terrain."
   }
 ];
 
-const getRandomQuestion = () => {
-  const randomIndex = Math.floor(Math.random() * questions.length);
-  const question = { ...questions[randomIndex] };
-  // Garder l'index ET ajouter le texte de la réponse correcte
-  const correctAnswerIndex = question.correctAnswer;
-  question.correctAnswerText = question.options[correctAnswerIndex];
+// Utilitaires
+const shuffleArray = (array) => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
+const decodeHtml = (html) => {
+  const entities = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#039;': "'",
+    '&apos;': "'",
+    '&nbsp;': ' '
+  };
+  return html.replace(/&[#\w]+;/g, (entity) => entities[entity] || entity);
+};
+
+const translateDifficulty = (difficulty) => {
+  const translations = {
+    'easy': 'Facile',
+    'medium': 'Moyen',
+    'hard': 'Difficile'
+  };
+  return translations[difficulty] || difficulty;
+};
+
+// Fonction principale pour récupérer une question
+const getRandomQuestion = async () => {
+  try {
+    // Sélectionner une catégorie et difficulté aléatoires
+    const categoryIds = Object.keys(TRIVIA_CATEGORIES);
+    const randomCategoryId = categoryIds[Math.floor(Math.random() * categoryIds.length)];
+    const randomDifficulty = DIFFICULTIES[Math.floor(Math.random() * DIFFICULTIES.length)];
+    
+    console.log(`[TRIVIA_API] Fetching question - Category: ${randomCategoryId}, Difficulty: ${randomDifficulty}`);
+    
+    // Appel à l'API Open Trivia DB
+    const response = await axios.get('https://opentdb.com/api.php', {
+      params: {
+        amount: 1,
+        category: randomCategoryId,
+        difficulty: randomDifficulty,
+        type: 'multiple'
+      },
+      timeout: 5000
+    });
+    
+    if (response.data.response_code !== 0 || !response.data.results || response.data.results.length === 0) {
+      console.log(`[TRIVIA_API] API returned no results, using fallback`);
+      return getFallbackQuestion();
+    }
+    
+    const triviaQuestion = response.data.results[0];
+    
+    // Vérifier si la question a déjà été utilisée récemment
+    const questionKey = triviaQuestion.question;
+    if (questionCache.has(questionKey)) {
+      console.log(`[TRIVIA_API] Question already used, trying again`);
+      return getRandomQuestion(); // Récursion pour une nouvelle question
+    }
+    
+    // Ajouter au cache
+    questionCache.add(questionKey);
+    if (questionCache.size > MAX_CACHE_SIZE) {
+      const firstKey = questionCache.values().next().value;
+      questionCache.delete(firstKey);
+    }
+    
+    // Décoder les entités HTML
+    const question = decodeHtml(triviaQuestion.question);
+    const correctAnswer = decodeHtml(triviaQuestion.correct_answer);
+    const incorrectAnswers = triviaQuestion.incorrect_answers.map(decodeHtml);
+    
+    // Créer le tableau d'options mélangées
+    const allOptions = [correctAnswer, ...incorrectAnswers];
+    const shuffledOptions = shuffleArray(allOptions);
+    const correctIndex = shuffledOptions.findIndex(option => option === correctAnswer);
+    
+    const categoryInfo = TRIVIA_CATEGORIES[randomCategoryId] || { name: 'Divers', emoji: '❓' };
+    
+    const formattedQuestion = {
+      question,
+      options: shuffledOptions,
+      correctAnswer: correctIndex,
+      correctAnswerText: correctAnswer,
+      category: categoryInfo.name,
+      categoryEmoji: categoryInfo.emoji,
+      difficulty: translateDifficulty(triviaQuestion.difficulty),
+      explanation: `La bonne réponse était : ${correctAnswer}`,
+      source: 'Open Trivia DB'
+    };
+    
+    console.log(`[TRIVIA_API] ✅ Question generated: ${question}`);
+    console.log(`[TRIVIA_API] Category: ${categoryInfo.emoji} ${categoryInfo.name} | Difficulty: ${translateDifficulty(triviaQuestion.difficulty)}`);
+    
+    return formattedQuestion;
+    
+  } catch (error) {
+    console.error(`[TRIVIA_API] Error fetching question:`, error.message);
+    return getFallbackQuestion();
+  }
+};
+
+// Fonction de secours
+const getFallbackQuestion = () => {
+  const randomIndex = Math.floor(Math.random() * fallbackQuestions.length);
+  const question = { ...fallbackQuestions[randomIndex] };
+  
+  // Remélanger les options
+  const correctAnswerText = question.correctAnswerText;
+  question.options = shuffleArray(question.options);
+  question.correctAnswer = question.options.findIndex(option => option === correctAnswerText);
+  question.source = 'Questions locales';
+  question.explanation = `La bonne réponse était : ${correctAnswerText}. ${question.explanation}`;
+  
+  console.log(`[TRIVIA_API] 🔄 Using fallback question: ${question.question}`);
   return question;
 };
 
-module.exports = { getRandomQuestion };
+// Fonction pour obtenir des statistiques sur les catégories
+const getCategoryStats = async () => {
+  try {
+    const response = await axios.get('https://opentdb.com/api_count_global.php', {
+      timeout: 3000
+    });
+    return response.data;
+  } catch (error) {
+    console.error('[TRIVIA_API] Error fetching category stats:', error.message);
+    return null;
+  }
+};
+
+// Fonction pour réinitialiser le cache
+const clearQuestionCache = () => {
+  questionCache.clear();
+  console.log('[TRIVIA_API] Question cache cleared');
+};
+
+module.exports = { 
+  getRandomQuestion, 
+  getCategoryStats, 
+  clearQuestionCache,
+  TRIVIA_CATEGORIES 
+};

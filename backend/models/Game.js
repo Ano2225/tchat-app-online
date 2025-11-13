@@ -15,6 +15,10 @@ const gameSchema = new mongoose.Schema({
     correctAnswer: Number, // Index de la réponse correcte
     correctAnswerText: String, // Texte de la réponse correcte
     explanation: String,
+    category: String, // Catégorie de la question
+    categoryEmoji: String, // Emoji de la catégorie
+    difficulty: String, // Difficulté (Facile, Moyen, Difficile)
+    source: String, // Source de la question
     startTime: Date,
     answers: [{
       userId: {

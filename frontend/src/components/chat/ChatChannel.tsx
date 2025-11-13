@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import axiosInstance from '@/utils/axiosInstance'
+import { useAuthStore } from '@/store/authStore'
 
 interface Channel {
   _id: string
@@ -17,6 +18,7 @@ interface ChatChannelProps {
 const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom }) => {
   const [channels, setChannels] = useState<Channel[]>([])
   const [loading, setLoading] = useState(true)
+  const user = useAuthStore((state) => state.user)
 
   useEffect(() => {
     const fetchChannels = async () => {
@@ -50,12 +52,8 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom }) =>
   const getChannelDescription = (name: string) => {
     const descriptions: { [key: string]: string } = {
       'General': 'Discussion générale',
-      'Tech': 'Technologie',
-      'Gaming': 'Jeux vidéo',
       'Music': 'Musique',
-      'Random': 'Discussions libres',
       'Sport': 'Sports',
-      'Cinema': 'Cinéma & Séries'
     }
     return descriptions[name] || 'Canal de discussion'
   }
@@ -79,59 +77,63 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom }) =>
   }
 
   return (
-    <div className="w-64 h-full bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl overflow-hidden">
+    <div className="w-60 h-full bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-400 dark:border-white/20 rounded-xl overflow-hidden shadow-lg">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-white/20">
+      <div className="p-3 border-b border-gray-300 dark:border-white/20">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Salons</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-300">
-          {channels.length > 0 ? `${channels.length} salon${channels.length > 1 ? 's' : ''} disponible${channels.length > 1 ? 's' : ''}` : 'Chargement des salons...'}
+        <p className="text-xs text-gray-600 dark:text-gray-300">
+          {channels.length > 0 ? `${channels.length} salon${channels.length > 1 ? 's' : ''}` : 'Chargement...'}
         </p>
       </div>
 
       {/* Liste des salons */}
-      <div className="p-2 space-y-1 max-h-96 overflow-y-auto">
-        {/* Canal Game spécial */}
-        <button
-          onClick={() => onJoinRoom('Game')}
-          className={`w-full text-left p-3 rounded-xl transition-all duration-200 group ${
-            currentRoom === 'Game'
-              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
-              : 'hover:bg-purple-100 dark:hover:bg-purple-900/20 text-gray-700 dark:text-gray-300'
-          }`}
-        >
-          <div className="flex items-center space-x-3">
-            <span className="text-xl">🎮</span>
-            <div className="flex-1 min-w-0">
-              <p className={`font-medium truncate ${
-                currentRoom === 'Game' ? 'text-white' : 'text-gray-900 dark:text-white'
-              }`}>
-                #Game
-              </p>
-              <p className={`text-xs truncate ${
-                currentRoom === 'Game' 
-                  ? 'text-white/80' 
-                  : 'text-purple-600 dark:text-purple-400'
-              }`}>
-                Quiz en temps réel
-              </p>
+      <div className="p-2 space-y-1 flex-1 overflow-y-auto">
+        {/* Canal Game spécial - Seulement pour les utilisateurs inscrits */}
+        {user && !user.isAnonymous && (
+          <button
+            onClick={() => onJoinRoom('Game')}
+            className={`w-full text-left p-2.5 rounded-lg transition-all duration-200 group ${
+              currentRoom === 'Game'
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md'
+                : 'hover:bg-purple-100 dark:hover:bg-purple-900/20 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            <div className="flex items-center space-x-3">
+              <span className="text-xl">🎮</span>
+              <div className="flex-1 min-w-0">
+                <p className={`font-medium truncate ${
+                  currentRoom === 'Game' ? 'text-white' : 'text-gray-900 dark:text-white'
+                }`}>
+                  #Game
+                </p>
+                <p className={`text-xs truncate ${
+                  currentRoom === 'Game' 
+                    ? 'text-white/80' 
+                    : 'text-purple-600 dark:text-purple-400'
+                }`}>
+                  Quiz en temps réel
+                </p>
+              </div>
+              {currentRoom === 'Game' && (
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+              )}
             </div>
-            {currentRoom === 'Game' && (
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            )}
-          </div>
-        </button>
+          </button>
+        )}
         
-        {/* Séparateur */}
-        <div className="border-t border-gray-200 dark:border-white/20 my-2"></div>
+        {/* Séparateur - Seulement si Game est visible */}
+        {user && !user.isAnonymous && (
+          <div className="border-t border-gray-300 dark:border-white/20 my-2"></div>
+        )}
         
         {/* Autres canaux */}
         {channels.map((channel) => (
           <button
             key={channel._id}
             onClick={() => onJoinRoom(channel.name)}
-            className={`w-full text-left p-3 rounded-xl transition-all duration-200 group ${
+            className={`w-full text-left p-2.5 rounded-lg transition-all duration-200 group ${
               currentRoom === channel.name
-                ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white'
+                ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-md'
                 : 'hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300'
             }`}
           >
@@ -160,10 +162,10 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom }) =>
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-200 dark:border-white/20">
+      <div className="p-3 border-t border-gray-300 dark:border-white/20">
         <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
           <div className="w-2 h-2 bg-secondary-500 rounded-full animate-pulse"></div>
-          <span>#{currentRoom}</span>
+          <span className="truncate">#{currentRoom}</span>
         </div>
       </div>
     </div>

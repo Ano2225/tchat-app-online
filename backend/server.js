@@ -34,7 +34,7 @@ class ChatServer {
     this.server = http.createServer(this.app);
     this.io = socketIo(this.server, {
       cors: {
-        origin: ["http://localhost:3000", "http://localhost:3001"],
+        origin: ["http://localhost:3000"],
         methods: ["GET", "POST"]
       }
     });
@@ -62,8 +62,65 @@ class ChatServer {
     // this.app.use(checkBruteForce); // Désactivé
   }
 
-  connectDatabase() {
-    connectDB();
+  async connectDatabase() {
+    await connectDB();
+    await this.initializeDatabase();
+  }
+
+  async initializeDatabase() {
+    try {
+      const bcrypt = require('bcryptjs');
+      const User = require('./models/User');
+      const Channel = require('./models/Channel');
+      const Game = require('./models/Game');
+      const { getRandomQuestion } = require('./services/questionService');
+
+      // Créer admin par défaut
+      const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+      const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+      
+      const existingAdmin = await User.findOne({ username: adminUsername });
+      if (!existingAdmin) {
+        const hashedPassword = await bcrypt.hash(adminPassword, 10);
+        await User.create({
+          username: adminUsername,
+          email: process.env.ADMIN_EMAIL || 'admin@tchat.com',
+          password: hashedPassword,
+          role: 'admin',
+          age: 25,
+          sexe: 'autre',
+          ville: 'Admin City',
+          isAnonymous: false
+        });
+        console.log('✅ Admin créé:', adminUsername);
+      }
+
+      // Créer canaux par défaut
+      const defaultChannels = ['General', 'Music', 'Sport'];
+      for (const channelName of defaultChannels) {
+        const existingChannel = await Channel.findOne({ name: channelName });
+        if (!existingChannel) {
+          await Channel.create({ name: channelName });
+          console.log(`✅ Canal "${channelName}" créé`);
+        }
+      }
+
+      // Initialiser le jeu
+      const existingGame = await Game.findOne({ channel: 'Game' });
+      if (!existingGame) {
+        const question = getRandomQuestion();
+        await Game.create({
+          channel: 'Game',
+          isActive: true,
+          currentQuestion: { ...question, startTime: new Date(), answers: [] },
+          leaderboard: [],
+          questionHistory: []
+        });
+        console.log('✅ Système de jeu initialisé');
+      }
+    } catch (error) {
+      console.error('❌ Erreur initialisation:', error.message);
+    }
   }
 
   setupRoutes() {
@@ -88,10 +145,10 @@ class ChatServer {
 
   }
 
-  start() {
+  async start() {
     const PORT = process.env.PORT || 8000;
     this.server.listen(PORT, () => {
-      console.log(`Serveur démarré sur le port ${PORT}`);
+      console.log(`🚀 Serveur démarré sur le port ${PORT}`);
     });
   }
 }

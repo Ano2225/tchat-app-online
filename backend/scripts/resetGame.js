@@ -1,32 +1,35 @@
 const mongoose = require('mongoose');
-require('dotenv').config();
-
 const Game = require('../models/Game');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 async function resetGame() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log('🔄 Connexion à MongoDB...');
-    
-    // Supprimer ou réinitialiser le jeu Game
+    console.log('Connected to MongoDB');
+
+    // Supprimer le jeu existant
     await Game.deleteOne({ channel: 'Game' });
-    console.log('✅ Jeu Game réinitialisé');
-    
-    // Créer un nouveau jeu
-    const newGame = await Game.create({
+    console.log('✅ Game deleted');
+
+    // Créer un nouveau jeu inactif
+    const game = await Game.create({
       channel: 'Game',
       isActive: false,
       leaderboard: [],
       questionHistory: []
     });
-    
-    console.log('✅ Nouveau jeu créé');
-    console.log('🎮 Le jeu va redémarrer automatiquement quand quelqu\'un rejoindra le canal');
-    
-    process.exit(0);
+
+    console.log('✅ New game created:', {
+      channel: game.channel,
+      isActive: game.isActive
+    });
+
   } catch (error) {
-    console.error('❌ Erreur:', error);
-    process.exit(1);
+    console.error('❌ Error:', error);
+  } finally {
+    await mongoose.disconnect();
+    console.log('Disconnected from MongoDB');
   }
 }
 

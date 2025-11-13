@@ -125,7 +125,14 @@ class AuthController {
         return res.status(400).json({ message: 'L\'âge est requis' });
       }
 
+      // Validation du nom d'utilisateur
+      if (username.length < 3) {
+        return res.status(400).json({ message: 'Le nom d\'utilisateur doit contenir au moins 3 caractères' });
+      }
 
+      if (username.length > 20) {
+        return res.status(400).json({ message: 'Le nom d\'utilisateur ne peut pas dépasser 20 caractères' });
+      }
 
       const ageNum = parseInt(age);
       if (ageNum < 13 || ageNum > 25) {
@@ -172,10 +179,27 @@ class AuthController {
           age: user.age,
           sexe: user.sexe,
           ville: user.ville,
+          isAnonymous: true,
+          role: user.role
         }
       });
 
     } catch (error) {
+      // Gestion spécifique des erreurs de validation Mongoose
+      if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors).map(err => {
+          if (err.path === 'username' && err.kind === 'minlength') {
+            return 'Le nom d\'utilisateur doit contenir au moins 3 caractères';
+          }
+          if (err.path === 'username' && err.kind === 'maxlength') {
+            return 'Le nom d\'utilisateur ne peut pas dépasser 20 caractères';
+          }
+          return err.message;
+        });
+        return res.status(400).json({ message: messages[0] || 'Données invalides' });
+      }
+      
+      console.error('Erreur anonymousLogin:', error);
       res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }
   }

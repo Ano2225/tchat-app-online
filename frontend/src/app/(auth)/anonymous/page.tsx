@@ -33,6 +33,16 @@ export default function AnonymousPage() {
       return
     }
 
+    if (formData.username.trim().length < 3) {
+      toast.error('Le nom d\'utilisateur doit contenir au moins 3 caractères')
+      return
+    }
+
+    if (formData.username.trim().length > 20) {
+      toast.error('Le nom d\'utilisateur ne peut pas dépasser 20 caractères')
+      return
+    }
+
     const age = parseInt(formData.age)
     if (!formData.age || isNaN(age) || age < 13 || age > 25) {
       toast.error('Veuillez entrer un âge valide (13-25 ans)')
@@ -97,12 +107,16 @@ export default function AnonymousPage() {
                   placeholder="Votre pseudo temporaire"
                   className="w-full bg-white dark:bg-white/10 border border-gray-400 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all shadow-sm"
                   required
+                  minLength={3}
                   maxLength={20}
                 />
                 <div className="absolute inset-y-0 left-3 flex items-center">
                   <span className="text-gray-500 dark:text-gray-400">🎭</span>
                 </div>
               </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Entre 3 et 20 caractères
+              </p>
             </div>
 
             <div>

@@ -156,55 +156,75 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-neutral-dark dark:via-gray-900 dark:to-neutral-dark p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Dashboard Administrateur
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Vue d'ensemble de la plateforme TChat
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  Dashboard Admin
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Gérez votre plateforme TChat en temps réel
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => router.push('/chat')}
+              className="flex items-center space-x-2 px-4 py-2 bg-secondary-500 hover:bg-secondary-600 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <span>Retour au Chat</span>
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-4 mb-6">
+        <div className="flex space-x-2 mb-8 bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 rounded-lg ${
+            className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-200 ${
               activeTab === 'overview'
-                ? 'bg-orange-400 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                ? 'bg-primary-500 text-white shadow-md transform scale-105'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
             Vue d'ensemble
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-4 py-2 rounded-lg ${
+            className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-200 ${
               activeTab === 'users'
-                ? 'bg-orange-400 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                ? 'bg-primary-500 text-white shadow-md transform scale-105'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
             Utilisateurs ({usersPagination.total})
           </button>
           <button
             onClick={() => setActiveTab('channels')}
-            className={`px-4 py-2 rounded-lg ${
+            className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-200 ${
               activeTab === 'channels'
-                ? 'bg-orange-400 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                ? 'bg-primary-500 text-white shadow-md transform scale-105'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
             Canaux ({channels.length})
           </button>
           <button
             onClick={() => setActiveTab('reports')}
-            className={`px-4 py-2 rounded-lg ${
+            className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-200 ${
               activeTab === 'reports'
-                ? 'bg-orange-400 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                ? 'bg-primary-500 text-white shadow-md transform scale-105'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
             Signalements ({reports.length})
@@ -215,7 +235,7 @@ const AdminDashboard = () => {
         {activeTab === 'overview' && (
           <>
             {/* Statistiques principales */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
               <Card className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -243,7 +263,30 @@ const AdminDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Utilisateurs Actifs
+                      Utilisateurs Inscrits
+                    </p>
+                    <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                      {stats?.registeredUsers ?? 0}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-indigo-100 dark:bg-indigo-900 rounded-full">
+                    <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <span className="text-sm text-green-600 dark:text-green-400">
+                    +{stats?.newRegisteredUsersLast7d ?? 0} cette semaine
+                  </span>
+                </div>
+              </Card>
+
+              <Card className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Utilisateus Actifs 
                     </p>
                     <p className="text-3xl font-bold text-gray-900 dark:text-white">
                       {stats?.activeUsers ?? 0}
@@ -254,6 +297,11 @@ const AdminDashboard = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
+                </div>
+                <div className="mt-4">
+                  <span className="text-sm text-blue-600 dark:text-blue-400">@
+                     Connectés &lt; 24h
+                  </span>
                 </div>
               </Card>
 
@@ -528,7 +576,7 @@ const AdminDashboard = () => {
                 >
                   Précédent
                 </button>
-                <span className="px-3 py-1 bg-orange-400 text-white rounded">
+                <span className="px-3 py-1 bg-primary-500 text-white rounded shadow-sm">
                   {usersPagination.page} / {usersPagination.pages}
                 </span>
                 <button
@@ -560,7 +608,7 @@ const AdminDashboard = () => {
                 />
                 <button
                   onClick={createChannel}
-                  className="px-4 py-2 bg-orange-400 text-white rounded hover:bg-orange-500"
+                  className="px-4 py-2 bg-primary-500 text-white rounded hover:bg-primary-600 shadow-md"
                 >
                   Créer
                 </button>

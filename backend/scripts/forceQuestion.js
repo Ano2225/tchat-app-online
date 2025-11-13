@@ -9,7 +9,7 @@ async function forceQuestion() {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('Connected to MongoDB');
 
-    const question = getRandomQuestion();
+    const question = await getRandomQuestion();
     console.log('Generated question:', question.question);
 
     // Créer ou mettre à jour le jeu Game
