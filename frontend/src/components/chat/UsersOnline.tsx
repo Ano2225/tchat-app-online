@@ -13,17 +13,20 @@ interface User {
 
 interface UsersOnlineProps {
   socket: Socket | null
+  currentRoom?: string
 }
 
-const UsersOnline: React.FC<UsersOnlineProps> = ({ socket }) => {
+const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom }) => {
   const [users, setUsers] = useState<User[]>([])
   const [isCollapsed, setIsCollapsed] = useState(false)
 
   useEffect(() => {
     if (!socket) return
 
-    const handleUsersUpdate = (usernames: string[]) => {
-      const onlineUsers = usernames.map((username, index) => ({
+    const handleGlobalUsersUpdate = (usernames: string[] | { room: string; users: string[] }) => {
+      // If server sends an object, normalize to user list
+      const list = Array.isArray(usernames) ? usernames : (usernames.users || [])
+      const onlineUsers = list.map((username, index) => ({
         id: `user_${index}`,
         username,
         isOnline: true
@@ -31,13 +34,29 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket }) => {
       setUsers(onlineUsers)
     }
 
-    socket.on('update_user_list', handleUsersUpdate)
-    // Pas besoin d'émettre get_online_users car le serveur émet automatiquement
+    const handleRoomUsersUpdate = (payload: string[] | { room: string; users: string[] }) => {
+      const list = Array.isArray(payload) ? payload : (payload.users || [])
+      const onlineUsers = list.map((username, index) => ({
+        id: `room_user_${index}`,
+        username,
+        isOnline: true
+      }))
+      setUsers(onlineUsers)
+    }
+
+    socket.on('update_user_list', handleGlobalUsersUpdate)
+    socket.on('update_room_user_list', handleRoomUsersUpdate)
+
+    // If component knows currentRoom, ask server for the current list
+    if (currentRoom) {
+      socket.emit('get_room_users', currentRoom)
+    }
 
     return () => {
-      socket.off('update_user_list', handleUsersUpdate)
+      socket.off('update_user_list', handleGlobalUsersUpdate)
+      socket.off('update_room_user_list', handleRoomUsersUpdate)
     }
-  }, [socket])
+  }, [socket, currentRoom])
 
   const getStatusColor = (isOnline: boolean) => {
     return isOnline ? 'bg-green-500' : 'bg-gray-400'
@@ -46,8 +65,8 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket }) => {
 
 
   return (
-    <div className={`h-full bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-400 dark:border-white/20 rounded-xl overflow-hidden transition-all duration-300 shadow-lg ${
-      isCollapsed ? 'w-16' : 'w-56'
+    <div className={`h-full bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl overflow-hidden transition-all duration-300 shadow-lg ${
+      isCollapsed ? 'w-16' : 'w-full md:w-56'
     }`}>
       {/* Header */}
       <div className="p-3 border-b border-gray-300 dark:border-white/20 flex items-center justify-between">
@@ -64,8 +83,10 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket }) => {
         
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-all duration-200"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
           title={isCollapsed ? 'Développer' : 'Réduire'}
+          aria-label={isCollapsed ? 'Expand users list' : 'Collapse users list'}
+          aria-expanded={!isCollapsed}
         >
           <svg 
             className={`w-4 h-4 text-gray-600 dark:text-gray-300 transition-transform duration-200 ${
@@ -99,8 +120,17 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket }) => {
           users.map((user) => (
             <div
               key={user.id}
-              className="flex items-center space-x-2.5 p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-all duration-200 cursor-pointer group"
+              className="w-full flex items-center space-x-2.5 p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-all duration-200 cursor-pointer group relative"
               title={isCollapsed ? user.username : undefined}
+              role="button"
+              tabIndex={0}
+              aria-label={`User ${user.username} - ${user.isOnline ? 'Online' : 'Offline'}`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  // Handle user click
+                }
+              }}
             >
               {/* Avatar */}
               <div className="relative flex-shrink-0">
@@ -139,8 +169,13 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket }) => {
               {!isCollapsed && (
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                   <button
-                    className="p-1 hover:bg-gray-200 dark:hover:bg-white/20 rounded"
+                    className="p-1 hover:bg-gray-200 dark:hover:bg-white/20 rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
                     title="Message privé"
+                    aria-label={`Send private message to ${user.username}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Handle private message
+                    }}
                   >
                     <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />

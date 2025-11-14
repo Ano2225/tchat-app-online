@@ -84,7 +84,7 @@ class ChatServer {
         const hashedPassword = await bcrypt.hash(adminPassword, 10);
         await User.create({
           username: adminUsername,
-          email: process.env.ADMIN_EMAIL || 'admin@tchat.com',
+          email: process.env.ADMIN_EMAIL || 'admin@babichat.com',
           password: hashedPassword,
           role: 'admin',
           age: 25,

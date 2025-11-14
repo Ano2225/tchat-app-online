@@ -118,16 +118,61 @@ const ChatPage = () => {
     setReplyTo(null);
   };
 
+  const [showChannels, setShowChannels] = useState(false);
+  const [showUsers, setShowUsers] = useState(false);
+
   return (
     <div className="h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-neutral-dark dark:via-gray-900 dark:to-neutral-dark">
       <ChatHeader users={user || undefined} socket={socket} />
-      <div className="flex h-[calc(100vh-80px)] gap-2 p-2">
-        <div className="flex-shrink-0">
-          <ChatChannel onJoinRoom={handleJoinRoom} currentRoom={currentRoom} />
+      
+      {/* Mobile: Floating action buttons */}
+      <div className="md:hidden fixed bottom-20 left-4 z-30 flex flex-col gap-2">
+        <button
+          onClick={() => setShowChannels(!showChannels)}
+          className="w-12 h-12 bg-gradient-to-r from-primary-500 to-secondary-500 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform"
+          aria-label="Toggle channels"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <button
+          onClick={() => setShowUsers(!showUsers)}
+          className="w-12 h-12 bg-gradient-to-r from-accent-500 to-green-500 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform"
+          aria-label="Toggle users"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="flex h-[calc(100vh-80px)] gap-2 p-2 relative">
+        {/* Channel Sidebar - Desktop always visible, Mobile overlay */}
+        <div className={`
+          md:flex-shrink-0 md:relative md:translate-x-0
+          fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out
+          ${showChannels ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}>
+          <div className="h-full md:h-auto md:mt-0 mt-20">
+            <ChatChannel onJoinRoom={handleJoinRoom} currentRoom={currentRoom} socket={socket} />
+          </div>
         </div>
-        <div className="flex flex-1 gap-2">
+
+        {/* Overlay for mobile */}
+        {(showChannels || showUsers) && (
+          <div 
+            className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-30"
+            onClick={() => {
+              setShowChannels(false);
+              setShowUsers(false);
+            }}
+          />
+        )}
+
+        <div className="flex flex-1 gap-2 min-w-0">
           {/* Chat principal */}
-          <div className="flex flex-col flex-1 bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-400 dark:border-white/20 rounded-xl overflow-hidden shadow-lg">
+          <div className="flex flex-col flex-1 bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl overflow-hidden shadow-lg min-w-0">
             <ChatMessage currentRoom={currentRoom} socket={socket} onReply={handleReply} />
             <ChatInput 
               currentRoom={currentRoom} 
@@ -137,17 +182,25 @@ const ChatPage = () => {
             />
           </div>
           
-          {/* GamePanel seulement pour le canal Game */}
+          {/* GamePanel seulement pour le canal Game - Hidden on mobile */}
           {currentRoom === 'Game' && (
-            <div className="w-80 bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-400 dark:border-white/20 rounded-xl overflow-hidden shadow-lg">
+            <div className="hidden lg:block w-80 bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl overflow-hidden shadow-lg">
               <div className="p-3 h-full overflow-y-auto">
                 <GamePanel channel={currentRoom} socket={socket} />
               </div>
             </div>
           )}
         </div>
-        <div className="flex-shrink-0">
-          <UsersOnline socket={socket} />
+
+        {/* Users Sidebar - Desktop always visible, Mobile overlay */}
+        <div className={`
+          md:flex-shrink-0 md:relative md:translate-x-0
+          fixed inset-y-0 right-0 z-40 transform transition-transform duration-300 ease-in-out
+          ${showUsers ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
+        `}>
+          <div className="h-full md:h-auto md:mt-0 mt-20">
+            <UsersOnline socket={socket} currentRoom={currentRoom} />
+          </div>
         </div>
       </div>
     </div>

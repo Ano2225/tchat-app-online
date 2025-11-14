@@ -171,13 +171,13 @@ const AdminDashboard = () => {
                   Dashboard Admin
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Gérez votre plateforme TChat en temps réel
+                  Gérez votre plateforme BabiChat en temps réel
                 </p>
               </div>
             </div>
             <button
               onClick={() => router.push('/chat')}
-              className="flex items-center space-x-2 px-4 py-2 bg-secondary-500 hover:bg-secondary-600 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center space-x-2 px-4 py-2  dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />

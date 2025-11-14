@@ -6,6 +6,7 @@ import Link from 'next/link'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/authStore'
+import ThemeToggle from '@/components/ui/ThemeToggle'
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -62,6 +63,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-bg via-gray-100 to-neutral-bg dark:from-neutral-dark dark:via-gray-900 dark:to-neutral-dark flex items-center justify-center p-4">
+      {/* Header avec ThemeToggle */}
+      <header className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-end">
+        <ThemeToggle variant="inline" />
+      </header>
+      
       {/* Background Effects */}
       <div className="absolute inset-0">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse"></div>

@@ -47,7 +47,7 @@ router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
         const uploadPromise = new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream({
                 resource_type: 'auto', 
-                folder: 'tchat_online', 
+                folder: 'babichat_online',
             }, (error, result) => {
                 if (error) {
                     return reject(error);

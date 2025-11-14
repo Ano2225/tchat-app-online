@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import ThemeToggle from '@/components/ui/ThemeToggle'
 
 export default function RegisterPage() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -119,6 +120,11 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-bg via-gray-100 to-neutral-bg dark:from-neutral-dark dark:via-gray-900 dark:to-neutral-dark flex items-center justify-center p-4">
+      {/* Header avec ThemeToggle */}
+      <header className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-end">
+        <ThemeToggle variant="inline" />
+      </header>
+      
       <div className="absolute inset-0">
         <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-secondary-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse"></div>
         <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-turquoise-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse delay-1000"></div>
@@ -130,7 +136,7 @@ export default function RegisterPage() {
             <div className="w-20 h-20 bg-gradient-to-r from-secondary-500 to-turquoise-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
               <span className="text-3xl">✨</span>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Rejoignez TChat</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Rejoignez BabiChat</h1>
             <p className="text-gray-600 dark:text-gray-300">Étape {currentStep} sur {totalSteps}</p>
             
             {/* Messages d'encouragement */}

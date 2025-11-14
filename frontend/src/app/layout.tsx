@@ -3,13 +3,12 @@ import "./globals.css";
 import AuthProvider from "./providers";
 import { Toaster } from 'react-hot-toast';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
-import ThemeToggle from '@/components/ui/ThemeToggle';
 
 
 
 export const metadata: Metadata = {
-  title: "Chat en ligne - Discutez avec vos amis",
-  description: "Rejoignez des salons de discussion anonymes ou avec authentification. Partagez vos idées, discutez en temps réel et vivez des échanges passionnants.",
+  title: "BabiChat - Chat en ligne",
+  description: "BabiChat - Connecte-toi avec tes potes en temps réel. Chat sécurisé et rapide.",
 };
 
 export default function RootLayout({
@@ -21,7 +20,6 @@ export default function RootLayout({
     <html lang="fr">
       <body className="antialiased">
         <ErrorBoundary>
-          <ThemeToggle />
           <Toaster/>
           <AuthProvider>{children}</AuthProvider>
         </ErrorBoundary>

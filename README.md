@@ -1,4 +1,4 @@
-# 💬 TChat Online - Application de Chat Moderne
+# 💬 BabiChat Online - Application de Chat Moderne
 
 Une application de chat en temps réel avec une interface moderne, des fonctionnalités avancées et une sécurité renforcée.
 
@@ -68,7 +68,7 @@ Une application de chat en temps réel avec une interface moderne, des fonctionn
 ```bash
 # Cloner le projet
 git clone <votre-repo>
-cd tchat-app-online
+cd babichat-app-online
 
 # Lancer le script de configuration
 ./setup.sh
@@ -104,7 +104,7 @@ npm run dev
 
 ### Variables d'environnement Backend (.env)
 ```env
-MONGODB_URI=mongodb://localhost:27017/tchat_online
+MONGODB_URI=mongodb://localhost:27017/babichat_online
 JWT_SECRET=your_super_secret_jwt_key
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
@@ -139,7 +139,7 @@ npm run lint       # Linting
 ## 📁 Structure du Projet
 
 ```
-tchat-app-online/
+babichat-app-online/
 ├── backend/
 │   ├── config/         # Configuration DB
 │   ├── controllers/    # Logique métier
@@ -213,4 +213,4 @@ Pour toute question ou problème :
 
 ---
 
-**Développé avec ❤️ par l'équipe TChat**
+**Développé avec ❤️ par l'équipe BabiChat**

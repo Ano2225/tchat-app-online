@@ -45,6 +45,8 @@ module.exports = (io, socket) => {
     if (room === 'Game') {
       socket.emit('join_game_channel', room);
     }
+    // Emit updated list for this room
+    emitRoomUserList(room);
   });
 
   // --- Leave a public room ---
@@ -61,6 +63,8 @@ module.exports = (io, socket) => {
       if (socket.currentRoom === room) {
         delete socket.currentRoom;
       }
+      // Emit updated list for this room
+      emitRoomUserList(room);
     } else if (socket.currentRoom) {
       socket.leave(socket.currentRoom);
       console.log(`User ${socket.id} left room ${socket.currentRoom}`);
@@ -70,6 +74,8 @@ module.exports = (io, socket) => {
       }
       
       delete socket.currentRoom;
+      // Emit updated list for the previous room
+      emitRoomUserList(room);
     }
   });
 
@@ -239,6 +245,10 @@ module.exports = (io, socket) => {
 
       connectedUsers.get(username).add(socket.id);
       emitUserList();
+      // If the socket is currently in a room, also emit that room's user list
+      if (socket.currentRoom) {
+        emitRoomUserList(socket.currentRoom);
+      }
     } catch (error) {
       console.error("Error in user_connected:", error);
     }
@@ -289,6 +299,9 @@ module.exports = (io, socket) => {
       connectedUsers.get(newUsername).add(socket.id);
 
       emitUserList();
+      if (socket.currentRoom) {
+        emitRoomUserList(socket.currentRoom);
+      }
     } catch (error) {
       console.error("Error in update_username:", error);
     }
@@ -426,6 +439,21 @@ module.exports = (io, socket) => {
       }
 
       emitUserList();
+      // If the socket had a currentRoom, update that room's user list too
+      if (socket.currentRoom) {
+        emitRoomUserList(socket.currentRoom);
+      }
+    }
+  });
+
+  // --- Provide a way for clients to request current users in a room ---
+  socket.on('get_room_users', (room) => {
+    try {
+      if (!room || typeof room !== 'string') return;
+      const usernames = getUsernamesInRoom(room);
+      socket.emit('update_room_user_list', { room, users: usernames });
+    } catch (err) {
+      console.error('Error in get_room_users:', err);
     }
   });
 
@@ -485,6 +513,28 @@ module.exports = (io, socket) => {
   function emitUserList() {
     const usernames = Array.from(connectedUsers.keys());
     io.emit('update_user_list', usernames);
+  }
+
+  // Emit users present in a specific room to members of that room
+  function emitRoomUserList(room) {
+    try {
+      const usernames = getUsernamesInRoom(room);
+      io.to(room).emit('update_room_user_list', { room, users: usernames });
+    } catch (err) {
+      console.error('Error emitting room user list for', room, err);
+    }
+  }
+
+  // Helper: compute unique usernames currently connected in a room
+  function getUsernamesInRoom(room) {
+    const roomInfo = io.sockets.adapter.rooms.get(room);
+    const names = new Set();
+    if (!roomInfo) return [];
+    for (const socketId of roomInfo) {
+      const s = io.sockets.sockets.get(socketId);
+      if (s && s.username) names.add(s.username);
+    }
+    return Array.from(names);
   }
 
   // --- Generate a consistent private room ID for two users ---

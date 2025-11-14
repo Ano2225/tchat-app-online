@@ -159,25 +159,43 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     };
   }, [currentRoom, socket]);
 
+  const [showScrollButton, setShowScrollButton] = React.useState(false);
+  const messagesContainerRef = React.useRef<HTMLDivElement>(null);
+
+  const handleScroll = () => {
+    if (messagesContainerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+      setShowScrollButton(scrollHeight - scrollTop - clientHeight > 100);
+    }
+  };
+
+  const scrollToBottomSmooth = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+    <div 
+      ref={messagesContainerRef}
+      onScroll={handleScroll}
+      className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 relative"
+    >
       {/* Header du canal */}
-      <div className="bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl p-4 mb-4 shadow-sm">
+      <div className="sticky top-0 z-10 bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl p-3 md:p-4 mb-3 md:mb-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full flex items-center justify-center shadow-sm">
-              <span className="text-white font-bold">#</span>
+          <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
+              <span className="text-white font-bold text-sm md:text-base">#</span>
             </div>
-            <div>
-              <h3 className="font-bold text-gray-900 dark:text-white text-lg">{currentRoom}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-bold text-gray-900 dark:text-white text-base md:text-lg truncate">{currentRoom}</h3>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 truncate">
                 Canal public • {messages.length} message{messages.length > 1 ? 's' : ''}
               </p>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1.5 md:space-x-2 flex-shrink-0">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">En ligne</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">En ligne</span>
           </div>
         </div>
       </div>
@@ -191,9 +209,22 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
         />
       ))}
 
+      {/* Scroll to bottom button */}
+      {showScrollButton && (
+        <button
+          onClick={scrollToBottomSmooth}
+          className="fixed bottom-24 right-8 z-20 w-10 h-10 md:w-12 md:h-12 bg-gradient-to-r from-primary-500 to-secondary-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center animate-slide-up focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          aria-label="Scroll to bottom"
+        >
+          <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+        </button>
+      )}
+
       {/* Messages */}
       {messages.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-2 md:space-y-3">
           {messages.map((msg) => {
             const isOwnMessage = msg.sender._id === user?.id;
             const isQuizBot = msg.sender.username === 'Quiz Bot';

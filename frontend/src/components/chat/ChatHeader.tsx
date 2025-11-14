@@ -94,39 +94,39 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
 
   return (
     <>
-      <header className="sticky top-0 bg-white/80 dark:bg-white/10 backdrop-blur-xl border-b border-gray-200 dark:border-white/20 px-6 py-4 z-[200]">
-        <div className="flex items-center justify-between">
+      <header className="sticky top-0 bg-white/80 dark:bg-white/10 backdrop-blur-xl border-b border-gray-200 dark:border-white/20 px-3 md:px-6 py-3 md:py-4 z-[200]">
+        <div className="flex items-center justify-between gap-2 md:gap-0">
           {/* Logo et titre */}
-          <div className="flex items-center space-x-4">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-100 dark:from-blue-200/30 dark:to-indigo-500/30 border-blue-300 dark:border-blue-700 rounded-xl flex items-center justify-center">
-              <span className="text-xl font-bold text-white">T</span>
+          <div className="flex items-center space-x-2 md:space-x-4 min-w-0 flex-1">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-blue-600 to-indigo-100 dark:from-blue-200/30 dark:to-indigo-500/30 border-blue-300 dark:border-blue-700 rounded-xl flex items-center justify-center flex-shrink-0">
+              <span className="text-lg md:text-xl font-bold text-white">T</span>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">TChat</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-300">Tchattezzz et briser les frontieres </p>
+            <div className="min-w-0 hidden sm:block">
+              <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">BabiChat</h1>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 truncate">Chat en temps réel</p>
             </div>
           </div>
 
           {/* Utilisateur connecté */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-1.5 md:space-x-4 flex-shrink-0">
             {/* Bouton Messages privés */}
             <button
               onClick={() => {
                 const newShowMessages = !showMessages;
                 setShowMessages(newShowMessages);
                 if (newShowMessages) {
-                  // Quand on ouvre le panneau, remettre le compteur à zéro
                   setUnreadCount(0);
                 }
               }}
-              className="p-2 bg-turquoise-500/10 hover:bg-turquoise-500/20 border border-turquoise-500/20 rounded-xl transition-all duration-200 relative"
+              className="p-1.5 md:p-2 bg-turquoise-500/10 hover:bg-turquoise-500/20 border border-turquoise-500/20 rounded-lg md:rounded-xl transition-all duration-200 relative focus:outline-none focus:ring-2 focus:ring-turquoise-500"
               title="Messages privés"
+              aria-label="Private messages"
             >
-              <svg className="w-5 h-5 text-turquoise-600 dark:text-turquoise-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 md:w-5 md:h-5 text-turquoise-600 dark:text-turquoise-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
               {unreadCount > 0 && (
-                <div className="absolute -top-1 -right-1 min-w-[12px] h-3 bg-orange-400 rounded-full flex items-center justify-center">
+                <div className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-orange-400 rounded-full flex items-center justify-center px-1 animate-scale-in">
                   <span className="text-xs text-white font-bold">{unreadCount > 9 ? '9+' : unreadCount}</span>
                 </div>
               )}
