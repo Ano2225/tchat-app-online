@@ -84,9 +84,13 @@ const ChatPage = () => {
     };
     
     const handleGameError = (error: any) => {
-      if (error && Object.keys(error).length > 0) {
+      // Only log if error has meaningful content
+      if (error && typeof error === 'object' && error.message) {
+        console.error('[GAME] Game error:', error.message);
+      } else if (error && Object.keys(error).length > 0) {
         console.error('[GAME] Game error:', error);
       }
+      // Silently ignore empty error objects
     };
     
     socket.on('receive_message', handleReceive);

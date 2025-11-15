@@ -222,7 +222,9 @@ module.exports = (io, socket) => {
   const validateAuthenticatedUser = (socket) => {
     if (!socket.userId || !socket.username) {
       console.log(`[SECURITY] Unauthorized game action attempt from socket: ${socket.id}`);
-      socket.emit('game_error', { message: 'Authentication required for game actions' });
+      const errorMessage = 'Authentication required for game actions';
+      console.error(`[GAME_ERROR] ${errorMessage}`);
+      socket.emit('game_error', { message: errorMessage });
       return false;
     }
     return true;
@@ -277,8 +279,10 @@ module.exports = (io, socket) => {
         return;
       }
     } catch (error) {
+      const errorMessage = 'Erreur de vérification utilisateur';
       console.error('Error checking user registration:', error);
-      socket.emit('game_error', { message: 'Erreur de vérification utilisateur' });
+      console.error(`[GAME_ERROR] ${errorMessage}`);
+      socket.emit('game_error', { message: errorMessage });
       return;
     }
 
@@ -312,8 +316,10 @@ module.exports = (io, socket) => {
         activeGames.set(channel, game);
         console.log(`Game created/loaded for channel: ${channel}`);
       } catch (error) {
+        const errorMessage = 'Erreur lors du chargement du jeu';
         console.error('Error creating/loading game:', error);
-        socket.emit('game_error', { message: 'Erreur lors du chargement du jeu' });
+        console.error(`[GAME_ERROR] ${errorMessage}`);
+        socket.emit('game_error', { message: errorMessage });
         return;
       }
     }

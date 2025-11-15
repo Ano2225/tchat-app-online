@@ -180,7 +180,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
       className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 relative"
     >
       {/* Header du canal */}
-      <div className="sticky top-0 z-10 bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl p-3 md:p-4 mb-3 md:mb-4 shadow-sm">
+      <div className="sticky top-0 z-50 bg-white dark:bg-gray-900/95 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl p-3 md:p-4 mb-3 md:mb-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1">
             <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
