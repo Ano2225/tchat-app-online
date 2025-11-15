@@ -511,15 +511,75 @@ module.exports = (io, socket) => {
 
   // --- Emit the list of connected users ---
   function emitUserList() {
+    // Emit richer user info (username + avatarUrl when available) to clients
     const usernames = Array.from(connectedUsers.keys());
-    io.emit('update_user_list', usernames);
+    (async () => {
+      try {
+        const usersInfo = [];
+        for (const username of usernames) {
+          const socketsSet = connectedUsers.get(username);
+          let avatarUrl = null;
+
+          if (socketsSet && socketsSet.size > 0) {
+            // Try to pick one socket for this username and lookup its userId
+            const socketId = Array.from(socketsSet)[0];
+            const s = io.sockets.sockets.get(socketId);
+            if (s && s.userId) {
+              try {
+                const dbUser = await User.findById(s.userId).select('avatarUrl');
+                if (dbUser && dbUser.avatarUrl) avatarUrl = dbUser.avatarUrl;
+              } catch (err) {
+                // ignore DB errors for best-effort avatar retrieval
+              }
+            }
+          }
+          usersInfo.push({ username, avatarUrl });
+        }
+        io.emit('update_user_list', usersInfo);
+      } catch (err) {
+        console.error('Error emitting enriched user list:', err);
+        // Fallback to plain usernames
+        io.emit('update_user_list', usernames);
+      }
+    })();
   }
 
   // Emit users present in a specific room to members of that room
   function emitRoomUserList(room) {
     try {
       const usernames = getUsernamesInRoom(room);
-      io.to(room).emit('update_room_user_list', { room, users: usernames });
+      // Build enriched user info (username + avatarUrl) for members of the room
+      (async () => {
+        try {
+          const usersInfo = [];
+          const roomInfo = io.sockets.adapter.rooms.get(room);
+          if (!roomInfo) {
+            io.to(room).emit('update_room_user_list', { room, users: [] });
+            return;
+          }
+
+          for (const socketId of roomInfo) {
+            const s = io.sockets.sockets.get(socketId);
+            if (s && s.username) {
+              let avatarUrl = null;
+              if (s.userId) {
+                try {
+                  const dbUser = await User.findById(s.userId).select('avatarUrl');
+                  if (dbUser && dbUser.avatarUrl) avatarUrl = dbUser.avatarUrl;
+                } catch (err) {
+                  // ignore per-user DB errors
+                }
+              }
+              usersInfo.push({ username: s.username, avatarUrl });
+            }
+          }
+
+          io.to(room).emit('update_room_user_list', { room, users: usersInfo });
+        } catch (err) {
+          console.error('Error building room user info for', room, err);
+          io.to(room).emit('update_room_user_list', { room, users: usernames });
+        }
+      })();
     } catch (err) {
       console.error('Error emitting room user list for', room, err);
     }

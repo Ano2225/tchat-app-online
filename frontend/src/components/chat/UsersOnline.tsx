@@ -23,24 +23,30 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom }) => {
   useEffect(() => {
     if (!socket) return
 
-    const handleGlobalUsersUpdate = (usernames: string[] | { room: string; users: string[] }) => {
+    const handleGlobalUsersUpdate = (usernames: any[] | { room: string; users: any[] }) => {
       // If server sends an object, normalize to user list
       const list = Array.isArray(usernames) ? usernames : (usernames.users || [])
-      const onlineUsers = list.map((username, index) => ({
-        id: `user_${index}`,
-        username,
-        isOnline: true
-      }))
+      const onlineUsers = list.map((item, index) => {
+        if (typeof item === 'string') {
+          return { id: `user_${index}`, username: item, isOnline: true }
+        }
+        // Expecting { username, avatarUrl }
+        return {
+          id: `user_${index}`,
+          username: item.username,
+          avatarUrl: item.avatarUrl || undefined,
+          isOnline: true
+        }
+      })
       setUsers(onlineUsers)
     }
 
-    const handleRoomUsersUpdate = (payload: string[] | { room: string; users: string[] }) => {
+    const handleRoomUsersUpdate = (payload: any[] | { room: string; users: any[] }) => {
       const list = Array.isArray(payload) ? payload : (payload.users || [])
-      const onlineUsers = list.map((username, index) => ({
-        id: `room_user_${index}`,
-        username,
-        isOnline: true
-      }))
+      const onlineUsers = list.map((item, index) => {
+        if (typeof item === 'string') return { id: `room_user_${index}`, username: item, isOnline: true }
+        return { id: `room_user_${index}`, username: item.username, avatarUrl: item.avatarUrl || undefined, isOnline: true }
+      })
       setUsers(onlineUsers)
     }
 

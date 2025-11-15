@@ -33,6 +33,7 @@ const ChatPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentRoom, setCurrentRoom] = useState('General');
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [registeredOnSocket, setRegisteredOnSocket] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
 
   const previousRoomRef = useRef<string | null>(null);
@@ -53,25 +54,52 @@ const ChatPage = () => {
   useEffect(() => {
     const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000');
     setSocket(newSocket);
+
+    const handleConnect = () => {
+      // Send a user_connected event as soon as the socket connects.
+      // Use the authenticated username when available, otherwise send an anon id.
+      const idPart = newSocket.id ?? Math.random().toString(36).slice(2, 8);
+      const usernameToSend = user?.username ?? `anon_${idPart}`;
+      try {
+        newSocket.emit('user_connected', usernameToSend);
+      } catch (err) {
+        console.error('Failed to emit user_connected on connect', err);
+      }
+      // mark locally that we've registered on the socket so joins can happen safely
+      setRegisteredOnSocket(true);
+
+      // Ensure we join the default/current room after being registered on socket
+      if (currentRoom) {
+        newSocket.emit('join_room', currentRoom);
+        previousRoomRef.current = currentRoom;
+      }
+    };
+
+    newSocket.on('connect', handleConnect);
+
     return () => {
+      newSocket.off('connect', handleConnect);
       newSocket.disconnect();
     };
+  // We intentionally do not include `currentRoom` here to avoid recreating the socket when the room changes.
+  // `user` is used only to pick the username to send on first connect; updates to username are handled elsewhere.
   }, []);
 
   useEffect(() => {
-    if (!socket || !currentRoom) return;
-    
+    // Only attempt to join/leave rooms after we've registered the user on the socket
+    if (!socket || !currentRoom || !registeredOnSocket) return;
+
     if (previousRoomRef.current) {
       socket.emit('leave_room', previousRoomRef.current);
     }
-    
+
     socket.emit('join_room', currentRoom);
     previousRoomRef.current = currentRoom;
-    
+
     return () => {
       socket.emit('leave_room', currentRoom);
     };
-  }, [currentRoom, socket]);
+  }, [currentRoom, socket, registeredOnSocket]);
 
   useEffect(() => {
     if (!socket) return;
@@ -101,11 +129,19 @@ const ChatPage = () => {
       socket.off('game_error', handleGameError);
     };
   }, [socket, currentRoom]);
+  // Note: we emit `user_connected` on socket 'connect' and gate joins until registration.
+  // If the user's username changes after initial connect (e.g., logs in), inform the server
+  // so it can update mapping without reconnecting.
   useEffect(() => {
-    if (socket && user?.username) {
-      socket.emit('user_connected', user.username);
+    if (!socket || !registeredOnSocket) return;
+    if (user?.username) {
+      try {
+        socket.emit('update_username', user.username);
+      } catch (err) {
+        console.error('Failed to emit update_username', err);
+      }
     }
-  }, [socket, user?.username]);
+  }, [socket, registeredOnSocket, user?.username]);
   useEffect(() => { loadRoomMessages(); }, [currentRoom]);
 
   const handleJoinRoom = (roomName: string) => {
