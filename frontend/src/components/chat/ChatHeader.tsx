@@ -142,6 +142,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
                 sexe={user?.sexe}
                 size="sm"
                 className="w-8 h-8"
+                clickable={false}
               />
               <div className="hidden sm:block">
                 <p className="text-sm font-medium text-gray-900 dark:text-white">
@@ -227,6 +228,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
                           sexe={conversation.user.sexe}
                           size="md"
                           className="w-10 h-10"
+                          clickable={false}
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 dark:text-white truncate">

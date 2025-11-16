@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import GenderAvatar from './GenderAvatar';
+import AvatarUpload from './AvatarUpload';
 import axiosInstance from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
 
@@ -24,6 +25,12 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ onClose }) 
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleAvatarUpdate = (avatarUrl: string | null) => {
+    if (user) {
+      updateUser({ ...user, avatarUrl: avatarUrl || undefined });
+    }
   };
 
   const handleSave = async () => {
@@ -72,14 +79,17 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ onClose }) 
           {/* Avatar Section */}
           <div className="text-center">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">👤 Avatar</h3>
-            <div className="flex justify-center">
+            <div className="flex justify-center mb-4">
               <GenderAvatar
                 username={formData.username}
+                avatarUrl={user?.avatarUrl}
                 sexe={formData.sexe}
                 size="lg"
                 className="w-24 h-24"
+                clickable={false}
               />
             </div>
+            <AvatarUpload onAvatarUpdate={handleAvatarUpdate} />
           </div>
 
           {/* Form Fields */}

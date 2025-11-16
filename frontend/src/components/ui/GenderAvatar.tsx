@@ -17,6 +17,7 @@ interface GenderAvatarProps {
   size?: 'sm' | 'md' | 'lg';
   onClick?: () => void;
   className?: string;
+  clickable?: boolean;
 }
 
 const GenderAvatar: React.FC<GenderAvatarProps> = ({
@@ -25,7 +26,8 @@ const GenderAvatar: React.FC<GenderAvatarProps> = ({
   sexe = 'autre',
   size = 'md',
   onClick,
-  className = ''
+  className = '',
+  clickable = true
 }) => {
   const sizeClasses = {
     sm: 'w-6 h-6',
@@ -45,11 +47,13 @@ const GenderAvatar: React.FC<GenderAvatarProps> = ({
     lg: 'text-base'
   };
 
+  const Component = clickable ? 'button' : 'div';
+  
   return (
-    <button
-      onClick={onClick}
-      className={`${sizeClasses[size]} rounded-full shadow-sm hover:scale-110 transition-transform cursor-pointer overflow-hidden border-2 ${getGenderBorderColor(sexe)} ${className}`}
-      title="Voir le profil"
+    <Component
+      onClick={clickable ? onClick : undefined}
+      className={`${sizeClasses[size]} rounded-full shadow-sm ${clickable ? 'hover:scale-110 cursor-pointer' : ''} transition-transform overflow-hidden border-2 ${getGenderBorderColor(sexe)} ${className}`}
+      title={clickable ? "Voir le profil" : undefined}
     >
       {avatarUrl && avatarUrl.startsWith('http') ? (
         <div className="relative w-full h-full">
@@ -73,7 +77,7 @@ const GenderAvatar: React.FC<GenderAvatarProps> = ({
           </div>
         </div>
       )}
-    </button>
+    </Component>
   );
 };
 

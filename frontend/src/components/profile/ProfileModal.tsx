@@ -3,6 +3,7 @@ import { useAuthStore } from '@/store/authStore';
 import axiosInstance from '@/utils/axiosInstance';
 import BlockedUsers from '@/components/settings/BlockedUsers';
 import GenderAvatar from '@/components/ui/GenderAvatar';
+import AvatarUpload from '@/components/ui/AvatarUpload';
 
 interface ProfileModalProps {
   onClose: () => void;
@@ -10,45 +11,24 @@ interface ProfileModalProps {
 
 const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
   const { user, updateUser } = useAuthStore();
-  const [selectedAvatar, setSelectedAvatar] = useState(user?.avatarUrl || '');
-
-  const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'blocked'>('profile');
+
+  const handleAvatarUpdate = (avatarUrl: string | null) => {
+    if (user) {
+      updateUser({ ...user, avatarUrl: avatarUrl || undefined });
+    }
+  };
   
   // Debug
   console.log('User data:', user);
   console.log('isAnonymous:', user?.isAnonymous);
   console.log('role:', user?.role);
 
-  const predefinedAvatars = [
-    '👤', '👨', '👩', '🧑', '👦', '👧',
-    '🐶', '🐱', '🐭', '🐹', '🐰', '🦊',
-  ];
+
   
 
 
-  const handleAvatarSelect = async (avatar: string) => {
-    if (!user?.id || user?.isAnonymous === true) {
-      console.log('Utilisateur non autorisé');
-      return;
-    }
 
-    try {
-      setUploading(true);
-      await axiosInstance.put(`/user`, { 
-        username: user.username,
-        age: user.age,
-        ville: user.ville,
-        avatarUrl: avatar 
-      });
-      setSelectedAvatar(avatar);
-      updateUser({ ...user, avatarUrl: avatar });
-    } catch (error) {
-      console.error('Error updating avatar:', error);
-    } finally {
-      setUploading(false);
-    }
-  };
   
 
 
@@ -67,6 +47,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
               sexe={user?.sexe}
               size="lg"
               className="w-16 h-16 mx-auto mb-2"
+              clickable={false}
             />
             <p className="text-gray-600 dark:text-gray-400 text-sm">
               Inscrivez-vous pour personnaliser votre profil
@@ -140,44 +121,23 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
                 <div className="flex justify-center mb-4">
                   <GenderAvatar
                     username={user?.username || ''}
-                    avatarUrl={selectedAvatar}
+                    avatarUrl={user?.avatarUrl}
                     sexe={user?.sexe}
                     size="lg"
                     className="w-24 h-24"
+                    clickable={false}
                   />
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{user?.username}</p>
-              </div>
-
-              {/* Avatars prédéfinis */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">😀 Avatars prédéfinis</h3>
-                <div className="grid grid-cols-6 gap-3">
-                  {predefinedAvatars.map((avatar, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleAvatarSelect(avatar)}
-                      disabled={uploading}
-                      className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center text-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:scale-110 ${
-                        selectedAvatar === avatar ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-300 dark:border-gray-600'
-                      }`}
-                    >
-                      {avatar}
-                    </button>
-                  ))}
-                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{user?.username}</p>
+                
+                <AvatarUpload onAvatarUpdate={handleAvatarUpdate} />
               </div>
 
 
 
-              {uploading && (
-                <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-sm text-blue-600 dark:text-blue-400">Mise à jour en cours...</span>
-                  </div>
-                </div>
-              )}
+
+
+
             </div>
           ) : (
             <BlockedUsers />

@@ -207,6 +207,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
               sexe={recipient.sexe}
               size="sm"
               className="w-8 h-8 border border-white/30"
+              clickable={false}
             />
             <div>
               <div className="font-medium text-sm">{recipient.username}</div>

@@ -124,6 +124,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, onSelect
                   sexe={user.sexe}
                   size="sm"
                   className="w-7 h-7"
+                  clickable={false}
                 />
                 <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 ${getStatusColor(user.isOnline)} rounded-full border-2 border-white dark:border-gray-800 shadow-sm`}></div>
               </div>
