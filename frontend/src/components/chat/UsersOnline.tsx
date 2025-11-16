@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Socket } from 'socket.io-client'
 import GenderAvatar from '@/components/ui/GenderAvatar'
 import AIAgentChatBox from './AIAgentChatBox'
+import { UserCheck, Users, MessageCircle } from 'lucide-react'
 
 interface User {
   id: string
@@ -149,18 +150,44 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, onSelect
 
       {/* Agents IA */}
       {!isCollapsed && (
-        <div className="p-2 border-t border-gray-200 dark:border-white/10">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Assistants virtuels :</p>
-          {[{ id: 'alex', name: 'Alex', avatar: '👨💬' }, { id: 'emma', name: 'Emma', avatar: '👩💬' }].map((agent) => (
-            <button
-              key={agent.id}
-              onClick={() => onSelectAgent?.(agent)}
-              className="w-full flex items-center space-x-2 p-2 mb-1 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-blue-200 dark:border-blue-500/30 rounded-lg transition-all"
-            >
-              <span className="text-lg">{agent.avatar}</span>
-              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">{agent.name}</span>
-            </button>
-          ))}
+        <div className="p-3 border-t border-gray-200/50 dark:border-white/10 bg-gradient-to-b from-transparent to-gray-50/50 dark:to-gray-800/30">
+          <div className="flex items-center space-x-2 mb-3">
+            <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-pulse"></div>
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Assistants IA</p>
+          </div>
+          <div className="space-y-2">
+            {[
+              { id: 'alex', name: 'Alex', avatar: '🤖', description: 'Assistant général', gradient: 'from-blue-500 to-cyan-500' },
+              { id: 'emma', name: 'Emma', avatar: '👩‍💻', description: 'Spécialiste tech', gradient: 'from-purple-500 to-pink-500' }
+            ].map((agent) => (
+              <button
+                key={agent.id}
+                onClick={() => onSelectAgent?.(agent)}
+                className="w-full group relative overflow-hidden bg-white dark:bg-gray-800/50 hover:bg-gradient-to-r hover:from-white hover:to-gray-50 dark:hover:from-gray-800/70 dark:hover:to-gray-700/50 border border-gray-200/60 dark:border-gray-600/40 hover:border-gray-300 dark:hover:border-gray-500 rounded-xl p-3 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className={`relative w-10 h-10 bg-gradient-to-br ${agent.gradient} rounded-full flex items-center justify-center text-lg shadow-md group-hover:scale-110 transition-transform duration-200`}>
+                    <span className="filter drop-shadow-sm">{agent.avatar}</span>
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white dark:border-gray-800 animate-pulse"></div>
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="font-semibold text-sm text-gray-900 dark:text-white group-hover:text-gray-800 dark:group-hover:text-gray-100 transition-colors">
+                      {agent.name}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
+                      {agent.description}
+                    </div>
+                  </div>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <svg className="w-4 h-4 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className={`absolute inset-0 bg-gradient-to-r ${agent.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300 rounded-xl`}></div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

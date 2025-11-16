@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import ThemeToggle from '@/components/ui/ThemeToggle'
+import { Lock, Sparkles, User, Zap, Shield, PartyPopper } from 'lucide-react'
 
 export default function Home() {
   const cards = [
-    { href: '/login', icon: '🔐', title: 'Connexion', desc: 'Accédez à votre compte', colors: 'from-blue-600 to-blue-500' },
-    { href: '/register', icon: '✨', title: 'Inscription', desc: 'Créez votre compte', colors: 'from-purple-600 to-purple-500' },
-    { href: '/anonymous', icon: '👤', title: 'Anonyme', desc: 'Essayez sans compte', colors: 'from-gray-700 to-gray-600' }
+    { href: '/login', icon: Lock, title: 'Connexion', desc: 'Accédez à votre compte', colors: 'from-blue-600 to-blue-500' },
+    { href: '/register', icon: Sparkles, title: 'Inscription', desc: 'Créez votre compte', colors: 'from-purple-600 to-purple-500' },
+    { href: '/anonymous', icon: User, title: 'Anonyme', desc: 'Essayez sans compte', colors: 'from-gray-700 to-gray-600' }
   ];
 
   return (
@@ -40,7 +41,9 @@ export default function Home() {
             {cards.map((card) => (
               <Link key={card.href} href={card.href}>
                 <div className={`bg-gradient-to-r ${card.colors} p-6 rounded-2xl hover:scale-105 transition-transform duration-200 shadow-lg`}>
-                  <div className="text-4xl mb-3">{card.icon}</div>
+                  <div className="mb-3">
+                    <card.icon className="w-10 h-10 text-white mx-auto" />
+                  </div>
                   <h3 className="text-white font-bold text-lg mb-2">{card.title}</h3>
                   <p className="text-white/90 text-sm">{card.desc}</p>
                 </div>
@@ -51,17 +54,23 @@ export default function Home() {
           {/* Features */}
           <div className="grid md:grid-cols-3 gap-6 text-center">
             <div className="p-4">
-              <div className="text-3xl mb-2">⚡</div>
+              <div className="mb-2">
+                <Zap className="w-8 h-8 text-yellow-500 mx-auto" />
+              </div>
               <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Ultra Rapide</h4>
               <p className="text-sm text-gray-600 dark:text-gray-400">Messages instantanés</p>
             </div>
             <div className="p-4">
-              <div className="text-3xl mb-2">🔒</div>
+              <div className="mb-2">
+                <Shield className="w-8 h-8 text-green-500 mx-auto" />
+              </div>
               <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Sécurisé</h4>
               <p className="text-sm text-gray-600 dark:text-gray-400">Conversations privées</p>
             </div>
             <div className="p-4">
-              <div className="text-3xl mb-2">🎉</div>
+              <div className="mb-2">
+                <PartyPopper className="w-8 h-8 text-purple-500 mx-auto" />
+              </div>
               <h4 className="font-semibold text-gray-900 dark:text-white mb-1">Fun</h4>
               <p className="text-sm text-gray-600 dark:text-gray-400">Ambiance cool</p>
             </div>

@@ -1,5 +1,18 @@
 const mongoose = require('mongoose');
 
+// Lazy loading helper for better performance
+const lazyRequire = (moduleName) => {
+  let module;
+  return () => {
+    if (!module) {
+      module = require(moduleName);
+    }
+    return module;
+  };
+};
+
+const getMongoose = lazyRequire('mongoose');
+
 const gameSchema = new mongoose.Schema({
   channel: {
     type: String,
@@ -73,9 +86,26 @@ const gameSchema = new mongoose.Schema({
 
 // Middleware pour mettre à jour updatedAt
 gameSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
+  if (this.isModified() && !this.isNew) {
+    this.updatedAt = new Date();
+  }
+  
+  // Validation et sanitisation des données sensibles
+  if (this.currentQuestion && this.currentQuestion.question) {
+    this.currentQuestion.question = this.currentQuestion.question.toString().trim();
+  }
+  if (this.channel) {
+    this.channel = this.channel.toString().trim();
+  }
+  
   next();
 });
+
+// Méthode pour retourner un objet sécurisé
+gameSchema.methods.toSafeObject = function() {
+  const obj = this.toObject();
+  return obj;
+};
 
 // Index pour améliorer les performances
 gameSchema.index({ channel: 1 }, { unique: true });

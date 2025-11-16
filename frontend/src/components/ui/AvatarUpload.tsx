@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import axiosInstance from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/authStore';
+import { Camera, Trash2, Rocket } from 'lucide-react';
 
 interface AvatarUploadProps {
   onAvatarUpdate: (avatarUrl: string | null) => void;
@@ -31,7 +32,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({ onAvatarUpdate, className =
   };
 
   const uploadAvatar = async (file: File) => {
-    console.log('🚀 Début upload avatar:', file.name);
+    console.log('Début upload avatar:', file.name);
     setUploading(true);
     try {
       const formData = new FormData();
@@ -95,7 +96,17 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({ onAvatarUpdate, className =
           disabled={uploading}
           className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg text-sm transition-colors disabled:opacity-50"
         >
-          {uploading ? 'Upload...' : '📷 Changer'}
+          {uploading ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              Upload...
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Camera className="w-4 h-4" />
+              Changer
+            </div>
+          )}
         </button>
         
         {user?.avatarUrl && (
@@ -103,7 +114,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({ onAvatarUpdate, className =
             onClick={removeAvatar}
             className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg text-sm transition-colors"
           >
-            🗑️
+            <Trash2 className="w-4 h-4" />
           </button>
         )}
       </div>

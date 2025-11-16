@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/authStore'
 import axiosInstance from '@/utils/axiosInstance'
 import ThemeToggle from '@/components/ui/ThemeToggle'
+import { User, Theater, Calendar, Info } from 'lucide-react'
 
 export default function AnonymousPage() {
   const [formData, setFormData] = useState({
@@ -93,7 +94,7 @@ export default function AnonymousPage() {
         <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-3xl p-8 shadow-2xl">
           <div className="text-center mb-8">
             <div className="w-20 h-20 bg-gradient-to-r from-gray-700 to-gray-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <span className="text-3xl">👤</span>
+              <User className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Mode Anonyme</h1>
             <p className="text-gray-600 dark:text-gray-300">Chattez sans créer de compte</p>
@@ -117,7 +118,7 @@ export default function AnonymousPage() {
                   maxLength={20}
                 />
                 <div className="absolute inset-y-0 left-3 flex items-center">
-                  <span className="text-gray-500 dark:text-gray-400">🎭</span>
+                  <Theater className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 </div>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
@@ -142,7 +143,7 @@ export default function AnonymousPage() {
                   max="25"
                 />
                 <div className="absolute inset-y-0 left-3 flex items-center">
-                  <span className="text-gray-500 dark:text-gray-400">📅</span>
+                  <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 </div>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
@@ -210,7 +211,7 @@ export default function AnonymousPage() {
 
           <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-500/10 border border-gray-200 dark:border-gray-500/20 rounded-xl">
             <div className="flex items-start space-x-3">
-              <span className="text-gray-600 dark:text-gray-400 text-lg">ℹ️</span>
+              <Info className="w-5 h-5 text-gray-600 dark:text-gray-400 mt-0.5" />
               <div>
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mode Anonyme</h4>
                 <p className="text-xs text-gray-600 dark:text-gray-300">

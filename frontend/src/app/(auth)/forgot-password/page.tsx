@@ -30,7 +30,11 @@ const ForgotPasswordPage = () => {
         console.log('Token de réinitialisation:', response.data.resetToken);
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Erreur lors de l\'envoi');
+      console.error('Password reset error:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.message || 
+                          'Erreur lors de l\'envoi de l\'email';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

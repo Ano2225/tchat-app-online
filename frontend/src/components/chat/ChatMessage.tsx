@@ -7,6 +7,7 @@ import MessageReactions from './MessageReactions';
 import GameMessage from '../Game/GameMessage';
 import toast from 'react-hot-toast';
 import GenderAvatar from '@/components/ui/GenderAvatar';
+import { MessageCircle } from 'lucide-react';
 
 interface Reaction {
   emoji: string;
@@ -335,7 +336,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center p-8">
             <div className="w-16 h-16 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-2xl">💬</span>
+              <MessageCircle className="w-8 h-8 text-gray-500 dark:text-gray-400" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
               Bienvenue dans #{currentRoom}

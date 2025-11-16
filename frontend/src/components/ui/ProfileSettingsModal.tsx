@@ -4,6 +4,7 @@ import GenderAvatar from './GenderAvatar';
 import AvatarUpload from './AvatarUpload';
 import axiosInstance from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
+import { Settings, User, Cake, Users, MapPin, Save, X } from 'lucide-react';
 
 interface ProfileSettingsModalProps {
   onClose: () => void;
@@ -64,12 +65,13 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ onClose }) 
             onClick={onClose} 
             className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-all duration-200 hover:scale-110"
           >
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-4 h-4 text-white" />
           </button>
           
-          <h2 className="text-xl font-bold text-white mb-2">⚙️ Paramètres du profil</h2>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Settings className="w-5 h-5 text-white" />
+            <h2 className="text-xl font-bold text-white">Paramètres du profil</h2>
+          </div>
           <p className="text-white/80 text-sm">Personnalisez votre profil</p>
         </div>
 
@@ -78,7 +80,10 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ onClose }) 
           
           {/* Avatar Section */}
           <div className="text-center">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">👤 Avatar</h3>
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <User className="w-4 h-4 text-gray-900 dark:text-white" />
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Avatar</h3>
+            </div>
             <div className="flex justify-center mb-4">
               <GenderAvatar
                 username={formData.username}
@@ -95,8 +100,9 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ onClose }) 
           {/* Form Fields */}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                👤 Nom d'utilisateur
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <User className="w-4 h-4" />
+                Nom d'utilisateur
               </label>
               <input
                 type="text"
@@ -110,8 +116,9 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ onClose }) 
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  🎂 Âge
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <Cake className="w-4 h-4" />
+                  Âge
                 </label>
                 <input
                   type="number"
@@ -126,8 +133,9 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ onClose }) 
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  👥 Genre
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <Users className="w-4 h-4" />
+                  Genre
                 </label>
                 <select
                   name="sexe"
@@ -143,8 +151,9 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ onClose }) 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                📍 Ville
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <MapPin className="w-4 h-4" />
+                Ville
               </label>
               <input
                 type="text"
@@ -177,7 +186,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ onClose }) 
                 </>
               ) : (
                 <>
-                  <span>💾</span>
+                  <Save className="w-4 h-4" />
                   <span>Sauvegarder</span>
                 </>
               )}

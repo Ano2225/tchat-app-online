@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import ChatMessage from '@/components/chat/ChatMessage';
 import ChatChannel from '@/components/chat/ChatChannel';
@@ -11,6 +12,7 @@ import GamePanel from '@/components/Game/GamePanel';
 import axiosInstance from '@/utils/axiosInstance';
 import UsersOnline from '@/components/chat/UsersOnline';
 import AIAgentChatBox from '@/components/chat/AIAgentChatBox';
+import toast from 'react-hot-toast';
 
 interface Message {
   _id: string;
@@ -30,7 +32,9 @@ interface Message {
 }
 
 const ChatPage = () => {
+  const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentRoom, setCurrentRoom] = useState('General');
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -123,12 +127,51 @@ const ChatPage = () => {
       // Silently ignore empty error objects
     };
     
+    const handleUsernameTaken = (data: any) => {
+      toast.error(data.message || 'Ce nom d\'utilisateur est déjà utilisé.', {
+        duration: 6000,
+        position: 'top-center',
+      });
+      setTimeout(() => {
+        logout();
+        router.push('/anonymous');
+      }, 2000);
+    };
+    
+    const handleUsernameReserved = (data: any) => {
+      toast.error(data.message || 'Ce nom d\'utilisateur appartient à un compte enregistré.', {
+        duration: 6000,
+        position: 'top-center',
+      });
+      setTimeout(() => {
+        logout();
+        router.push('/login');
+      }, 2000);
+    };
+    
+    const handleSessionReplaced = (data: any) => {
+      toast.error(data.message || 'Votre session a été remplacée par une nouvelle connexion.', {
+        duration: 5000,
+        position: 'top-center',
+      });
+      setTimeout(() => {
+        logout();
+        window.location.reload();
+      }, 3000);
+    };
+    
     socket.on('receive_message', handleReceive);
     socket.on('game_error', handleGameError);
+    socket.on('username_taken', handleUsernameTaken);
+    socket.on('username_reserved', handleUsernameReserved);
+    socket.on('session_replaced', handleSessionReplaced);
     
     return () => {
       socket.off('receive_message', handleReceive);
       socket.off('game_error', handleGameError);
+      socket.off('username_taken', handleUsernameTaken);
+      socket.off('username_reserved', handleUsernameReserved);
+      socket.off('session_replaced', handleSessionReplaced);
     };
   }, [socket, currentRoom]);
   // Note: we emit `user_connected` on socket 'connect' and gate joins until registration.

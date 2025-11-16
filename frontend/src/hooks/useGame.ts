@@ -43,28 +43,32 @@ export const useGame = (channel: string, socket?: Socket | null) => {
     socket.emit('join_game_channel', channel);
 
     const handleGameState = (state: any) => {
-      console.log('[GAME] Game state received:', state);
-      if (isGameChannel) {
-        setGameState(state);
-        
-        // Check if user already answered current question
-        const userAnswered = state.currentQuestion?.answers?.some((a: any) => a.userId === user.id);
-        if (userAnswered) {
-          setHasAnswered(true);
-        }
-        
-        // Handle timer for current question
-        if (state.currentQuestion && state.currentQuestion.startTime) {
-          const elapsed = Date.now() - new Date(state.currentQuestion.startTime).getTime();
-          const remaining = Math.max(0, Math.floor((15000 - elapsed) / 1000));
-          console.log('[GAME] Question in progress, remaining time:', remaining);
-          if (remaining > 0) {
-            startTimer(remaining);
-          } else {
-            console.log('[GAME] Question expired');
-            setTimeLeft(0);
+      try {
+        console.log('[GAME] Game state received:', state);
+        if (isGameChannel && state) {
+          setGameState(state);
+          
+          // Check if user already answered current question
+          const userAnswered = state.currentQuestion?.answers?.some((a: any) => a.userId === user.id);
+          if (userAnswered) {
+            setHasAnswered(true);
+          }
+          
+          // Handle timer for current question
+          if (state.currentQuestion && state.currentQuestion.startTime) {
+            const elapsed = Date.now() - new Date(state.currentQuestion.startTime).getTime();
+            const remaining = Math.max(0, Math.floor((15000 - elapsed) / 1000));
+            console.log('[GAME] Question in progress, remaining time:', remaining);
+            if (remaining > 0) {
+              startTimer(remaining);
+            } else {
+              console.log('[GAME] Question expired');
+              setTimeLeft(0);
+            }
           }
         }
+      } catch (error) {
+        console.error('[GAME] Error handling game state:', error);
       }
     };
 
@@ -95,11 +99,15 @@ export const useGame = (channel: string, socket?: Socket | null) => {
     };
 
     const handleAnswerResult = (result: any) => {
-      if (result.userId === user.id) {
-        if (!result.alreadyAnswered) {
-          setAnswerResult(result);
-          setHasAnswered(true);
+      try {
+        if (result && result.userId === user.id) {
+          if (!result.alreadyAnswered) {
+            setAnswerResult(result);
+            setHasAnswered(true);
+          }
         }
+      } catch (error) {
+        console.error('[GAME] Error handling answer result:', error);
       }
     };
 

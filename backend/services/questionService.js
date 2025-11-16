@@ -138,6 +138,17 @@ const decodeHtml = (html) => {
   return html.replace(/&[#\w]+;/g, (entity) => entities[entity] || entity);
 };
 
+const sanitizeText = (text) => {
+  if (typeof text !== 'string') return '';
+  return text
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+    .trim();
+};
+
 const translateDifficulty = (difficulty) => {
   const translations = {
     'easy': 'Facile',
@@ -169,9 +180,11 @@ const translateTextsToFrench = async (texts) => {
       {
         headers: {
           'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Requested-With': 'XMLHttpRequest'
         },
-        timeout: 5000
+        timeout: 5000,
+        withCredentials: false
       }
     );
 
@@ -252,14 +265,14 @@ const getRandomQuestion = async () => {
     const categoryInfo = TRIVIA_CATEGORIES[randomCategoryId] || { name: 'Divers', emoji: '❓' };
     
     const formattedQuestion = {
-      question: questionFr,
-      options: shuffledOptions,
+      question: sanitizeText(questionFr),
+      options: shuffledOptions.map(sanitizeText),
       correctAnswer: correctIndex,
-      correctAnswerText: correctAnswerFr,
-      category: categoryInfo.name,
+      correctAnswerText: sanitizeText(correctAnswerFr),
+      category: sanitizeText(categoryInfo.name),
       categoryEmoji: categoryInfo.emoji,
-      difficulty: translateDifficulty(triviaQuestion.difficulty),
-      explanation: `La bonne réponse était : ${correctAnswerFr}`,
+      difficulty: sanitizeText(translateDifficulty(triviaQuestion.difficulty)),
+      explanation: sanitizeText(`La bonne réponse était : ${correctAnswerFr}`),
       source: 'Open Trivia DB + DeepL'
     };
     

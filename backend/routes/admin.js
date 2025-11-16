@@ -4,10 +4,12 @@ const adminController = require('../controllers/adminController');
 const adminAuth = require('../middleware/adminAuth');
 const adminRateLimit = require('../middleware/rateLimitAdmin');
 const adminLogger = require('../middleware/adminLogger');
+const csrf = require('../middleware/csrf');
 
-// Middleware d'authentification, rate limiting et logging admin
+// Middleware d'authentification, rate limiting, CSRF et logging admin
 router.use(adminRateLimit);
 router.use(adminAuth);
+router.use(csrf);
 router.use(adminLogger);
 
 // Statistiques
@@ -20,20 +22,20 @@ router.get('/messages', adminController.getAllMessages);
 
 // Utilisateurs
 router.get('/users', adminController.getUsers);
-router.put('/users/:userId/block', adminController.toggleUserBlock);
-router.delete('/users/:userId', adminController.deleteUser);
+router.put('/users/:userId/block', csrf, adminController.toggleUserBlock);
+router.delete('/users/:userId', csrf, adminController.deleteUser);
 
 // Canaux
-router.post('/channels', adminController.createChannel);
-router.delete('/channels/:channelId', adminController.deleteChannel);
+router.post('/channels', csrf, adminController.createChannel);
+router.delete('/channels/:channelId', csrf, adminController.deleteChannel);
 
 // Alertes
 router.get('/alerts', adminController.getAlerts);
-router.put('/alerts/:alertId/read', adminController.markAlertAsRead);
-router.put('/alerts/read-all', adminController.markAllAlertsAsRead);
+router.put('/alerts/:alertId/read', csrf, adminController.markAlertAsRead);
+router.put('/alerts/read-all', csrf, adminController.markAllAlertsAsRead);
 
 // Signalements
 router.get('/reports', adminController.getReports);
-router.put('/reports/:reportId', adminController.handleReport);
+router.put('/reports/:reportId', csrf, adminController.handleReport);
 
 module.exports = router;

@@ -6,6 +6,7 @@ import { Socket } from 'socket.io-client';
 import axiosInstance from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
 import GenderAvatar from '@/components/ui/GenderAvatar';
+import { MessageCircle, AlertTriangle, UserX, Cake, MapPin } from 'lucide-react';
 
 interface Props {
   userId: string;
@@ -123,10 +124,19 @@ const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
 
         {/* Infos simples */}
         <div className="px-6 pb-6 text-center space-y-2">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            {profile.age && <span>🎂 {profile.age} ans</span>}
-            {profile.age && profile.ville && <span> • </span>}
-            {profile.ville && <span>📍 {profile.ville}</span>}
+          <div className="flex items-center justify-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+            {profile.age && (
+              <div className="flex items-center gap-1">
+                <Cake className="w-4 h-4" />
+                <span>{profile.age} ans</span>
+              </div>
+            )}
+            {profile.ville && (
+              <div className="flex items-center gap-1">
+                <MapPin className="w-4 h-4" />
+                <span>{profile.ville}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -134,17 +144,19 @@ const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
         <div className="p-6 pt-0 space-y-2">
           <button
             onClick={() => setShowChat(true)}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg text-sm font-medium transition-colors"
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
           >
-            💬 Envoyer un message
+            <MessageCircle className="w-4 h-4" />
+            Envoyer un message
           </button>
           
           <div className="flex space-x-2">
             <button
               onClick={() => setShowReportModal(true)}
-              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg text-sm font-medium transition-colors"
+              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
             >
-              ⚠️ Signaler
+              <AlertTriangle className="w-4 h-4" />
+              Signaler
             </button>
             
             <button
@@ -157,9 +169,10 @@ const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
                   toast.error(error.response?.data?.message || 'Erreur lors du blocage');
                 }
               }}
-              className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-medium transition-colors"
+              className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
             >
-              🚫 Bloquer
+              <UserX className="w-4 h-4" />
+              Bloquer
             </button>
           </div>
         </div>

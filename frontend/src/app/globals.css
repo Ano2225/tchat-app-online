@@ -108,12 +108,28 @@ body {
 
 @keyframes scale-in {
   from {
-    transform: scale(0.95);
+    transform: translate(-50%, -50%) scale(0.95);
     opacity: 0;
   }
   to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes scale-out {
+  from {
     transform: scale(1);
     opacity: 1;
+  }
+  to {
+    transform: scale(0.95);
+    opacity: 0;
   }
 }
 
@@ -144,6 +160,14 @@ body {
 
 .animate-scale-in {
   animation: scale-in 0.2s ease-out;
+}
+
+.animate-fade-out {
+  animation: fade-out 0.2s ease-out;
+}
+
+.animate-scale-out {
+  animation: scale-out 0.2s ease-out;
 }
 
 .animate-shimmer {

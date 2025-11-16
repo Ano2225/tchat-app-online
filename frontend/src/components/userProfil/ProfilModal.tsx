@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { Dialog } from '@headlessui/react';
 import { Socket } from 'socket.io-client';
+import { User } from 'lucide-react';
 
 // Define your default avatars here or import them from a dedicated file
 // These URLs must be publicly accessible (e.g., hosted on Cloudinary, or in your Next.js public/avatars folder)
@@ -66,7 +67,10 @@ const ProfileModal = ({ user, onClose, socket }: ProfileModalProps) => {
       <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <Dialog.Panel className="w-full max-w-md p-6 bg-white rounded shadow">
-          <Dialog.Title className="text-xl font-bold mb-4 text-black">👤 Mon profil</Dialog.Title>
+          <Dialog.Title className="flex items-center gap-2 text-xl font-bold mb-4 text-black">
+            <User className="w-5 h-5" />
+            Mon profil
+          </Dialog.Title>
 
           <div className="flex flex-col gap-4 text-black">
             {/* Selected avatar preview */}

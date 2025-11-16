@@ -4,6 +4,7 @@ import axiosInstance from '@/utils/axiosInstance';
 import BlockedUsers from '@/components/settings/BlockedUsers';
 import GenderAvatar from '@/components/ui/GenderAvatar';
 import AvatarUpload from '@/components/ui/AvatarUpload';
+import { Settings, User, UserX, X } from 'lucide-react';
 
 interface ProfileModalProps {
   onClose: () => void;
@@ -75,12 +76,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
             onClick={onClose} 
             className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-all duration-200 hover:scale-110"
           >
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-4 h-4 text-white" />
           </button>
           
-          <h2 className="text-xl font-bold text-white mb-2">⚙️ Paramètres</h2>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Settings className="w-5 h-5 text-white" />
+            <h2 className="text-xl font-bold text-white">Paramètres</h2>
+          </div>
           <p className="text-white/80 text-sm">Personnalisez votre profil</p>
         </div>
 
@@ -89,23 +91,25 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
           <div className="flex bg-gray-100 dark:bg-gray-700/50 rounded-xl p-1 mb-6">
             <button
               onClick={() => setActiveTab('profile')}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
                 activeTab === 'profile'
                   ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
-              👤 Profil
+              <User className="w-4 h-4" />
+              Profil
             </button>
             <button
               onClick={() => setActiveTab('blocked')}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
                 activeTab === 'blocked'
                   ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
-              🚫 Bloqués
+              <UserX className="w-4 h-4" />
+              Bloqués
             </button>
           </div>
         </div>
@@ -117,7 +121,10 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
             <div className="space-y-6">
               {/* Section Avatar */}
               <div className="text-center">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">👤 Avatar</h3>
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <User className="w-4 h-4 text-gray-900 dark:text-white" />
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Avatar</h3>
+                </div>
                 <div className="flex justify-center mb-4">
                   <GenderAvatar
                     username={user?.username || ''}

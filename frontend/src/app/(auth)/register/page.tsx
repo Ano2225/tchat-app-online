@@ -6,6 +6,7 @@ import Link from 'next/link'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import ThemeToggle from '@/components/ui/ThemeToggle'
+import { Sparkles, Rocket, Lock, PartyPopper, User, Mail, Calendar, MapPin, Eye, EyeOff, ChevronDown } from 'lucide-react'
 
 export default function RegisterPage() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -134,7 +135,7 @@ export default function RegisterPage() {
         <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-3xl p-8 shadow-2xl">
           <div className="text-center mb-8">
             <div className="w-20 h-20 bg-gradient-to-r from-secondary-500 to-turquoise-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <span className="text-3xl">✨</span>
+              <Sparkles className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Rejoignez BabiChat</h1>
             <p className="text-gray-600 dark:text-gray-300">Étape {currentStep} sur {totalSteps}</p>
@@ -142,13 +143,22 @@ export default function RegisterPage() {
             {/* Messages d'encouragement */}
             <div className="mt-3">
               {currentStep === 1 && (
-                <p className="text-sm text-secondary-600 dark:text-secondary-400 font-medium">🚀 Commençons par les bases !</p>
+                <div className="flex items-center justify-center gap-2">
+                  <Rocket className="w-4 h-4 text-secondary-600 dark:text-secondary-400" />
+                  <p className="text-sm text-secondary-600 dark:text-secondary-400 font-medium">Commençons par les bases !</p>
+                </div>
               )}
               {currentStep === 2 && (
-                <p className="text-sm text-secondary-600 dark:text-secondary-400 font-medium">🔐 Sécurisez votre compte maintenant</p>
+                <div className="flex items-center justify-center gap-2">
+                  <Lock className="w-4 h-4 text-secondary-600 dark:text-secondary-400" />
+                  <p className="text-sm text-secondary-600 dark:text-secondary-400 font-medium">Sécurisez votre compte maintenant</p>
+                </div>
               )}
               {currentStep === 3 && (
-                <p className="text-sm text-secondary-600 dark:text-secondary-400 font-medium">🎉 Dernière étape, vous y êtes presque !</p>
+                <div className="flex items-center justify-center gap-2">
+                  <PartyPopper className="w-4 h-4 text-secondary-600 dark:text-secondary-400" />
+                  <p className="text-sm text-secondary-600 dark:text-secondary-400 font-medium">Dernière étape, vous y êtes presque !</p>
+                </div>
               )}
             </div>
             
@@ -178,7 +188,7 @@ export default function RegisterPage() {
                       required
                     />
                     <div className="absolute inset-y-0 left-3 flex items-center">
-                      <span className="text-gray-500 dark:text-gray-400">👤</span>
+                      <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                     </div>
                   </div>
                 </div>
@@ -196,7 +206,7 @@ export default function RegisterPage() {
                       required
                     />
                     <div className="absolute inset-y-0 left-3 flex items-center">
-                      <span className="text-gray-500 dark:text-gray-400">📧</span>
+                      <Mail className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                     </div>
                   </div>
                 </div>
@@ -219,14 +229,14 @@ export default function RegisterPage() {
                       required
                     />
                     <div className="absolute inset-y-0 left-3 flex items-center">
-                      <span className="text-gray-500 dark:text-gray-400">🔒</span>
+                      <Lock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                     </div>
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute inset-y-0 right-3 flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
                     >
-                      {showPassword ? '🙈' : '👁️'}
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
@@ -244,14 +254,14 @@ export default function RegisterPage() {
                       required
                     />
                     <div className="absolute inset-y-0 left-3 flex items-center">
-                      <span className="text-gray-500 dark:text-gray-400">🔒</span>
+                      <Lock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                     </div>
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute inset-y-0 right-3 flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
                     >
-                      {showConfirmPassword ? '🙈' : '👁️'}
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
@@ -277,7 +287,7 @@ export default function RegisterPage() {
                         required
                       />
                       <div className="absolute inset-y-0 left-3 flex items-center">
-                        <span className="text-gray-500 dark:text-gray-400">📅</span>
+                        <Calendar className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                       </div>
                     </div>
                   </div>
@@ -304,12 +314,10 @@ export default function RegisterPage() {
                         <option value="autre" className="text-gray-900 dark:text-white">Autre</option>
                       </select>
                       <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500 dark:text-gray-400">👤</span>
+                        <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                       </div>
                       <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                        <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
+                        <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                       </div>
                     </div>
                   </div>
@@ -328,7 +336,7 @@ export default function RegisterPage() {
                       required
                     />
                     <div className="absolute inset-y-0 left-3 flex items-center">
-                      <span className="text-gray-500 dark:text-gray-400">📍</span>
+                      <MapPin className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                     </div>
                   </div>
                 </div>

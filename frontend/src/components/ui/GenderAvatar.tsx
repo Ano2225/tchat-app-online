@@ -63,17 +63,16 @@ const GenderAvatar: React.FC<GenderAvatarProps> = ({
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/20 rounded-full"></div>
-          <div className={`absolute bottom-0 right-0 text-white ${iconSizes[size]}`}>
+          <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center text-xs font-bold border border-gray-200 dark:border-gray-600 shadow-sm ${
+            sexe === 'homme' ? 'text-blue-600' : sexe === 'femme' ? 'text-pink-600' : 'text-gray-600'
+          }`}>
             {getGenderIcon(sexe)}
           </div>
         </div>
       ) : (
         <div className={`w-full h-full bg-gradient-to-r ${getGenderColor(sexe)} flex items-center justify-center relative`}>
-          <span className={`${textSizes[size]} font-bold text-white`}>
-            {getInitials(username)}
-          </span>
-          <div className={`absolute bottom-0 right-0 text-white ${iconSizes[size]}`}>
-            {getGenderIcon(sexe)}
+          <div className="text-white">
+            {getGenderIcon(sexe, size)}
           </div>
         </div>
       )}

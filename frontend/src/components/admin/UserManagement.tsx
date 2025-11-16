@@ -58,9 +58,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserAction }) => {
     }
   };
 
+  const getUserBlockReason = (isBlocked: boolean): string | null => {
+    return isBlocked ? prompt('Raison du blocage (optionnel):') : null;
+  };
+
   const handleUserBlock = async (userId: string, isBlocked: boolean) => {
     try {
-      const reason = isBlocked ? prompt('Raison du blocage (optionnel):') : null;
+      const reason = getUserBlockReason(isBlocked);
       
       await axiosInstance.put(`/admin/users/${userId}/block`, { 
         isBlocked: !isBlocked,
@@ -88,26 +92,32 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserAction }) => {
     }
   };
 
+  const getBulkActionMessage = (action: 'block' | 'unblock' | 'delete', count: number): string => {
+    return action === 'delete' 
+      ? `Supprimer ${count} utilisateur(s) ? Cette action est irréversible.`
+      : `${action === 'block' ? 'Bloquer' : 'Débloquer'} ${count} utilisateur(s) ?`;
+  };
+
+  const createBulkActionPromises = (action: 'block' | 'unblock' | 'delete', userIds: string[]) => {
+    return userIds.map(userId => {
+      if (action === 'delete') {
+        return axiosInstance.delete(`/admin/users/${userId}`);
+      } else {
+        return axiosInstance.put(`/admin/users/${userId}/block`, { 
+          isBlocked: action === 'block' 
+        });
+      }
+    });
+  };
+
   const handleBulkAction = async (action: 'block' | 'unblock' | 'delete') => {
     if (selectedUsers.length === 0) return;
     
-    const confirmMessage = action === 'delete' 
-      ? `Supprimer ${selectedUsers.length} utilisateur(s) ? Cette action est irréversible.`
-      : `${action === 'block' ? 'Bloquer' : 'Débloquer'} ${selectedUsers.length} utilisateur(s) ?`;
-    
+    const confirmMessage = getBulkActionMessage(action, selectedUsers.length);
     if (!confirm(confirmMessage)) return;
 
     try {
-      const promises = selectedUsers.map(userId => {
-        if (action === 'delete') {
-          return axiosInstance.delete(`/admin/users/${userId}`);
-        } else {
-          return axiosInstance.put(`/admin/users/${userId}/block`, { 
-            isBlocked: action === 'block' 
-          });
-        }
-      });
-
+      const promises = createBulkActionPromises(action, selectedUsers);
       await Promise.all(promises);
       setSelectedUsers([]);
       fetchUsers();

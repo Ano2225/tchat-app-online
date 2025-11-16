@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import axiosInstance from '@/utils/axiosInstance'
 import { useAuthStore } from '@/store/authStore'
+import { MessageCircle, Monitor, Gamepad2, Music, Dice6, CircleDot, Film, Megaphone } from 'lucide-react'
 
 interface Channel {
   _id: string
@@ -62,16 +63,16 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
   }, [socket])
 
   const getChannelIcon = (name: string) => {
-    const icons: { [key: string]: string } = {
-      'General': '💬',
-      'Tech': '💻',
-      'Gaming': '🎮',
-      'Music': '🎵',
-      'Random': '🎲',
-      'Sport': '⚽',
-      'Cinema': '🎬'
+    const iconComponents: { [key: string]: React.ComponentType<{ className?: string }> } = {
+      'General': MessageCircle,
+      'Tech': Monitor,
+      'Gaming': Gamepad2,
+      'Music': Music,
+      'Random': Dice6,
+      'Sport': CircleDot,
+      'Cinema': Film
     }
-    return icons[name] || '📢'
+    return iconComponents[name] || Megaphone
   }
 
   const getChannelDescription = (name: string) => {
@@ -111,45 +112,52 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
 
       {/* Liste des salons */}
       <div className="p-2 space-y-1 flex-1 overflow-y-auto">
-        {/* Canal Game spécial - Seulement pour les utilisateurs inscrits */}
-        {user && !user.isAnonymous && (
-          <button
-            onClick={() => onJoinRoom('Game')}
-            className={`w-full text-left p-2.5 rounded-lg transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-              currentRoom === 'Game'
-                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md scale-[1.02]'
+        {/* Canal Game spécial - Visible pour tous mais accès restreint */}
+        <button
+          onClick={() => {
+            if (!user || user.isAnonymous) {
+              alert('Vous devez être inscrit pour accéder au canal Game. Créez un compte pour jouer !');
+              return;
+            }
+            onJoinRoom('Game');
+          }}
+          className={`w-full text-left p-2.5 rounded-lg transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+            currentRoom === 'Game'
+              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md scale-[1.02]'
+              : (!user || user.isAnonymous)
+                ? 'hover:bg-gray-200 dark:hover:bg-gray-700/50 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-75'
                 : 'hover:bg-purple-100 dark:hover:bg-purple-900/20 text-gray-700 dark:text-gray-300 hover:scale-[1.01]'
-            }`}
-            aria-label="Join Game channel"
-            aria-current={currentRoom === 'Game' ? 'page' : undefined}
-          >
-            <div className="flex items-center space-x-3">
-              <span className="text-xl">🎮</span>
-              <div className="flex-1 min-w-0">
-                <p className={`font-medium truncate ${
-                  currentRoom === 'Game' ? 'text-white' : 'text-gray-900 dark:text-white'
-                }`}>
-                  #Game
-                </p>
-                <p className={`text-xs truncate ${
-                  currentRoom === 'Game' 
-                    ? 'text-white/80' 
+          }`}
+          aria-label="Join Game channel"
+          aria-current={currentRoom === 'Game' ? 'page' : undefined}
+          disabled={!user || user.isAnonymous}
+        >
+          <div className="flex items-center space-x-3">
+            <Gamepad2 className="w-5 h-5" />
+            <div className="flex-1 min-w-0">
+              <p className={`font-medium truncate ${
+                currentRoom === 'Game' ? 'text-white' : 'text-gray-900 dark:text-white'
+              }`}>
+                #Game
+              </p>
+              <p className={`text-xs truncate ${
+                currentRoom === 'Game' 
+                  ? 'text-white/80' 
+                  : (!user || user.isAnonymous)
+                    ? 'text-gray-400 dark:text-gray-500'
                     : 'text-purple-600 dark:text-purple-400'
-                }`}>
-                  Quiz en temps réel
-                </p>
-              </div>
-              {currentRoom === 'Game' && (
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-              )}
+              }`}>
+                {(!user || user.isAnonymous) ? '🔒 Inscription requise' : 'Quiz en temps réel'}
+              </p>
             </div>
-          </button>
-        )}
+            {currentRoom === 'Game' && (
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            )}
+          </div>
+        </button>
         
-        {/* Séparateur - Seulement si Game est visible */}
-        {user && !user.isAnonymous && (
-          <div className="border-t border-gray-300 dark:border-white/20 my-2"></div>
-        )}
+        {/* Séparateur */}
+        <div className="border-t border-gray-300 dark:border-white/20 my-2"></div>
         
 
         
@@ -167,7 +175,7 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
             aria-current={currentRoom === channel.name ? 'page' : undefined}
           >
             <div className="flex items-center space-x-3">
-              <span className="text-xl">{getChannelIcon(channel.name)}</span>
+              {React.createElement(getChannelIcon(channel.name), { className: "w-5 h-5" })}
               <div className="flex-1 min-w-0">
                 <p className={`font-medium truncate ${
                   currentRoom === channel.name ? 'text-white' : 'text-gray-900 dark:text-white'

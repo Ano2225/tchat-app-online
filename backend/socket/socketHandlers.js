@@ -226,6 +226,29 @@ module.exports = (io, socket) => {
         currentUserId = user._id.toString();
         socket.userId = currentUserId;
         socket.username = username;
+        
+        // GESTION DES SESSIONS UNIQUES POUR UTILISATEURS AUTHENTIFIÉS
+        // Si l'utilisateur est déjà connecté, déconnecter les anciennes sessions
+        if (connectedUsers.has(username)) {
+          const existingSockets = connectedUsers.get(username);
+          console.log(`Déconnexion des anciennes sessions pour ${username}:`, existingSockets.size);
+          
+          // Déconnecter toutes les anciennes sessions
+          existingSockets.forEach(oldSocketId => {
+            const oldSocket = io.sockets.sockets.get(oldSocketId);
+            if (oldSocket && oldSocket.id !== socket.id) {
+              console.log(`Déconnexion de l'ancienne session: ${oldSocketId}`);
+              oldSocket.emit('session_replaced', { 
+                message: 'Votre session a été remplacée par une nouvelle connexion.' 
+              });
+              oldSocket.disconnect(true);
+            }
+          });
+          
+          // Vider l'ancienne liste
+          connectedUsers.delete(username);
+        }
+        
         // Store in our mapping
         userIdToUsername.set(currentUserId, username);
 
@@ -235,18 +258,39 @@ module.exports = (io, socket) => {
           lastSeen: new Date()
         });
       } else {
+        // GESTION DES UTILISATEURS ANONYMES
+        // Vérifier si le nom d'utilisateur est déjà pris (par un utilisateur authentifié ou anonyme)
+        if (connectedUsers.has(username)) {
+          console.log(`Nom d'utilisateur ${username} déjà pris`);
+          socket.emit('username_taken', { 
+            message: `Le nom d'utilisateur "${username}" est déjà utilisé. Veuillez en choisir un autre.` 
+          });
+          socket.disconnect();
+          return;
+        }
+        
+        // Vérifier aussi si ce nom correspond à un utilisateur enregistré
+        const existingUser = await User.findOne({ username });
+        if (existingUser) {
+          console.log(`Nom d'utilisateur ${username} appartient à un compte enregistré`);
+          socket.emit('username_reserved', { 
+            message: `Le nom d'utilisateur "${username}" appartient à un compte enregistré. Veuillez vous connecter ou choisir un autre nom.` 
+          });
+          socket.disconnect();
+          return;
+        }
+        
         // For anonymous users, use a temporary ID
         currentUserId = `anon_${socket.id}`;
         socket.userId = currentUserId;
         socket.username = username;
-        // Don't store anonymous in userIdToUsername mapping
       }
 
-      if (!connectedUsers.has(username)) {
-        connectedUsers.set(username, new Set());
-      }
-
-      connectedUsers.get(username).add(socket.id);
+      // Créer une nouvelle entrée pour ce socket uniquement
+      connectedUsers.set(username, new Set([socket.id]));
+      
+      console.log(`Utilisateur ${username} connecté avec le socket ${socket.id}`);
+      
       emitUserList();
       // If the socket is currently in a room, also emit that room's user list
       if (socket.currentRoom) {

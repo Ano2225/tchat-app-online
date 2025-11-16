@@ -7,6 +7,7 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/authStore'
 import ThemeToggle from '@/components/ui/ThemeToggle'
+import { MessageCircle, User, Lock, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -78,7 +79,7 @@ export default function LoginPage() {
         <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-3xl p-8 shadow-2xl">
           <div className="text-center mb-8">
             <div className="w-20 h-20 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <span className="text-3xl">💬</span>
+              <MessageCircle className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Bon retour!</h1>
             <p className="text-gray-600 dark:text-gray-300">Connectez-vous à votre compte</p>
@@ -100,7 +101,7 @@ export default function LoginPage() {
                   required
                 />
                 <div className="absolute inset-y-0 left-3 flex items-center">
-                  <span className="text-gray-500 dark:text-gray-400">👤</span>
+                  <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 </div>
               </div>
             </div>
@@ -120,14 +121,14 @@ export default function LoginPage() {
                   required
                 />
                 <div className="absolute inset-y-0 left-3 flex items-center">
-                  <span className="text-gray-500 dark:text-gray-400">🔒</span>
+                  <Lock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-3 flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
                 >
-                  {showPassword ? '🙈' : '👁️'}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
