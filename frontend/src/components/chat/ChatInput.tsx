@@ -22,7 +22,12 @@ interface ChatInputProps {
   onCancelReply?: () => void
 }
 
-const ChatInput: React.FC<ChatInputProps> = ({ currentRoom, socket, replyTo, onCancelReply }) => {
+const ChatInput: React.FC<ChatInputProps> = ({ 
+  currentRoom, 
+  socket, 
+  replyTo, 
+  onCancelReply
+}) => {
   const [message, setMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)

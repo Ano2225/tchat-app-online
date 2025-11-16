@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { MoreVertical, Reply, Heart, Copy, Trash2, Edit3 } from 'lucide-react'
 import Avatar from '@/components/ui/Avatar'
+import AICharacterAvatar from './AICharacterAvatar'
 import MessageReactions from './MessageReactions'
 import { formatTime } from '@/lib/utils'
 import { Menu, Transition } from '@headlessui/react'
@@ -16,9 +17,12 @@ interface Message {
     id: string
     username: string
     avatar?: string
+    avatarUrl?: string
   }
   timestamp: Date | string
   isOwn: boolean
+  isAI?: boolean
+  aiCharacter?: string
   type?: 'text' | 'image' | 'file'
   reactions?: { emoji: string; count: number; users: { id: string; username: string }[] }[]
   replyTo?: {
@@ -57,7 +61,15 @@ const MessageBubble = ({ message, onReply, onEdit, onDelete, onReact }: MessageB
       onMouseLeave={() => setShowActions(false)}
     >
       {!message.isOwn && (
-        <Avatar name={message.sender.username} src={message.sender.avatar} size="md" />
+        message.isAI ? (
+          <AICharacterAvatar 
+            character={message.sender.avatarUrl || message.sender.avatar}
+            name={message.sender.username}
+            size="md"
+          />
+        ) : (
+          <Avatar name={message.sender.username} src={message.sender.avatar} size="md" />
+        )
       )}
 
       <div className={`flex-1 max-w-2xl ${message.isOwn ? 'flex flex-col items-end' : ''}`}>
@@ -86,7 +98,9 @@ const MessageBubble = ({ message, onReply, onEdit, onDelete, onReact }: MessageB
         {/* Message Content */}
         <div
           className={`relative p-3 rounded-2xl max-w-md break-words ${
-            message.isOwn
+            message.isAI
+              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-bl-md border-2 border-purple-300'
+              : message.isOwn
               ? 'bg-primary-500 text-white rounded-br-md'
               : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 rounded-bl-md'
           }`}
@@ -170,7 +184,7 @@ const MessageBubble = ({ message, onReply, onEdit, onDelete, onReact }: MessageB
                           )}
                         </Menu.Item>
 
-                        {message.isOwn && (
+                        {message.isOwn && !message.isAI && (
                           <>
                             <Menu.Item>
                               {({ active }) => (

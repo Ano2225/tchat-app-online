@@ -57,6 +57,18 @@ const MessageSchema = new mongoose.Schema({
   read: {
     type: Boolean,
     default: false,
-  }
+  },
+  isAI: {
+    type: Boolean,
+    default: false,
+  },
+  aiCharacter: {
+    type: String,
+    default: null
+  },
+  aiContext: [{
+    role: String,
+    content: String
+  }]
 });
 module.exports = mongoose.model('Message', MessageSchema);

@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const Message = require("../models/Message");
 const gameHandlers = require('./gameHandlers');
+const aiService = require('../services/aiService');
 
 // username -> Set of socket IDs
 const connectedUsers = new Map();
@@ -81,7 +82,7 @@ module.exports = (io, socket) => {
 
   // --- Send a message to a public room ---
   socket.on('send_message', async (messageData) => {
-    const { sender, content, room, replyTo } = messageData;
+    const { sender, content, room, replyTo, isAIChat } = messageData;
     if (room && sender && content) {
       try {
         const user = await User.findById(sender.id);
@@ -120,6 +121,8 @@ module.exports = (io, socket) => {
 
         // Envoyer le message immédiatement
         io.to(room).emit('receive_message', enrichedMessage);
+        
+
         
         // Puis traiter la logique de jeu si nécessaire
         if (room === 'Game') {
@@ -357,7 +360,7 @@ module.exports = (io, socket) => {
   });
 
   // --- Send a private message ---
-  socket.on('send_private_message', async ({ senderId, recipientId, content, media_url, media_type }) => {
+  socket.on('send_private_message', async ({ senderId, recipientId, content, media_url, media_type, isAIChat }) => {
     try {
       // Vérifier si l'expéditeur ou le destinataire sont bloqués
       const sender = await User.findById(senderId);
@@ -392,7 +395,54 @@ module.exports = (io, socket) => {
       io.to(roomId).emit('receive_private_message', newMessage);
       console.log(`📨 New message sent in room ${roomId}`, { content, media_url, media_type });
 
-      // Get recipient's username from their ID
+      // Traiter la réponse IA pour les messages privés si activée
+      if (isAIChat && recipientId === 'ai') {
+        setImmediate(async () => {
+          try {
+            // Récupérer le contexte des messages privés
+            const recentMessages = await Message.find({
+              $or: [
+                { sender: senderId, recipient: 'ai' },
+                { sender: 'ai', recipient: senderId }
+              ]
+            })
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .populate('sender', 'username');
+            
+            const context = recentMessages.reverse().map(msg => ({
+              role: msg.isAI ? 'assistant' : 'user',
+              content: msg.content
+            }));
+
+            const aiResponse = await aiService.generateResponse(content, context);
+            
+            const aiMessage = await Message.create({
+              sender: 'ai',
+              recipient: senderId,
+              content: aiResponse,
+              isAI: true,
+              aiContext: context
+            });
+
+            const aiMessageData = {
+              ...aiMessage.toObject(),
+              sender: {
+                _id: 'ai',
+                username: 'Assistant IA',
+                avatarUrl: null
+              }
+            };
+
+            io.to(roomId).emit('receive_private_message', aiMessageData);
+          } catch (error) {
+            console.error('Error generating AI private response:', error);
+          }
+        });
+      }
+
+      // Get recipient's username from their ID (skip for AI)
+      if (recipientId === 'ai') return;
       const recipientUsername = userIdToUsername.get(recipientId.toString());
       
       // --- Real-time notification to recipient ---

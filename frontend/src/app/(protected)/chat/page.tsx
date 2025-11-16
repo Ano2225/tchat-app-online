@@ -10,6 +10,7 @@ import ChatInput from '@/components/chat/ChatInput';
 import GamePanel from '@/components/Game/GamePanel';
 import axiosInstance from '@/utils/axiosInstance';
 import UsersOnline from '@/components/chat/UsersOnline';
+import AIAgentChatBox from '@/components/chat/AIAgentChatBox';
 
 interface Message {
   _id: string;
@@ -35,6 +36,7 @@ const ChatPage = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [registeredOnSocket, setRegisteredOnSocket] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<any>(null);
 
   const previousRoomRef = useRef<string | null>(null);
 
@@ -239,10 +241,23 @@ const ChatPage = () => {
           ${showUsers ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
         `}>
           <div className="h-full md:h-auto md:mt-0 mt-20">
-            <UsersOnline socket={socket} currentRoom={currentRoom} />
+            <UsersOnline 
+              socket={socket} 
+              currentRoom={currentRoom}
+              onSelectAgent={setSelectedAgent}
+            />
           </div>
         </div>
       </div>
+      
+      {/* AI Agent Chat Box */}
+      {selectedAgent && (
+        <AIAgentChatBox
+          agent={selectedAgent}
+          socket={socket}
+          onClose={() => setSelectedAgent(null)}
+        />
+      )}
     </div>
   );
 };

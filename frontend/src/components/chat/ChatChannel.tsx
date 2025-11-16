@@ -151,6 +151,8 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
           <div className="border-t border-gray-300 dark:border-white/20 my-2"></div>
         )}
         
+
+        
         {/* Autres canaux */}
         {channels.map((channel) => (
           <button
@@ -178,14 +180,6 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
                     : 'text-gray-500 dark:text-gray-400'
                 }`}>
                   {getChannelDescription(channel.name)}
-                </p>
-                {/* Count users in channel (if known) */}
-                <p className={`text-xs truncate ${
-                  currentRoom === channel.name 
-                    ? 'text-white/80' 
-                    : 'text-gray-500 dark:text-gray-400'
-                }`}>
-                  {roomCounts[channel.name] !== undefined ? `${roomCounts[channel.name]} utilisateur${roomCounts[channel.name] > 1 ? 's' : ''}` : ''}
                 </p>
               </div>
               {currentRoom === channel.name && (
