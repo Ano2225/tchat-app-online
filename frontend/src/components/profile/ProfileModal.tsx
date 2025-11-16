@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import axiosInstance from '@/utils/axiosInstance';
 import BlockedUsers from '@/components/settings/BlockedUsers';
-import AvatarUpload from '@/components/ui/AvatarUpload';
-import { getAvatarColor, getInitials } from '@/utils/avatarUtils';
+import GenderAvatar from '@/components/ui/GenderAvatar';
 
 interface ProfileModalProps {
   onClose: () => void;
@@ -62,11 +61,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Profil</h2>
           <div className="text-center mb-4">
-            <div className={`w-16 h-16 bg-gradient-to-r ${getAvatarColor(user?.username || '')} rounded-full flex items-center justify-center mx-auto mb-2`}>
-              <span className="text-xl font-bold text-white">
-                {getInitials(user?.username || '')}
-              </span>
-            </div>
+            <GenderAvatar
+              username={user?.username || ''}
+              avatarUrl={user?.avatarUrl}
+              sexe={user?.sexe}
+              size="lg"
+              className="w-16 h-16 mx-auto mb-2"
+            />
             <p className="text-gray-600 dark:text-gray-400 text-sm">
               Inscrivez-vous pour personnaliser votre profil
             </p>
@@ -133,37 +134,17 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
           
           {activeTab === 'profile' ? (
             <div className="space-y-6">
-              {/* Section Avatar avec upload */}
+              {/* Section Avatar */}
               <div className="text-center">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">📸 Photo de profil</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">👤 Avatar</h3>
                 <div className="flex justify-center mb-4">
-                  <div className="relative">
-                    {/* Avatar actuel */}
-                    <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white/20 shadow-lg mb-2">
-                      {(selectedAvatar && selectedAvatar.startsWith('http')) || (user?.avatarUrl && user.avatarUrl.startsWith('http')) ? (
-                        <img src={(selectedAvatar || user?.avatarUrl || '').replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} alt="Avatar" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className={`w-full h-full flex items-center justify-center bg-gradient-to-r ${getAvatarColor(user?.username || '')}`}>
-                          <span className="text-2xl text-white">
-                            {selectedAvatar && !selectedAvatar.startsWith('http') ? selectedAvatar : getInitials(user?.username || '')}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <AvatarUpload
-                      currentAvatar={(selectedAvatar && selectedAvatar.startsWith('http')) ? selectedAvatar : (user?.avatarUrl && user.avatarUrl.startsWith('http')) ? user.avatarUrl : undefined}
-                      onAvatarUpdate={(avatarUrl) => {
-                        if (avatarUrl && user) {
-                          setSelectedAvatar(avatarUrl);
-                          updateUser({ ...user, avatarUrl });
-                        } else if (user) {
-                          setSelectedAvatar('');
-                          updateUser({ ...user, avatarUrl: undefined });
-                        }
-                      }}
-                      className="absolute -bottom-2 -right-2"
-                    />
-                  </div>
+                  <GenderAvatar
+                    username={user?.username || ''}
+                    avatarUrl={selectedAvatar}
+                    sexe={user?.sexe}
+                    size="lg"
+                    className="w-24 h-24"
+                  />
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">{user?.username}</p>
               </div>

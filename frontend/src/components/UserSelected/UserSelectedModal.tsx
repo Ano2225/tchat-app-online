@@ -5,7 +5,7 @@ import ReportModal from '@/components/ui/ReportModal';
 import { Socket } from 'socket.io-client';
 import axiosInstance from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
-import { getAvatarColor, getInitials } from '@/utils/avatarUtils';
+import GenderAvatar from '@/components/ui/GenderAvatar';
 
 interface Props {
   userId: string;
@@ -103,20 +103,14 @@ const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
           </button>
           
           {/* Avatar */}
-          <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-3 shadow-lg border-4 border-white/20">
-            {profile.avatarUrl && profile.avatarUrl.startsWith('http') ? (
-              <img 
-                src={profile.avatarUrl.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} 
-                alt={profile.username}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className={`w-full h-full bg-gradient-to-br ${getAvatarColor(profile.username)} flex items-center justify-center`}>
-                <span className="text-2xl font-bold text-white">
-                  {getInitials(profile.username)}
-                </span>
-              </div>
-            )}
+          <div className="mx-auto mb-3">
+            <GenderAvatar
+              username={profile.username}
+              avatarUrl={profile.avatarUrl}
+              sexe={profile.sexe}
+              size="lg"
+              className="w-20 h-20 shadow-lg"
+            />
           </div>
           <h3 className="font-bold text-gray-900 dark:text-white text-xl mb-1">
             {profile.username}

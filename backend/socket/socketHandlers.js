@@ -100,7 +100,7 @@ module.exports = (io, socket) => {
           replyTo: replyTo || null,
         });
 
-        await newMessage.populate('sender', 'username avatarUrl');
+        await newMessage.populate('sender', 'username avatarUrl sexe');
         if (replyTo) {
           await newMessage.populate('replyTo');
         }
@@ -349,7 +349,7 @@ module.exports = (io, socket) => {
           { sender: recipientId, recipient: userId },
         ]
       })
-        .populate('sender', 'username email')
+        .populate('sender', 'username email sexe')
         .sort({ createdAt: 1 });
 
       const roomId = getPrivateRoomId(userId, recipientId);
@@ -389,7 +389,7 @@ module.exports = (io, socket) => {
         media_type,
       });
 
-      await newMessage.populate('sender', 'username email avatarUrl');
+      await newMessage.populate('sender', 'username email avatarUrl sexe');
 
       const roomId = getPrivateRoomId(senderId, recipientId);
       io.to(roomId).emit('receive_private_message', newMessage);
@@ -569,6 +569,7 @@ module.exports = (io, socket) => {
         for (const username of usernames) {
           const socketsSet = connectedUsers.get(username);
           let avatarUrl = null;
+          let sexe = null;
 
           if (socketsSet && socketsSet.size > 0) {
             // Try to pick one socket for this username and lookup its userId
@@ -576,14 +577,15 @@ module.exports = (io, socket) => {
             const s = io.sockets.sockets.get(socketId);
             if (s && s.userId) {
               try {
-                const dbUser = await User.findById(s.userId).select('avatarUrl');
+                const dbUser = await User.findById(s.userId).select('avatarUrl sexe');
                 if (dbUser && dbUser.avatarUrl) avatarUrl = dbUser.avatarUrl;
+                if (dbUser && dbUser.sexe) sexe = dbUser.sexe;
               } catch (err) {
                 // ignore DB errors for best-effort avatar retrieval
               }
             }
           }
-          usersInfo.push({ username, avatarUrl });
+          usersInfo.push({ username, avatarUrl, sexe: sexe || 'autre' });
         }
         io.emit('update_user_list', usersInfo);
       } catch (err) {
@@ -612,15 +614,17 @@ module.exports = (io, socket) => {
             const s = io.sockets.sockets.get(socketId);
             if (s && s.username) {
               let avatarUrl = null;
+              let sexe = null;
               if (s.userId) {
                 try {
-                  const dbUser = await User.findById(s.userId).select('avatarUrl');
+                  const dbUser = await User.findById(s.userId).select('avatarUrl sexe');
                   if (dbUser && dbUser.avatarUrl) avatarUrl = dbUser.avatarUrl;
+                  if (dbUser && dbUser.sexe) sexe = dbUser.sexe;
                 } catch (err) {
                   // ignore per-user DB errors
                 }
               }
-              usersInfo.push({ username: s.username, avatarUrl });
+              usersInfo.push({ username: s.username, avatarUrl, sexe: sexe || 'autre' });
             }
           }
 

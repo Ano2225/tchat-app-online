@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
-const authMiddleware = require('../middleware/auth'); 
+const authMiddleware = require('../middleware/auth');
+const csrfProtection = require('../middleware/csrf'); 
 
 
 const cloudinaryConfig = {
@@ -32,7 +33,7 @@ const upload = multer({
     }
 });
 
-router.post('/', authMiddleware, upload.single('media'), async (req, res) => {
+router.post('/', csrfProtection, authMiddleware, upload.single('media'), async (req, res) => {
     // Vérification d'autorisation supplémentaire
     if (!req.user || !req.user.id) {
         return res.status(401).json({ error: 'Utilisateur non authentifié' });

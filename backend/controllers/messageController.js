@@ -7,7 +7,7 @@ class MessageController {
     const { room } = req.params;
     try {
       const messages = await Message.find({ room })
-        .populate('sender', 'username email avatarUrl')
+        .populate('sender', 'username email avatarUrl sexe')
         .sort({ createdAt: 1 });
 
       res.status(200).json(messages);
@@ -27,7 +27,7 @@ class MessageController {
 
     try {
       const message = await Message.create({ content, sender, room });
-      await message.populate('sender', 'username email avatarUrl');
+      await message.populate('sender', 'username email avatarUrl sexe');
       res.status(201).json(message);
     } catch (error) {
       console.error("Error while sending message:", error);
@@ -46,7 +46,7 @@ class MessageController {
           { sender: recipientId, recipient: userId }
         ]
       })
-      .populate('sender', 'username email avatarUrl')
+      .populate('sender', 'username email avatarUrl sexe')
       .sort({ createdAt: 1 });
 
       res.status(200).json(messages);
@@ -77,7 +77,7 @@ class MessageController {
         media_type,
       });
 
-      await message.populate('sender', 'username email avatarUrl');
+      await message.populate('sender', 'username email avatarUrl sexe');
 
       const getPrivateRoomId = (userId1, userId2) => {
         return [userId1, userId2].sort().join('_');
@@ -111,8 +111,8 @@ class MessageController {
           { recipient: userId }
         ]
       })
-      .populate('sender', 'username email avatarUrl')
-      .populate('recipient', 'username email avatarUrl')
+      .populate('sender', 'username email avatarUrl sexe')
+      .populate('recipient', 'username email avatarUrl sexe')
       .sort({ createdAt: -1 });
 
       // Group by participant

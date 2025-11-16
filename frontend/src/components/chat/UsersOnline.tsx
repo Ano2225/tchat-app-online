@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Socket } from 'socket.io-client'
-import { getAvatarColor, getInitials } from '@/utils/avatarUtils'
+import GenderAvatar from '@/components/ui/GenderAvatar'
 import AIAgentChatBox from './AIAgentChatBox'
 
 interface User {
@@ -10,6 +10,7 @@ interface User {
   username: string
   isOnline: boolean
   avatarUrl?: string
+  sexe?: string
 }
 
 interface UsersOnlineProps {
@@ -35,6 +36,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, onSelect
           id: `user_${index}`,
           username: item.username,
           avatarUrl: item.avatarUrl || undefined,
+          sexe: item.sexe || 'autre',
           isOnline: true
         }
       })
@@ -45,7 +47,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, onSelect
       const list = Array.isArray(payload) ? payload : (payload.users || [])
       const onlineUsers = list.map((item, index) => {
         if (typeof item === 'string') return { id: `room_user_${index}`, username: item, isOnline: true }
-        return { id: `room_user_${index}`, username: item.username, avatarUrl: item.avatarUrl || undefined, isOnline: true }
+        return { id: `room_user_${index}`, username: item.username, avatarUrl: item.avatarUrl || undefined, sexe: item.sexe || 'autre', isOnline: true }
       })
       setUsers(onlineUsers)
     }
@@ -116,19 +118,13 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, onSelect
               className="w-full flex items-center space-x-2.5 p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-all duration-200 cursor-pointer group relative"
             >
               <div className="relative flex-shrink-0">
-                {user.avatarUrl && user.avatarUrl.startsWith('http') ? (
-                  <img 
-                    src={user.avatarUrl.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} 
-                    alt={user.username}
-                    className="w-7 h-7 rounded-full object-cover shadow-sm"
-                  />
-                ) : (
-                  <div className={`w-7 h-7 bg-gradient-to-r ${getAvatarColor(user.username)} rounded-full flex items-center justify-center shadow-sm`}>
-                    <span className="text-xs font-bold text-white">
-                      {getInitials(user.username)}
-                    </span>
-                  </div>
-                )}
+                <GenderAvatar
+                  username={user.username}
+                  avatarUrl={user.avatarUrl}
+                  sexe={user.sexe}
+                  size="sm"
+                  className="w-7 h-7"
+                />
                 <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 ${getStatusColor(user.isOnline)} rounded-full border-2 border-white dark:border-gray-800 shadow-sm`}></div>
               </div>
 

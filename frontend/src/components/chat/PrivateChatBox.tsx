@@ -4,13 +4,14 @@ import { Socket } from 'socket.io-client';
 import chatService from '@/services/chatServices';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import axiosInstance from '@/utils/axiosInstance';
-import { getAvatarColor, getInitials } from '@/utils/avatarUtils';
+import GenderAvatar from '@/components/ui/GenderAvatar';
 
 interface PrivateChatBoxProps {
   recipient: {
     _id: string;
     username: string;
     avatarUrl?: string;
+    sexe?: string;
   };
   socket: Socket | null;
   onClose: () => void;
@@ -200,19 +201,13 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-full overflow-hidden border border-white/30">
-              {recipient.avatarUrl && recipient.avatarUrl.startsWith('http') ? (
-                <img 
-                  src={recipient.avatarUrl.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} 
-                  alt={recipient.username}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className={`w-full h-full bg-gradient-to-r ${getAvatarColor(recipient.username)} flex items-center justify-center`}>
-                  <span className="text-sm font-bold text-white">{getInitials(recipient.username)}</span>
-                </div>
-              )}
-            </div>
+            <GenderAvatar
+              username={recipient.username}
+              avatarUrl={recipient.avatarUrl}
+              sexe={recipient.sexe}
+              size="sm"
+              className="w-8 h-8 border border-white/30"
+            />
             <div>
               <div className="font-medium text-sm">{recipient.username}</div>
               <div className="flex items-center space-x-1 text-xs opacity-90">

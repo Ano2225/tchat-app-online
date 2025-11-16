@@ -9,7 +9,7 @@ import PrivateChatBox from './PrivateChatBox'
 import Toast from '../ui/Toast'
 import ThemeToggle from '../ui/ThemeToggle'
 import ProfileModal from '../profile/ProfileModal'
-import { getAvatarColor, getInitials } from '@/utils/avatarUtils'
+import GenderAvatar from '@/components/ui/GenderAvatar'
 
 interface ChatHeaderProps {
   users?: {
@@ -136,21 +136,13 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
               onClick={() => setShowProfile(true)}
               className="flex items-center space-x-3 bg-gray-100 dark:bg-white/10 rounded-full px-4 py-2 border border-gray-200 dark:border-white/20 hover:bg-gray-200 dark:hover:bg-white/20 transition-all cursor-pointer"
             >
-              <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20">
-                {user?.avatarUrl && user.avatarUrl.startsWith('http') ? (
-                  <img 
-                    src={user.avatarUrl.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} 
-                    alt={user.username}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className={`w-full h-full flex items-center justify-center bg-gradient-to-r ${getAvatarColor(user?.username || '')}`}>
-                    <span className="text-sm font-bold text-white">
-                      {getInitials(user?.username || '')}
-                    </span>
-                  </div>
-                )}
-              </div>
+              <GenderAvatar
+                username={user?.username || ''}
+                avatarUrl={user?.avatarUrl}
+                sexe={user?.sexe}
+                size="sm"
+                className="w-8 h-8"
+              />
               <div className="hidden sm:block">
                 <p className="text-sm font-medium text-gray-900 dark:text-white">
                   {users?.username}
@@ -229,19 +221,13 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
                       className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-600 last:border-b-0"
                     >
                       <div className="flex items-center space-x-3">
-                        {conversation.user.avatarUrl && conversation.user.avatarUrl.startsWith('http') ? (
-                          <img 
-                            src={conversation.user.avatarUrl.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} 
-                            alt={conversation.user.username}
-                            className="w-10 h-10 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className={`w-10 h-10 bg-gradient-to-r ${getAvatarColor(conversation.user.username)} rounded-full flex items-center justify-center`}>
-                            <span className="text-sm font-bold text-white">
-                              {getInitials(conversation.user.username)}
-                            </span>
-                          </div>
-                        )}
+                        <GenderAvatar
+                          username={conversation.user.username}
+                          avatarUrl={conversation.user.avatarUrl}
+                          sexe={conversation.user.sexe}
+                          size="md"
+                          className="w-10 h-10"
+                        />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                             {conversation.user.username}

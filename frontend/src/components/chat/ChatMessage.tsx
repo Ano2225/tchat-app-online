@@ -6,7 +6,7 @@ import UserSelectedModal from '../UserSelected/UserSelectedModal';
 import MessageReactions from './MessageReactions';
 import GameMessage from '../Game/GameMessage';
 import toast from 'react-hot-toast';
-import { getAvatarColor, getInitials } from '@/utils/avatarUtils';
+import GenderAvatar from '@/components/ui/GenderAvatar';
 
 interface Reaction {
   emoji: string;
@@ -20,6 +20,7 @@ interface Message {
     _id: string;
     username: string;
     avatarUrl?: string;
+    sexe?: string;
   };
   content: string;
   createdAt: string;
@@ -250,30 +251,18 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                   {!isOwnMessage && (
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center space-x-2">
-                        <button
+                        <GenderAvatar
+                          username={msg.sender?.username || 'Utilisateur inconnu'}
+                          avatarUrl={msg.sender?.avatarUrl}
+                          sexe={msg.sender?.sexe}
+                          size="md"
                           onClick={() => {
                             console.log('Clicked on user:', msg.sender);
                             if (msg.sender._id !== user?.id) {
                               setSelectedUser(msg.sender);
                             }
                           }}
-                          className="w-8 h-8 rounded-full shadow-sm hover:scale-110 transition-transform cursor-pointer overflow-hidden border-2 border-white/20"
-                          title="Voir le profil"
-                        >
-                          {msg.sender?.avatarUrl && msg.sender.avatarUrl.startsWith('http') ? (
-                            <img 
-                              src={msg.sender.avatarUrl.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} 
-                              alt={msg.sender.username}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className={`w-full h-full bg-gradient-to-r ${getAvatarColor(msg.sender?.username || '')} flex items-center justify-center`}>
-                              <span className="text-sm font-bold text-white">
-                                {getInitials(msg.sender?.username || '')}
-                              </span>
-                            </div>
-                          )}
-                        </button>
+                        />
                         <span className="text-sm font-semibold text-gray-900 dark:text-white">
                           {msg.sender?.username || 'Utilisateur inconnu'}
                         </span>
