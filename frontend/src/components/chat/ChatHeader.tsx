@@ -26,6 +26,7 @@ interface Conversation {
     username: string
     email: string
     avatarUrl?: string
+    sexe?: string
   }
   lastMessage?: {
     content: string
@@ -98,12 +99,20 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket }) => {
         <div className="flex items-center justify-between gap-2 md:gap-0">
           {/* Logo et titre */}
           <div className="flex items-center space-x-2 md:space-x-4 min-w-0 flex-1">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-blue-600 to-indigo-100 dark:from-blue-200/30 dark:to-indigo-500/30 border-blue-300 dark:border-blue-700 rounded-xl flex items-center justify-center flex-shrink-0">
-              <span className="text-lg md:text-xl font-bold text-white">T</span>
+            <div className="relative w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              {/* Icône de chat moderne */}
+              <svg className="w-4 h-4 md:w-5 md:h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 2.98.97 4.29L1 23l6.71-1.97C9.02 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                <circle cx="8" cy="12" r="1.5" fill="white" opacity="0.8"/>
+                <circle cx="12" cy="12" r="1.5" fill="white"/>
+                <circle cx="16" cy="12" r="1.5" fill="white" opacity="0.8"/>
+              </svg>
+              {/* Effet de brillance */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent rounded-2xl"></div>
             </div>
             <div className="min-w-0 hidden sm:block">
-              <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">BabiChat</h1>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 truncate">Chat en temps réel</p>
+              <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400">BabiChat</h1>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 truncate">🎪 Espace de discussion</p>
             </div>
           </div>
 

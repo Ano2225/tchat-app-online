@@ -30,11 +30,22 @@ export default function GameMessage({ content, timestamp }: GameMessageProps) {
   };
 
   const formatContent = (text: string) => {
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-lg">$1</strong>')
-      .replace(/\n/g, '<br />')
-      .replace(/(🅰️|🅱️|🅲️|🅳️|A\)|B\)|C\)|D\))/g, '<span class="font-semibold text-blue-600 dark:text-blue-400">$1</span>')
-      .replace(/(🥇|🥈|🥉|1\.|2\.|3\.|4\.|5\.)/g, '<span class="font-bold text-yellow-600 dark:text-yellow-400">$1</span>');
+    const parts = text.split(/(\*\*.*?\*\*|🅰️|🅱️|🅲️|🅳️|A\)|B\)|C\)|D\)|🥇|🥈|🥉|1\.|2\.|3\.|4\.|5\.)/);
+    
+    return parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={index} className="font-bold text-lg">{part.slice(2, -2)}</strong>;
+      }
+      if (/(🅰️|🅱️|🅲️|🅳️|A\)|B\)|C\)|D\))/.test(part)) {
+        return <span key={index} className="font-semibold text-blue-600 dark:text-blue-400">{part}</span>;
+      }
+      if (/(🥇|🥈|🥉|1\.|2\.|3\.|4\.|5\.)/.test(part)) {
+        return <span key={index} className="font-bold text-yellow-600 dark:text-yellow-400">{part}</span>;
+      }
+      return part.split('\n').map((line, lineIndex, lines) => (
+        lineIndex < lines.length - 1 ? [line, <br key={`${index}-${lineIndex}`} />] : line
+      )).flat();
+    }).flat();
   };
 
   const getIcon = () => {
@@ -63,15 +74,21 @@ export default function GameMessage({ content, timestamp }: GameMessageProps) {
         <div>
           <div className="font-bold text-purple-700 dark:text-purple-300 text-lg">Quiz Bot</div>
           <div className="text-xs text-gray-500 dark:text-gray-400">
-            {new Date(timestamp).toLocaleTimeString()}
+            {(() => {
+              try {
+                const date = new Date(timestamp);
+                return isNaN(date.getTime()) ? 'Invalid time' : date.toLocaleTimeString();
+              } catch {
+                return 'Invalid time';
+              }
+            })()}
           </div>
         </div>
       </div>
       
-      <div 
-        className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed"
-        dangerouslySetInnerHTML={{ __html: formatContent(content) }}
-      />
+      <div className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
+        {formatContent(content)}
+      </div>
     </motion.div>
   );
 }

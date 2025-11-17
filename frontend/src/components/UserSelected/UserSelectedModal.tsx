@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useUserProfileStore } from '@/store/userProfileStore';
 import PrivateChatBox from '../chat/PrivateChatBox';
 import ReportModal from '@/components/ui/ReportModal';
 import { Socket } from 'socket.io-client';
@@ -8,6 +7,15 @@ import toast from 'react-hot-toast';
 import GenderAvatar from '@/components/ui/GenderAvatar';
 import { MessageCircle, AlertTriangle, UserX, Cake, MapPin } from 'lucide-react';
 
+interface UserProfile {
+  _id: string;
+  username: string;
+  age?: number;
+  ville?: string;
+  sexe?: string;
+  avatarUrl?: string;
+}
+
 interface Props {
   userId: string;
   socket: Socket | null;
@@ -15,32 +23,51 @@ interface Props {
 }
 
 const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
-  const { profile, loading, error, fetchProfile, clearProfile } = useUserProfileStore();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
 
   const handleClose = () => {
     onClose();
-    clearProfile();
+    setProfile(null);
     setShowChat(false);
   };
 
   useEffect(() => {
     let isCancelled = false;
 
-    const fetch = async () => {
-      await fetchProfile(userId);
-      if (isCancelled) return;
+    const fetchProfile = async () => {
+      if (!userId) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const response = await axiosInstance.get(`/user/${userId}`);
+        if (!isCancelled) {
+          setProfile(response.data);
+        }
+      } catch (err: any) {
+        if (!isCancelled) {
+          setError(err?.response?.data?.message || 'Erreur lors du chargement du profil');
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+        }
+      }
     };
 
     if (userId && userId !== profile?._id) {
-      fetch();
+      fetchProfile();
     }
 
     return () => {
       isCancelled = true;
     };
-  }, [userId, fetchProfile, profile?._id]);
+  }, [userId, profile?._id]);
 
   if (loading) {
     return (

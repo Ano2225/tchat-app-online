@@ -10,14 +10,14 @@ export interface RegisterData {
   email: string;
   password: string;
   age: number;
-  sexe: string;
-  ville?: string;
+  gender: string;
+  city?: string;
 }
 
 export interface AnonymousData {
   username: string;
   age: number;
-  sexe: string;
+  gender: string;
 }
 
 export interface PasswordResetRequest {
@@ -31,8 +31,15 @@ export interface PasswordReset {
 
 class AuthService {
   async login(data: LoginData) {
-    const response = await axiosInstance.post('/auth/login', data);
-    return response.data;
+    try {
+      if (!data.username?.trim() || !data.password?.trim()) {
+        throw new Error('Username and password are required');
+      }
+      const response = await axiosInstance.post('/auth/login', data);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async register(data: RegisterData) {
@@ -46,13 +53,24 @@ class AuthService {
   }
 
   async logout() {
-    const response = await axiosInstance.post('/auth/logout');
-    return response.data;
+    try {
+      const response = await axiosInstance.post('/auth/logout');
+      return response.data;
+    } catch (error) {
+      throw new Error(`Logout failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async requestPasswordReset(data: PasswordResetRequest) {
-    const response = await axiosInstance.post('/auth/request-password-reset', data);
-    return response.data;
+    try {
+      if (!data.email?.trim()) {
+        throw new Error('Email is required');
+      }
+      const response = await axiosInstance.post('/auth/request-password-reset', data);
+      return response.data;
+    } catch (error) {
+      throw new Error(`Password reset request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   async resetPassword(data: PasswordReset) {
@@ -61,8 +79,12 @@ class AuthService {
   }
 
   async getMe() {
-    const response = await axiosInstance.get('/auth/me');
-    return response.data;
+    try {
+      const response = await axiosInstance.get('/auth/me');
+      return response.data;
+    } catch (error) {
+      throw new Error(`Failed to get user info: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }
 

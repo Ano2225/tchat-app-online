@@ -3,10 +3,10 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { MoreVertical, Reply, Heart, Copy, Trash2, Edit3 } from 'lucide-react'
-import Avatar from '@/components/ui/Avatar'
+import GenderAvatar from '@/components/ui/GenderAvatar'
 import AICharacterAvatar from './AICharacterAvatar'
 import MessageReactions from './MessageReactions'
-import { formatTime } from '@/lib/utils'
+import { formatTime } from '@/utils/utils'
 import { Menu, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
 
@@ -68,7 +68,12 @@ const MessageBubble = ({ message, onReply, onEdit, onDelete, onReact }: MessageB
             size="md"
           />
         ) : (
-          <Avatar name={message.sender.username} src={message.sender.avatar} size="md" />
+          <GenderAvatar 
+            username={message.sender.username} 
+            avatarUrl={message.sender.avatarUrl || message.sender.avatar} 
+            size="md" 
+            className="w-10 h-10"
+          />
         )
       )}
 
@@ -235,7 +240,12 @@ const MessageBubble = ({ message, onReply, onEdit, onDelete, onReact }: MessageB
       </div>
 
       {message.isOwn && (
-        <Avatar name={message.sender.username} src={message.sender.avatar} size="md" />
+        <GenderAvatar 
+          username={message.sender.username} 
+          avatarUrl={message.sender.avatarUrl || message.sender.avatar} 
+          size="md" 
+          className="w-10 h-10"
+        />
       )}
     </motion.div>
   )

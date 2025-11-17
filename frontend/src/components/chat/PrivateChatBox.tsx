@@ -74,9 +74,16 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
     if (!socket || !recipient?._id || !user?.id) return;
 
     const handleReceiveMessage = (message: Message) => {
-      console.log('Received message:', { id: message._id, sender: message.sender._id });
-      console.log('Message media_url:', message.media_url ? 'present' : 'none');
-      console.log('Message media_type:', message.media_type || 'none');
+      console.info('[PrivateChatBox] Message received', {
+        messageId: message._id,
+        senderId: message.sender._id,
+        senderUsername: message.sender.username,
+        recipientId: recipient._id,
+        hasMedia: !!message.media_url,
+        mediaType: message.media_type,
+        contentLength: message.content?.length || 0,
+        timestamp: message.createdAt
+      });
       setMessages(prev => [...prev, message]);
       scrollToBottom();
       
@@ -243,7 +250,12 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                             src={message.media_url.replace(/&#x2F;/g, '/').replace(/&amp;/g, '&')} 
                             alt="Image" 
                             className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity" 
-                            onClick={() => window.open(message?.media_url?.replace(/&#x2F;/g, '/').replace(/&amp;/g, '&'), '_blank')}
+                            onClick={() => {
+                              const url = message?.media_url?.replace(/&#x2F;/g, '/').replace(/&amp;/g, '&');
+                              if (url && (url.startsWith('/') || url.startsWith(window.location.origin))) {
+                                window.open(url, '_blank', 'noopener,noreferrer');
+                              }
+                            }}
                           />
                         </div>
                       )}

@@ -38,9 +38,9 @@ export interface Recipient {
 class ChatService {
   private mapConversationData(data: any[]): Conversation[] {
     return data.map((conv) => ({
-      id: conv.user._id,
-      user: conv.user.username,
-      lastMessage: conv.lastMessage.content,
+      id: conv.user?._id || '',
+      user: conv.user?.username || 'Unknown User',
+      lastMessage: conv.lastMessage?.content || 'No messages',
       hasNewMessages: conv.hasNewMessages ?? false,
       unreadCount: conv.unreadCount ?? 0,
     }));
@@ -129,7 +129,11 @@ class ChatService {
   
   async sendPrivateMessage(content: string, senderId: string, recipientId: string, mediaUrl?: string, mediaType?: string): Promise<Message> {
     try {
-      const socket = (window as any).socket;
+      if (!content?.trim() || !senderId || !recipientId) {
+        throw new Error('Content, sender ID, and recipient ID are required');
+      }
+      
+      const socket = (window as any)?.socket;
       
       if (!socket) {
         throw new Error('Socket connection not available');

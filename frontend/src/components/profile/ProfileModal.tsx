@@ -4,7 +4,143 @@ import axiosInstance from '@/utils/axiosInstance';
 import BlockedUsers from '@/components/settings/BlockedUsers';
 import GenderAvatar from '@/components/ui/GenderAvatar';
 import AvatarUpload from '@/components/ui/AvatarUpload';
-import { Settings, User, UserX, X } from 'lucide-react';
+import { Settings, User, UserX, X, Lock, Eye, EyeOff } from 'lucide-react';
+
+// Composant pour le changement de mot de passe
+const PasswordChangeSection: React.FC = () => {
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwords, setPasswords] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (passwords.newPassword !== passwords.confirmPassword) {
+      setMessage({type: 'error', text: 'Les mots de passe ne correspondent pas'});
+      return;
+    }
+
+    if (passwords.newPassword.length < 6) {
+      setMessage({type: 'error', text: 'Le mot de passe doit contenir au moins 6 caractères'});
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await axiosInstance.put('/auth/change-password', {
+        currentPassword: passwords.currentPassword,
+        newPassword: passwords.newPassword
+      });
+      
+      setMessage({type: 'success', text: 'Mot de passe modifié avec succès'});
+      setPasswords({currentPassword: '', newPassword: '', confirmPassword: ''});
+      setShowPasswordForm(false);
+    } catch (error: any) {
+      setMessage({type: 'error', text: error.response?.data?.message || 'Erreur lors du changement'});
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Lock className="w-4 h-4 text-gray-900 dark:text-white" />
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Sécurité</h3>
+        </div>
+        <button
+          onClick={() => setShowPasswordForm(!showPasswordForm)}
+          className="text-xs bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600 transition-colors"
+        >
+          {showPasswordForm ? 'Annuler' : 'Changer le mot de passe'}
+        </button>
+      </div>
+
+      {message && (
+        <div className={`text-xs p-2 rounded mb-3 ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {message.text}
+        </div>
+      )}
+
+      {showPasswordForm && (
+        <form onSubmit={handlePasswordChange} className="space-y-3">
+          <div className="relative">
+            <input
+              type={showPasswords.current ? 'text' : 'password'}
+              placeholder="Mot de passe actuel"
+              value={passwords.currentPassword}
+              onChange={(e) => setPasswords(prev => ({...prev, currentPassword: e.target.value}))}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white pr-10"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPasswords(prev => ({...prev, current: !prev.current}))}
+              className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
+            >
+              {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          
+          <div className="relative">
+            <input
+              type={showPasswords.new ? 'text' : 'password'}
+              placeholder="Nouveau mot de passe"
+              value={passwords.newPassword}
+              onChange={(e) => setPasswords(prev => ({...prev, newPassword: e.target.value}))}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white pr-10"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPasswords(prev => ({...prev, new: !prev.new}))}
+              className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
+            >
+              {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          
+          <div className="relative">
+            <input
+              type={showPasswords.confirm ? 'text' : 'password'}
+              placeholder="Confirmer le nouveau mot de passe"
+              value={passwords.confirmPassword}
+              onChange={(e) => setPasswords(prev => ({...prev, confirmPassword: e.target.value}))}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white pr-10"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPasswords(prev => ({...prev, confirm: !prev.confirm}))}
+              className="absolute right-2 top-2 text-gray-500 hover:text-gray-700"
+            >
+              {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm"
+          >
+            {loading ? 'Modification...' : 'Modifier le mot de passe'}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+};
 
 interface ProfileModalProps {
   onClose: () => void;
@@ -20,21 +156,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
     }
   };
   
-  // Debug
-  console.log('User data:', user);
-  console.log('isAnonymous:', user?.isAnonymous);
-  console.log('role:', user?.role);
-
-
-  
-
-
-
-  
-
-
-
-
   // Si isAnonymous est undefined, l'utilisateur est inscrit
   if (user?.isAnonymous === true) {
     return (
@@ -135,16 +256,41 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
                     clickable={false}
                   />
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{user?.username}</p>
-                
                 <AvatarUpload onAvatarUpdate={handleAvatarUpdate} />
               </div>
 
+              {/* Informations personnelles */}
+              <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Informations personnelles</h3>
+                
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Nom d'utilisateur</span>
+                    <p className="font-medium text-gray-900 dark:text-white">{user?.username}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Email</span>
+                    <p className="font-medium text-gray-900 dark:text-white">{(user as any)?.email || 'Non renseigné'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Âge</span>
+                    <p className="font-medium text-gray-900 dark:text-white">{user?.age || 'Non renseigné'}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 dark:text-gray-400">Sexe</span>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {user?.sexe === 'male' ? 'Homme' : user?.sexe === 'female' ? 'Femme' : user?.sexe === 'autre' ? 'Autre' : 'Non renseigné'}
+                    </p>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500 dark:text-gray-400">Ville</span>
+                    <p className="font-medium text-gray-900 dark:text-white">{user?.ville || 'Non renseignée'}</p>
+                  </div>
+                </div>
+              </div>
 
-
-
-
-
+              {/* Section changement de mot de passe */}
+              <PasswordChangeSection />
             </div>
           ) : (
             <BlockedUsers />
