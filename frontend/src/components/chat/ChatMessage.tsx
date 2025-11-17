@@ -5,6 +5,7 @@ import axiosInstance from '@/utils/axiosInstance';
 import UserSelectedModal from '../UserSelected/UserSelectedModal';
 import MessageReactions from './MessageReactions';
 import GameMessage from '../Game/GameMessage';
+import { ChatSkeleton } from '@/components/ui/skeletons';
 import toast from 'react-hot-toast';
 import GenderAvatar from '@/components/ui/GenderAvatar';
 import { MessageCircle } from 'lucide-react';
@@ -39,6 +40,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
   const [messages, setMessages] = useState<Message[]>([]);
   const [gameMessages, setGameMessages] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<Message['sender'] | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const user = useAuthStore((state) => state.user);
@@ -55,11 +57,16 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
       socket.emit('join_game_channel', currentRoom);
     }
 
+    setLoading(true);
     axiosInstance
       .get(`/messages/${currentRoom}`)
-      .then((res) => setMessages(res.data))
+      .then((res) => {
+        setMessages(res.data);
+        setLoading(false);
+      })
       .catch((error) => {
         console.error('Failed to load messages:', error?.message || 'Unknown error');
+        setLoading(false);
       });
   }, [currentRoom, socket]);
 
@@ -225,7 +232,9 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
       )}
 
       {/* Messages */}
-      {messages.length > 0 ? (
+      {loading ? (
+        <ChatSkeleton count={6} />
+      ) : messages.length > 0 ? (
         <div className="space-y-2 md:space-y-3">
           {messages.map((msg) => {
             const isOwnMessage = msg.sender._id === user?.id;

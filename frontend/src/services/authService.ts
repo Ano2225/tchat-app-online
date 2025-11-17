@@ -31,25 +31,37 @@ export interface PasswordReset {
 
 class AuthService {
   async login(data: LoginData) {
+    if (!data.username?.trim() || !data.password?.trim()) {
+      throw new Error('Nom d\'utilisateur et mot de passe requis');
+    }
+    
     try {
-      if (!data.username?.trim() || !data.password?.trim()) {
-        throw new Error('Username and password are required');
-      }
       const response = await axiosInstance.post('/auth/login', data);
       return response.data;
-    } catch (error) {
-      throw new Error(`Login failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || 'Erreur de connexion';
+      throw new Error(message);
     }
   }
 
   async register(data: RegisterData) {
-    const response = await axiosInstance.post('/auth/register', data);
-    return response.data;
+    try {
+      const response = await axiosInstance.post('/auth/register', data);
+      return response.data;
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || 'Erreur d\'inscription';
+      throw new Error(message);
+    }
   }
 
   async anonymousLogin(data: AnonymousData) {
-    const response = await axiosInstance.post('/auth/anonymous', data);
-    return response.data;
+    try {
+      const response = await axiosInstance.post('/auth/anonymous', data);
+      return response.data;
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || 'Erreur de connexion anonyme';
+      throw new Error(message);
+    }
   }
 
   async logout() {
@@ -62,20 +74,27 @@ class AuthService {
   }
 
   async requestPasswordReset(data: PasswordResetRequest) {
+    if (!data.email?.trim()) {
+      throw new Error('Email requis');
+    }
+    
     try {
-      if (!data.email?.trim()) {
-        throw new Error('Email is required');
-      }
       const response = await axiosInstance.post('/auth/request-password-reset', data);
       return response.data;
-    } catch (error) {
-      throw new Error(`Password reset request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || 'Erreur de réinitialisation';
+      throw new Error(message);
     }
   }
 
   async resetPassword(data: PasswordReset) {
-    const response = await axiosInstance.post('/auth/reset-password', data);
-    return response.data;
+    try {
+      const response = await axiosInstance.post('/auth/reset-password', data);
+      return response.data;
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || 'Erreur de réinitialisation';
+      throw new Error(message);
+    }
   }
 
   async getMe() {

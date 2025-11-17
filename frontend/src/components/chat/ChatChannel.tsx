@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import axiosInstance from '@/utils/axiosInstance'
 import { useAuthStore } from '@/store/authStore'
+import { ChannelListSkeleton } from '@/components/ui/skeletons'
 import { MessageCircle, Monitor, Gamepad2, Music, Dice6, CircleDot, Film, Megaphone } from 'lucide-react'
 
 interface Channel {
@@ -91,11 +92,7 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
           <div className="skeleton h-6 w-24 mb-2"></div>
           <div className="skeleton h-4 w-32"></div>
         </div>
-        <div className="p-2 space-y-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="skeleton h-14 rounded-lg"></div>
-          ))}
-        </div>
+        <ChannelListSkeleton count={5} />
       </div>
     )
   }

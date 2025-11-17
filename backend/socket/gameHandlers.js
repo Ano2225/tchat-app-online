@@ -10,8 +10,8 @@ const gameCache = new Map(); // Cache pour éviter les requêtes DB répétées
 
 const QUESTION_DURATION = 15000;
 const PAUSE_BETWEEN_QUESTIONS = 8000; // Réduit pour plus de fluidité
-const RATE_LIMIT_WINDOW = 1000;
-const MAX_ACTIONS_PER_WINDOW = 3; // Plus strict pour éviter le spam
+const RATE_LIMIT_WINDOW = 2000; // Augmenté à 2 secondes
+const MAX_ACTIONS_PER_WINDOW = 8; // Plus permissif pour les actions légitimes
 const MAX_LEADERBOARD_SIZE = 100; // Limiter la taille du leaderboard
 const CACHE_TTL = 30000; // 30 secondes de cache
 
@@ -230,20 +230,25 @@ module.exports = (io, socket) => {
     return true;
   };
   
-  // Rate limiting optimisé avec nettoyage automatique
-  const checkRateLimit = (userId) => {
+  // Rate limiting optimisé avec différenciation par type d'action
+  const checkRateLimit = (userId, actionType = 'default') => {
     const now = Date.now();
-    const userActions = userActionTimestamps.get(userId) || [];
+    const userKey = `${userId}_${actionType}`;
+    const userActions = userActionTimestamps.get(userKey) || [];
     
     // Nettoyage efficace des anciens timestamps
     const recentActions = userActions.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
     
-    if (recentActions.length >= MAX_ACTIONS_PER_WINDOW) {
+    // Limites différentes selon le type d'action
+    const maxActions = actionType === 'join' ? 2 : MAX_ACTIONS_PER_WINDOW;
+    
+    if (recentActions.length >= maxActions) {
+      console.log(`[RATE_LIMIT] User ${userId} exceeded limit for ${actionType}: ${recentActions.length}/${maxActions}`);
       return false;
     }
     
     recentActions.push(now);
-    userActionTimestamps.set(userId, recentActions);
+    userActionTimestamps.set(userKey, recentActions);
     
     // Nettoyage périodique de la mémoire
     if (Math.random() < 0.01) { // 1% de chance
@@ -286,9 +291,10 @@ module.exports = (io, socket) => {
       return;
     }
 
-    // Check rate limiting
-    if (!checkRateLimit(socket.userId)) {
-      socket.emit('game_error', { message: 'Too many requests. Please slow down.' });
+    // Check rate limiting spécifique pour join
+    if (!checkRateLimit(socket.userId, 'join')) {
+      console.log(`[RATE_LIMIT] Join game channel blocked for user: ${socket.username}`);
+      socket.emit('game_error', { message: 'Trop de tentatives de connexion. Attendez un moment.' });
       return;
     }
 
@@ -408,9 +414,10 @@ module.exports = (io, socket) => {
       return;
     }
 
-    // Check rate limiting
-    if (!checkRateLimit(socket.userId)) {
-      socket.emit('game_error', { message: 'Too many requests. Please slow down.' });
+    // Check rate limiting pour start_game
+    if (!checkRateLimit(socket.userId, 'start')) {
+      console.log(`[RATE_LIMIT] Start game blocked for user: ${socket.username}`);
+      socket.emit('game_error', { message: 'Trop de tentatives de démarrage. Attendez un moment.' });
       return;
     }
 
@@ -437,10 +444,10 @@ module.exports = (io, socket) => {
       return;
     }
 
-    // Check rate limiting
-    if (!checkRateLimit(socket.userId)) {
-      socket.emit('game_error', { message: 'Too many requests. Please slow down.' });
-      return;
+    // Check rate limiting pour leave (ne pas bloquer la déconnexion)
+    if (!checkRateLimit(socket.userId, 'leave')) {
+      console.log(`[RATE_LIMIT] Leave game channel rate limited for user: ${socket.username}`);
+      // Ne pas bloquer la déconnexion, juste logger
     }
 
     // Validate channel parameter
@@ -459,9 +466,10 @@ module.exports = (io, socket) => {
       return;
     }
 
-    // Check rate limiting
-    if (!checkRateLimit(socket.userId)) {
-      socket.emit('game_error', { message: 'Too many requests. Please slow down.' });
+    // Check rate limiting pour les réponses
+    if (!checkRateLimit(socket.userId, 'answer')) {
+      console.log(`[RATE_LIMIT] Game answer blocked for user: ${socket.username}`);
+      socket.emit('game_error', { message: 'Trop de réponses envoyées. Ralentissez.' });
       return;
     }
     

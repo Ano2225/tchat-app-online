@@ -6,6 +6,8 @@ import Link from 'next/link'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/authStore'
+import { useLoadingState } from '@/hooks/useLoadingState'
+import LoadingButton from '@/components/ui/LoadingButton'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import { MessageCircle, User, Lock, Eye, EyeOff } from 'lucide-react'
 
@@ -15,7 +17,7 @@ export default function LoginPage() {
     password: ''
   })
   const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const { loading, error, withLoading } = useLoadingState()
   const router = useRouter()
   const login = useAuthStore((state) => state.login)
 
@@ -34,10 +36,8 @@ export default function LoginPage() {
       toast.error('Veuillez remplir tous les champs')
       return
     }
-    
-    setLoading(true)
 
-    try {
+    const result = await withLoading(async () => {
       const response = await axios.post('/api/auth/login', {
         username: formData.username.trim(),
         password: formData.password
@@ -47,18 +47,18 @@ export default function LoginPage() {
         throw new Error('Réponse serveur invalide')
       }
 
-      login({
-        user: response.data.user,
-        token: response.data.token
-      })
+      return response.data
+    })
 
+    if (result) {
+      login({
+        user: result.user,
+        token: result.token
+      })
       toast.success('Connexion réussie!')
       router.push('/chat')
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Erreur de connexion'
-      toast.error(errorMessage)
-    } finally {
-      setLoading(false)
+    } else if (error) {
+      toast.error(error)
     }
   }
 
@@ -133,20 +133,16 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <button
+            <LoadingButton
               type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-primary-600 to-primary-500 text-white font-semibold py-3 rounded-xl hover:from-primary-700 hover:to-primary-600 transition-all disabled:opacity-50 shadow-lg"
+              loading={loading}
+              loadingText="Connexion..."
+              className="w-full"
+              variant="primary"
+              size="md"
             >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Connexion...
-                </div>
-              ) : (
-                'Se connecter'
-              )}
-            </button>
+              Se connecter
+            </LoadingButton>
           </form>
 
           <div className="mt-8 text-center space-y-4">

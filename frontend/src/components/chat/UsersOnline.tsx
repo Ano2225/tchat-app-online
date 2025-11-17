@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Socket } from 'socket.io-client'
 import GenderAvatar from '@/components/ui/GenderAvatar'
 import AIAgentChatBox from './AIAgentChatBox'
+import { UserListSkeleton } from '@/components/ui/skeletons'
 import { UserCheck, Users, MessageCircle } from 'lucide-react'
 
 interface User {
@@ -23,6 +24,7 @@ interface UsersOnlineProps {
 const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, onSelectAgent }) => {
   const [users, setUsers] = useState<User[]>([])
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!socket) return
@@ -42,6 +44,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, onSelect
         }
       })
       setUsers(onlineUsers)
+      setLoading(false)
     }
 
     const handleRoomUsersUpdate = (payload: any[] | { room: string; users: any[] }) => {
@@ -51,6 +54,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, onSelect
         return { id: `room_user_${index}`, username: item.username, avatarUrl: item.avatarUrl || undefined, sexe: item.sexe || 'autre', isOnline: true }
       })
       setUsers(onlineUsers)
+      setLoading(false)
     }
 
     socket.on('update_user_list', handleGlobalUsersUpdate)
@@ -104,7 +108,9 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, onSelect
       </div>
 
       <div className="p-2 space-y-1 flex-1 overflow-y-auto">
-        {users.length === 0 ? (
+        {loading ? (
+          !isCollapsed && <UserListSkeleton count={5} />
+        ) : users.length === 0 ? (
           <div className="p-4 text-center">
             {!isCollapsed && (
               <p className="text-sm text-gray-500 dark:text-gray-400">

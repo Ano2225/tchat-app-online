@@ -5,6 +5,7 @@ import { Socket } from 'socket.io-client';
 
 export const useGame = (channel: string, socket?: Socket | null) => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const joinedRef = useRef<boolean>(false);
   const user = useAuthStore((state) => state.user);
   const isGameChannel = channel === 'Game';
   
@@ -40,7 +41,12 @@ export const useGame = (channel: string, socket?: Socket | null) => {
 
     // Reset game state when entering channel
     resetGame();
-    socket.emit('join_game_channel', channel);
+    
+    // Éviter les appels multiples
+    if (!joinedRef.current) {
+      joinedRef.current = true;
+      socket.emit('join_game_channel', channel);
+    }
 
     const handleGameState = (state: any) => {
       try {
@@ -154,7 +160,10 @@ export const useGame = (channel: string, socket?: Socket | null) => {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      socket.emit('leave_game_channel', channel);
+      if (joinedRef.current) {
+        socket.emit('leave_game_channel', channel);
+        joinedRef.current = false;
+      }
       socket.off('game_state', handleGameState);
       socket.off('new_question', handleNewQuestion);
       socket.off('answer_result', handleAnswerResult);
