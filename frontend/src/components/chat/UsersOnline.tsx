@@ -163,8 +163,8 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, onSelect
           </div>
           <div className="space-y-2">
             {[
-              { id: 'alex', name: 'Alex', avatar: '🤖', description: 'Assistant général', gradient: 'from-blue-500 to-cyan-500' },
-              { id: 'emma', name: 'Emma', avatar: '👩‍💻', description: 'Spécialiste tech', gradient: 'from-purple-500 to-pink-500' }
+              { id: 'alex', name: 'Alex', avatar: '🤖', description: 'Gaming & Tech', gradient: 'from-blue-500 to-cyan-500' },
+              { id: 'emma', name: 'Emma', avatar: '👩‍💻', description: 'Code & Design', gradient: 'from-purple-500 to-pink-500' }
             ].map((agent) => (
               <button
                 key={agent.id}

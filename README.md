@@ -23,6 +23,7 @@ Real-time chat application with a modern interface and advanced features.
 
 * Node.js (v18+)
 * MongoDB
+* Google Cloud Account (pour l'IA gratuite)
 
 ### Quick Start
 
@@ -36,7 +37,17 @@ npm run dev
 cd frontend
 npm install
 npm run dev
+
+# Configuration IA gratuite (optionnel)
+./setup-vertex-ai.sh
 ```
+
+### 🤖 IA Conversationnelle (GRATUIT)
+
+**Google Cloud Vertex AI** - 300$ de crédits gratuits !
+- Agents IA Alex 😎 et Emma 🌸
+- Conversations naturelles comme avec des amis
+- Voir `VERTEX_AI_SETUP.md` pour la configuration
 
 ## 📁 Project Structure
 

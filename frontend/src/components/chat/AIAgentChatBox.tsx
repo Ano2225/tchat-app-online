@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react'
+import QuickReactions from './QuickReactions'
+import AIStatus from './AIStatus'
 
 interface AIAgent {
   id: string
@@ -30,12 +32,31 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose 
   const [newMessage, setNewMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const getSuggestions = () => {
+    const suggestions = {
+      alex: [
+        '🎮 Tu joues à quoi en ce moment ?',
+        '🎥 Un bon film à me conseiller ?',
+        '🎵 Tu écoutes quoi comme musique ?',
+        '😄 Raconte-moi ta journée !'
+      ],
+      emma: [
+        '🎨 Tu fais des trucs créatifs ?',
+        '📚 Un bon livre à lire ?',
+        '✨ Comment tu vas aujourd\'hui ?',
+        '🌸 Tes projets du moment ?'
+      ]
+    }
+    return suggestions[agent.id as keyof typeof suggestions] || suggestions.alex
+  }
 
   useEffect(() => {
     const welcomeMessages = {
-      alex: "Salut ! Moi c'est Alex 😊 Ravi de te rencontrer ! Comment ça va aujourd'hui ?",
-      emma: "Coucou ! Je suis Emma 🌸 Contente de faire ta connaissance ! Tu vas bien ?"
+      alex: "Salut mec ! 😎 Moi c'est Alex, ton nouveau pote virtuel ! On peut parler de tout - gaming, films, musique, ou juste de la vie ! Tu fais quoi de beau ?",
+      emma: "Coucou ! 🌸 Je suis Emma, ta nouvelle copine virtuelle ! J'adore écouter et partager. Raconte-moi un peu qui tu es !"
     }
     
     const welcomeMessage: Message = {
@@ -95,6 +116,7 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose 
 
         setMessages(prev => [...prev, aiMessage])
         setIsTyping(false)
+        setShowSuggestions(false)
         scrollToBottom()
       } catch (error) {
         console.error('Erreur:', error)
@@ -129,14 +151,7 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose 
           </div>
           <div>
             <div className="font-semibold text-base">{agent.name}</div>
-            <div className="flex items-center space-x-2 text-xs opacity-90">
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span>Assistant IA</span>
-              </div>
-              <span className="text-white/60">•</span>
-              <span className="text-white/80">Réponse rapide</span>
-            </div>
+            <AIStatus agentId={agent.id} isTyping={isTyping} />
           </div>
         </div>
         <button 
@@ -203,6 +218,39 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose 
                 <span className="text-xs text-white/70">En train d'écrire...</span>
               </div>
             </div>
+          </div>
+        )}
+        
+        {/* Suggestions de conversation */}
+        {showSuggestions && messages.length === 1 && (
+          <div className="animate-in slide-in-from-bottom-2 duration-300 space-y-3">
+            <div className="text-center">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                💡 Suggestions de conversation
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {getSuggestions().map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setNewMessage(suggestion)
+                      setShowSuggestions(false)
+                    }}
+                    className="text-xs bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded-full hover:from-blue-200 hover:to-purple-200 dark:hover:from-blue-800/40 dark:hover:to-purple-800/40 transition-all duration-200 hover:scale-105 border border-blue-200/50 dark:border-blue-700/50"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <QuickReactions 
+              agentId={agent.id}
+              onReactionClick={(reaction) => {
+                setNewMessage(reaction)
+                setShowSuggestions(false)
+              }}
+            />
           </div>
         )}
         
