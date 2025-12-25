@@ -26,17 +26,18 @@ const AI_AGENTS = {
 
 class AIService {
   constructor() {
-    // Google Cloud Vertex AI
-    this.projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
-    this.location = process.env.VERTEX_AI_LOCATION || 'us-central1';
-    this.model = process.env.VERTEX_AI_MODEL || 'gemini-1.5-flash';
+    // Configuration IA
+    this.aiProvider = process.env.AI_PROVIDER || 'ollama';
     
-    // Fallback OpenAI
-    this.openaiKey = process.env.OPENAI_API_KEY;
-    this.openaiUrl = process.env.AI_API_URL || 'https://api.openai.com/v1/chat/completions';
-    this.openaiModel = process.env.AI_MODEL || 'gpt-3.5-turbo';
+    // Ollama (Local Llama)
+    this.ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
+    this.llamaModel = process.env.LLAMA_MODEL || 'llama3.2:3b';
     
-    this.initVertexAI();
+    // Hugging Face
+    this.hfApiKey = process.env.HUGGINGFACE_API_KEY;
+    this.hfModel = process.env.HUGGINGFACE_MODEL || 'meta-llama/Llama-3.2-3B-Instruct';
+    
+    console.log(`🤖 AI Provider: ${this.aiProvider}`);
   }
 
   async initVertexAI() {
@@ -87,27 +88,20 @@ class AIService {
   async generateResponse(message, agentId = 'alex', context = []) {
     const agent = this.getAgent(agentId);
     
-    // Essayer Vertex AI d'abord
-    if (this.generativeModel && this.projectId) {
-      try {
-        return await this.generateVertexAIResponse(message, agent, context);
-      } catch (error) {
-        console.error('Vertex AI Error:', error.message);
+    try {
+      switch (this.aiProvider) {
+        case 'ollama':
+          return await this.generateOllamaResponse(message, agent, context);
+        case 'huggingface':
+          return await this.generateHuggingFaceResponse(message, agent, context);
+        default:
+          console.log('🤖 Using preset responses');
+          return this.getPresetResponse(message, agent, context);
       }
+    } catch (error) {
+      console.error(`❌ ${this.aiProvider} Error:`, error.message);
+      return this.getPresetResponse(message, agent, context);
     }
-    
-    // Fallback OpenAI
-    if (this.openaiKey && this.openaiKey !== 'sk-proj-your-real-openai-key-here') {
-      try {
-        return await this.generateOpenAIResponse(message, agent, context);
-      } catch (error) {
-        console.error('OpenAI Error:', error.message);
-      }
-    }
-    
-    // Fallback réponses prédéfinies
-    console.log('Using preset responses');
-    return this.getPresetResponse(message, agent, context);
   }
 
   async generateVertexAIResponse(message, agent, context = []) {
