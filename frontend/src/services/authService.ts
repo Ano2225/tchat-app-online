@@ -34,24 +34,57 @@ class AuthService {
     if (!data.username?.trim() || !data.password?.trim()) {
       throw new Error('Nom d\'utilisateur et mot de passe requis');
     }
-    
-    try {
-      const response = await axiosInstance.post('/auth/login', data);
-      return response.data;
-    } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || 'Erreur de connexion';
-      throw new Error(message);
+
+    const response = await axiosInstance.post('/auth/login', data);
+
+    // Store refresh token if available
+    if (response.data.refreshToken) {
+      localStorage.setItem('refreshToken', response.data.refreshToken);
     }
+
+    return response.data;
   }
 
   async register(data: RegisterData) {
-    try {
-      const response = await axiosInstance.post('/auth/register', data);
-      return response.data;
-    } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || 'Erreur d\'inscription';
-      throw new Error(message);
+    const response = await axiosInstance.post('/auth/register', data);
+
+    // Store refresh token if available
+    if (response.data.refreshToken) {
+      localStorage.setItem('refreshToken', response.data.refreshToken);
     }
+
+    return response.data;
+  }
+
+  async refreshToken() {
+    const refreshToken = localStorage.getItem('refreshToken');
+
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    const response = await axiosInstance.post('/token/refresh', { refreshToken });
+
+    // Store new refresh token
+    if (response.data.refreshToken) {
+      localStorage.setItem('refreshToken', response.data.refreshToken);
+    }
+
+    return response.data;
+  }
+
+  async logout() {
+    const refreshToken = localStorage.getItem('refreshToken');
+
+    if (refreshToken) {
+      try {
+        await axiosInstance.post('/token/revoke', { refreshToken });
+      } catch (error) {
+        console.error('Error revoking token:', error);
+      }
+    }
+
+    localStorage.removeItem('refreshToken');
   }
 
   async anonymousLogin(data: AnonymousData) {

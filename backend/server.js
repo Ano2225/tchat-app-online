@@ -6,6 +6,7 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const connectDB = require('./config/database');
 const authRoutes = require('./routes/auth');
+const tokenRoutes = require('./routes/token');
 const messageRoutes = require('./routes/message');
 const channelRoutes = require('./routes/channel');
 const userRoutes = require('./routes/user');
@@ -23,9 +24,10 @@ const {
   messageRateLimit,
   helmetConfig,
   sanitizeInput: securitySanitize,
-  secureLogger,
-  checkBruteForce
+  secureLogger
 } = require('./middleware/security');
+const { bruteForceProtection } = require('./middleware/bruteForce');
+const { socketAuthMiddleware } = require('./middleware/socketAuth');
 const helmet = require('helmet');
 
 
@@ -35,10 +37,22 @@ class ChatServer {
     this.server = http.createServer(this.app);
     this.io = socketIo(this.server, {
       cors: {
-        origin: ["http://localhost:3000"],
-        methods: ["GET", "POST"]
+        origin: process.env.FRONTEND_URL || "http://localhost:3000",
+        methods: ["GET", "POST"],
+        credentials: true
+      },
+      // Add authentication middleware
+      allowRequest: (req, callback) => {
+        // Allow health checks without auth
+        if (req._query && req._query.healthcheck) {
+          return callback(null, true);
+        }
+        callback(null, true);
       }
     });
+
+    // Apply Socket.IO authentication middleware
+    this.io.use(socketAuthMiddleware);
 
     this.initMiddlewares();
     this.connectDatabase();
@@ -47,20 +61,26 @@ class ChatServer {
   }
 
   initMiddlewares() {
+    // Trust proxy (important for rate limiting behind reverse proxy)
+    this.app.set('trust proxy', 1);
+
     // Sécurité renforcée
     this.app.use(helmetConfig);
     this.app.use(cors(corsOptions));
-    
+
     // Parsing et validation
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
     this.app.use(sanitizeInput);
     this.app.use(securitySanitize);
-    
+
     // Rate limiting et protection
     this.app.use(globalRateLimit);
     this.app.use(secureLogger);
-    // this.app.use(checkBruteForce); // Désactivé
+
+    // Brute force protection (ACTIVÉ)
+    this.app.use('/api/auth/login', bruteForceProtection);
+    this.app.use('/api/auth/register', bruteForceProtection);
   }
 
   async connectDatabase() {
@@ -126,6 +146,7 @@ class ChatServer {
 
   setupRoutes() {
     this.app.use('/api/auth', authRateLimit, authRoutes);
+    this.app.use('/api/token', tokenRoutes);
     this.app.use('/api/messages', messageRateLimit, messageRoutes(this.io));
     this.app.use('/api/channels', channelRoutes);
     this.app.use('/api/user', userRoutes);
@@ -137,6 +158,15 @@ class ChatServer {
     // Route de santé
     this.app.get('/health', (req, res) => {
       res.json({ status: 'OK', timestamp: new Date().toISOString() });
+    });
+
+    // Global error handler
+    this.app.use((err, req, res, next) => {
+      console.error('[ERROR]', err.stack);
+      res.status(err.status || 500).json({
+        error: err.message || 'Internal server error',
+        code: err.code || 'INTERNAL_ERROR'
+      });
     });
   }
 

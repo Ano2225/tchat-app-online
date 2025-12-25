@@ -112,8 +112,9 @@ export default function RegisterPage() {
         router.push('/login')
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Erreur lors de l\'inscription'
-      toast.error(errorMessage)
+      // Use centralized error handler
+      const { handleError } = await import('@/utils/errorHandler')
+      handleError(err, 'Erreur lors de l\'inscription')
     } finally {
       setLoading(false)
     }

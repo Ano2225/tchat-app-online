@@ -3,7 +3,7 @@ const authController = require('../controllers/authController');
 const authMiddleware = require('../middleware/auth');
 const { authLimiter } = require('../middleware/rateLimiter');
 const { validateUserRegistration } = require('../middleware/validation');
-const csrfProtection = require('../middleware/csrf');
+const { csrfProtection } = require('../middleware/csrf');
 
 const router = express.Router();
 

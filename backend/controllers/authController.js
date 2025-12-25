@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Alert = require('../models/Alert');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const TokenManager = require('../utils/tokenManager');
 
 const INACTIVITY_TIMEOUT = 1000 * 60 * 1; 
 
@@ -48,14 +49,17 @@ class AuthController {
         relatedUserId: user._id
       });
 
-      // Générer un token JWT
-      const token = jwt.sign(
-        { id: user._id, username: user.username }, 
-        process.env.JWT_SECRET,
-        { expiresIn: '1h' }
-      );
+      // Générer token pair (access + refresh)
+      const tokens = await TokenManager.generateTokenPair(user, req);
 
-      res.status(201).json({ token, user: { id: user._id, username: user.username } });
+      res.status(201).json({
+        ...tokens,
+        user: {
+          id: user._id,
+          username: user.username,
+          role: user.role
+        }
+      });
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }
@@ -86,26 +90,22 @@ class AuthController {
         return res.status(400).json({ message: 'Identifiants invalides' });
       }
 
-      //Mettre à jour la date de dernier accès 
+      //Mettre à jour la date de dernier accès
       user.lastSeen = new Date();
       user.isOnline = true;
       user.isEnabled = true;
       await user.save();
 
-      // Générer un token JWT
-      const token = jwt.sign(
-        { id: user._id, username: user.username, role: user.role }, 
-        process.env.JWT_SECRET,
-        { expiresIn: '1h' }
-      );
+      // Générer token pair (access + refresh)
+      const tokens = await TokenManager.generateTokenPair(user, req);
 
-      res.json({ 
-        token, 
-        user: { 
-          id: user._id, 
+      res.json({
+        ...tokens,
+        user: {
+          id: user._id,
           username: user.username,
           role: user.role
-        } 
+        }
       });
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', error: error.message });

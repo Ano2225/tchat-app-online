@@ -9,6 +9,8 @@ import { useAuthStore } from '@/store/authStore'
 import { useLoadingState } from '@/hooks/useLoadingState'
 import LoadingButton from '@/components/ui/LoadingButton'
 import ThemeToggle from '@/components/ui/ThemeToggle'
+import ErrorAlert from '@/components/ui/ErrorAlert'
+import { handleError, isRateLimitError } from '@/utils/errorHandler'
 import { MessageCircle, User, Lock, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
@@ -17,7 +19,8 @@ export default function LoginPage() {
     password: ''
   })
   const [showPassword, setShowPassword] = useState(false)
-  const { loading, error, withLoading } = useLoadingState()
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const { loading, error, errorInfo, withLoading, reset } = useLoadingState()
   const router = useRouter()
   const login = useAuthStore((state) => state.login)
 
@@ -27,39 +30,90 @@ export default function LoginPage() {
       ...prev,
       [name]: value
     }))
+
+    // Clear field error when user types
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[name]
+        return newErrors
+      })
+    }
+
+    // Clear global error
+    if (error) {
+      reset()
+    }
+  }
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {}
+
+    if (!formData.username.trim()) {
+      errors.username = 'Le nom d\'utilisateur est requis'
+    }
+
+    if (!formData.password.trim()) {
+      errors.password = 'Le mot de passe est requis'
+    } else if (formData.password.length < 6) {
+      errors.password = 'Le mot de passe doit contenir au moins 6 caractères'
+    }
+
+    setFieldErrors(errors)
+    return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    
-    if (!formData.username.trim() || !formData.password.trim()) {
-      toast.error('Veuillez remplir tous les champs')
+
+    // Validate form
+    if (!validateForm()) {
       return
     }
 
     const result = await withLoading(async () => {
-      const response = await axios.post('/api/auth/login', {
-        username: formData.username.trim(),
-        password: formData.password
-      })
+      try {
+        const response = await axios.post('/api/auth/login', {
+          username: formData.username.trim(),
+          password: formData.password
+        })
 
-      if (!response.data?.user || !response.data?.token) {
-        throw new Error('Réponse serveur invalide')
+        if (!response.data?.user || !response.data?.accessToken) {
+          throw new Error('Réponse serveur invalide')
+        }
+
+        return response.data
+      } catch (err) {
+        // Handle specific errors
+        handleError(err)
+        throw err
       }
-
-      return response.data
     })
 
     if (result) {
+      // Store tokens
       login({
         user: result.user,
-        token: result.token
+        token: result.accessToken
       })
-      toast.success('Connexion réussie!')
+
+      // Store refresh token if available
+      if (result.refreshToken) {
+        localStorage.setItem('refreshToken', result.refreshToken)
+      }
+
+      toast.success(`Bienvenue ${result.user.username} !`, {
+        icon: '👋',
+        duration: 3000
+      })
+
       router.push('/chat')
-    } else if (error) {
-      toast.error(error)
     }
+  }
+
+  const handleRetry = () => {
+    reset()
+    setFieldErrors({})
   }
 
   return (
@@ -85,10 +139,29 @@ export default function LoginPage() {
             <p className="text-gray-600 dark:text-gray-300">Connectez-vous à votre compte</p>
           </div>
 
+          {/* Error Alert */}
+          {error && (
+            <ErrorAlert
+              message={error}
+              severity={isRateLimitError(errorInfo) ? 'warning' : 'error'}
+              title={
+                errorInfo?.code === 'BRUTE_FORCE_DETECTED'
+                  ? 'Compte temporairement bloqué'
+                  : errorInfo?.code === 'TOO_MANY_REQUESTS'
+                  ? 'Trop de tentatives'
+                  : 'Erreur de connexion'
+              }
+              onClose={handleRetry}
+              onRetry={errorInfo?.code !== 'BRUTE_FORCE_DETECTED' ? handleRetry : undefined}
+              className="mb-6"
+            />
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 Nom d'utilisateur ou Email
+                <span className="text-red-500 ml-1">*</span>
               </label>
               <div className="relative">
                 <input
@@ -97,18 +170,30 @@ export default function LoginPage() {
                   value={formData.username}
                   onChange={handleChange}
                   placeholder="Votre nom d'utilisateur ou email"
-                  className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
-                  required
+                  className={`w-full bg-gray-50 dark:bg-white/10 border ${
+                    fieldErrors.username
+                      ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
+                      : 'border-gray-300 dark:border-white/20 focus:ring-primary-500'
+                  } rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 transition-all`}
+                  disabled={loading}
+                  aria-invalid={!!fieldErrors.username}
                 />
                 <div className="absolute inset-y-0 left-3 flex items-center">
-                  <User className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <User className={`w-4 h-4 ${fieldErrors.username ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`} />
                 </div>
               </div>
+              {fieldErrors.username && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <span>⚠️</span>
+                  {fieldErrors.username}
+                </p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
                 Mot de passe
+                <span className="text-red-500 ml-1">*</span>
               </label>
               <div className="relative">
                 <input
@@ -117,20 +202,32 @@ export default function LoginPage() {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Votre mot de passe"
-                  className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 pr-12 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
-                  required
+                  className={`w-full bg-gray-50 dark:bg-white/10 border ${
+                    fieldErrors.password
+                      ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
+                      : 'border-gray-300 dark:border-white/20 focus:ring-primary-500'
+                  } rounded-xl pl-10 pr-12 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 transition-all`}
+                  disabled={loading}
+                  aria-invalid={!!fieldErrors.password}
                 />
                 <div className="absolute inset-y-0 left-3 flex items-center">
-                  <Lock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <Lock className={`w-4 h-4 ${fieldErrors.password ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`} />
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-3 flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                  disabled={loading}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                  <span>⚠️</span>
+                  {fieldErrors.password}
+                </p>
+              )}
             </div>
 
             <LoadingButton

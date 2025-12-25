@@ -1,18 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth');
-const csrf = require('../middleware/csrf');
+const { csrfProtection } = require('../middleware/csrf');
 const MessageController = require('../controllers/MessageController');
 
 module.exports = (io) => {
   // Show Messages by Channel
   router.get('/:room', authMiddleware, MessageController.getMessagesByChanel);
-  router.post('/', authMiddleware, csrf, MessageController.createMessage);
+  router.post('/', authMiddleware, csrfProtection, MessageController.createMessage);
 
   // Private Messages
   router.get('/private/:userId/:recipientId', authMiddleware, MessageController.getPrivateMessages);
-  
-  router.post('/private', authMiddleware, csrf, async (req, res, next) => {
+
+  router.post('/private', authMiddleware, csrfProtection, async (req, res, next) => {
     try {
       await MessageController.sendPrivateMessage(req, res, io);
     } catch (error) {
@@ -23,7 +23,7 @@ module.exports = (io) => {
   
   router.get('/conversations/:userId', authMiddleware, MessageController.getUserConversations);
 
-  router.post('/mark-as-read', authMiddleware, csrf, async (req, res, next) => {
+  router.post('/mark-as-read', authMiddleware, csrfProtection, async (req, res, next) => {
     try {
       await MessageController.markMessagesAsRead(req, res);
 
@@ -47,7 +47,7 @@ module.exports = (io) => {
   });
 
   // Reactions
-  router.post('/reaction/:messageId', authMiddleware, csrf, MessageController.addReaction);
+  router.post('/reaction/:messageId', authMiddleware, csrfProtection, MessageController.addReaction);
 
   return router;
 };

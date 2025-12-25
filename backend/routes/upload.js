@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const authMiddleware = require('../middleware/auth');
-const csrfProtection = require('../middleware/csrf'); 
+const { csrfProtection } = require('../middleware/csrf');
 
 
 const cloudinaryConfig = {

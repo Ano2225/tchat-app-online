@@ -3,6 +3,7 @@ import "./globals.css";
 import AuthProvider from "./providers";
 import { Toaster } from 'react-hot-toast';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 
 
 
@@ -20,8 +21,10 @@ export default function RootLayout({
     <html lang="fr">
       <body className="antialiased">
         <ErrorBoundary>
-          <Toaster/>
-          <AuthProvider>{children}</AuthProvider>
+          <NotificationProvider>
+            <Toaster/>
+            <AuthProvider>{children}</AuthProvider>
+          </NotificationProvider>
         </ErrorBoundary>
       </body>
     </html>
