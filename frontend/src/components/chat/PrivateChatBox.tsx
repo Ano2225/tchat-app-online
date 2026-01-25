@@ -1,10 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
+import type { EmojiClickData } from 'emoji-picker-react';
 import { useAuthStore } from '@/store/authStore';
 import { Socket } from 'socket.io-client';
 import chatService from '@/services/chatServices';
-import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import axiosInstance from '@/utils/axiosInstance';
 import GenderAvatar from '@/components/ui/GenderAvatar';
+
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-72 h-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-center text-sm text-gray-500">
+      Chargement des emojis...
+    </div>
+  )
+});
 
 interface PrivateChatBoxProps {
   recipient: {
@@ -41,8 +51,21 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
   const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
+  const emojiPrefetched = useRef(false);
 
   useEffect(() => {
+    if (!emojiPrefetched.current) {
+      emojiPrefetched.current = true;
+      const idleCallback = (window as any).requestIdleCallback;
+      if (typeof idleCallback === 'function') {
+        idleCallback(() => import('emoji-picker-react'));
+      } else {
+        setTimeout(() => import('emoji-picker-react'), 800);
+      }
+    }
+
     const fetchMessages = async () => {
       if (!user?.id) return;
 
@@ -69,6 +92,33 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       socket.emit('check_user_online', recipient._id);
     }
   }, [user, recipient, socket]);
+
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node;
+      if (emojiPickerRef.current?.contains(target)) return;
+      if (emojiButtonRef.current?.contains(target)) return;
+      setShowEmojiPicker(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showEmojiPicker]);
 
   useEffect(() => {
     if (!socket || !recipient?._id || !user?.id) return;
@@ -196,7 +246,10 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
     <div className="relative">
       {/* Emoji Picker */}
       {showEmojiPicker && (
-        <div className="fixed bottom-20 right-6 z-[9999]">
+        <div
+          ref={emojiPickerRef}
+          className="fixed bottom-20 right-6 z-[9999] transition-all duration-150 ease-out"
+        >
           <EmojiPicker onEmojiClick={(emojiObject: EmojiClickData) => {
             setNewMessage(prev => prev + emojiObject.emoji);
             setShowEmojiPicker(false);
@@ -306,8 +359,10 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
             <button
               type="button"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              ref={emojiButtonRef}
               className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 p-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
               title="Ajouter un emoji"
+              aria-expanded={showEmojiPicker}
             >
               😊
             </button>

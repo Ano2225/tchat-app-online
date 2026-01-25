@@ -1,78 +1,32 @@
 const mongoose = require('mongoose');
 
+// Modèle User compatible avec better-auth
 const UserSchema = new mongoose.Schema({
-  username: {
-    type: String,
-    required: true,
-    trim: true,
-    minlength: 3,
-    maxlength: 30
-  },
-  avatarUrl : {
-    type: String,
-    default:null,
-  },
-  email: {
-    type: String,
-    required: false,
-    unique: false,
-    sparse: true,
-    trim: true,
-    lowercase: true
-  },
-  password: {
-    type: String,
-    required: false
-  },
-  sexe: {
-    type: String,
-    enum: ['homme', 'femme', 'autre'],
-    default: 'autre',
-  },
-  ville : {
-    type: String,
-  },
-  age : {
-    type: Number,
-    required: false
-  },
-  isAnonymous: {
-    type: Boolean,
-    default: false
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  lastSeen: {
-    type: Date,
-    default: Date.now
-  },
-  isOnline : {
-    type: Boolean,
-    default: false,
-  },
-  isBlocked: {
-    type: Boolean,
-    default: false
-  },
-  isEnabled: {
-    type: Boolean,
-    default: false
-  },
-  role: {
-    type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
-  },
-  bgColor: {
-    type: String,
-    default: 'bg-orange-400'
-  },
-  blockedUsers: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  }]
+  email: { type: String, required: true, unique: true },
+  emailVerified: { type: Boolean, default: false },
+  username: { type: String, required: true, unique: true },
+  name: String,
+  image: String,
+  
+  // Champs personnalisés
+  age: Number,
+  sexe: { type: String, enum: ['homme', 'femme', 'autre'], default: 'autre' },
+  ville: String,
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  isAnonymous: { type: Boolean, default: false },
+  avatarUrl: String,
+  bgColor: String,
+  isOnline: { type: Boolean, default: false },
+  lastSeen: { type: Date, default: null },
+  isBlocked: { type: Boolean, default: false },
+  blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  
+  // Timestamps
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+}, {
+  timestamps: true,
+  collection: 'user'
 });
 
 module.exports = mongoose.model('User', UserSchema);

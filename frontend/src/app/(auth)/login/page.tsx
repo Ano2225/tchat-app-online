@@ -20,9 +20,30 @@ export default function LoginPage() {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [formError, setFormError] = useState<string | null>(null)
+  const [verificationNotice, setVerificationNotice] = useState<string | null>(null)
+  const [verificationEmail, setVerificationEmail] = useState('')
+  const [verificationLink, setVerificationLink] = useState<string | null>(null)
+  const [sendingVerification, setSendingVerification] = useState(false)
   const { loading, error, errorInfo, withLoading, reset } = useLoadingState()
   const router = useRouter()
   const login = useAuthStore((state) => state.login)
+
+  const getLoginErrorMessage = (code?: string, fallback?: string) => {
+    switch (code) {
+      case 'INVALID_CREDENTIALS':
+        return 'Identifiants incorrects. Vérifiez vos informations.'
+      case 'EMAIL_NOT_VERIFIED':
+        return 'Veuillez confirmer votre email avant de vous connecter.'
+      case 'USER_BLOCKED':
+        return 'Votre compte a été bloqué. Contactez le support.'
+      case 'BRUTE_FORCE_DETECTED':
+      case 'TOO_MANY_REQUESTS':
+        return 'Trop de tentatives. Veuillez réessayer plus tard.'
+      default:
+        return fallback || 'Impossible de se connecter pour le moment.'
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -44,13 +65,47 @@ export default function LoginPage() {
     if (error) {
       reset()
     }
+    if (formError) {
+      setFormError(null)
+    }
+    if (verificationNotice) {
+      setVerificationNotice(null)
+    }
+    if (verificationLink) {
+      setVerificationLink(null)
+    }
   }
 
+  const isValidEmail = (value: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(value)
+  }
+
+  const isValidUsername = (value: string): boolean => {
+    // Username doit contenir entre 3 et 20 caractères alphanumériques et underscores
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/
+    return usernameRegex.test(value)
+  }
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {}
 
-    if (!formData.username.trim()) {
-      errors.username = 'Le nom d\'utilisateur est requis'
+    const usernameValue = formData.username.trim()
+
+    if (!usernameValue) {
+      errors.username = 'Le nom d\'utilisateur ou l\'email est requis'
+    } else {
+      // Vérifier si c'est un email ou un username
+      const isEmail = isValidEmail(usernameValue)
+      const isUsername = isValidUsername(usernameValue)
+
+      if (!isEmail && !isUsername) {
+        // Si ça ressemble à un email mais est invalide
+        if (usernameValue.includes('@')) {
+          errors.username = 'Adresse email invalide. Vérifiez le format (ex: nom@exemple.com)'
+        } else {
+          errors.username = 'Nom d\'utilisateur invalide. Il doit contenir entre 3 et 20 caractères (lettres, chiffres et underscores uniquement)'
+        }
+      }
     }
 
     if (!formData.password.trim()) {
@@ -66,54 +121,107 @@ export default function LoginPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
 
-    // Validate form
     if (!validateForm()) {
       return
     }
 
     const result = await withLoading(async () => {
       try {
-        const response = await axios.post('/api/auth/login', {
-          username: formData.username.trim(),
+        // Essayer better-auth d'abord
+        const authStore = useAuthStore.getState()
+        const loginResult = await authStore.signIn({
+          email: formData.username.trim(),
           password: formData.password
         })
 
-        if (!response.data?.user || !response.data?.accessToken) {
-          throw new Error('Réponse serveur invalide')
+        if (loginResult.success) {
+          return { user: authStore.user, accessToken: authStore.token }
+        } else {
+          if (loginResult.code === 'EMAIL_NOT_VERIFIED') {
+            setVerificationEmail(formData.username.trim())
+            setVerificationNotice(loginResult.error || 'Veuillez confirmer votre email avant de vous connecter')
+            setFormError(null)
+            return null
+          }
+          setFormError(getLoginErrorMessage(loginResult.code, loginResult.error))
+          return null
         }
-
-        return response.data
-      } catch (err) {
-        // Handle specific errors
-        handleError(err)
-        throw err
+      } catch (err: any) {
+        const errorMessage = err?.message || ''
+        
+        if (
+          errorMessage.includes('Identifiants') ||
+          errorMessage.includes('invalide') ||
+          errorMessage.toLowerCase().includes('invalid')
+        ) {
+          const message = getLoginErrorMessage('INVALID_CREDENTIALS')
+          setFormError(message)
+          return null
+        } else {
+          setFormError(getLoginErrorMessage(undefined, errorMessage))
+          return null
+        }
       }
     })
 
     if (result) {
-      // Store tokens
-      login({
-        user: result.user,
-        token: result.accessToken
-      })
-
-      // Store refresh token if available
-      if (result.refreshToken) {
-        localStorage.setItem('refreshToken', result.refreshToken)
-      }
-
-      toast.success(`Bienvenue ${result.user.username} !`, {
+      const fallbackName = formData.username.trim()
+      const displayName =
+        result.user?.username ||
+        (result.user as any)?.name ||
+        fallbackName ||
+        '!'
+      toast.success(`Bienvenue ${displayName} !`, {
         icon: '👋',
         duration: 3000
       })
-
       router.push('/chat')
+    }
+  }
+
+  const handleResendVerification = async () => {
+    if (!verificationEmail) {
+      toast.error('Veuillez saisir votre email')
+      return
+    }
+
+    try {
+      setSendingVerification(true)
+      const response = await fetch('/api/auth/send-verification-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: verificationEmail, callbackURL: '/login' })
+      })
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data?.message || 'Impossible d\'envoyer l\'email')
+      }
+
+      const data = await response.json().catch(() => ({}))
+      if (data?.delivered === false) {
+        const warningMessage = data?.warning || 'Email de verification non envoye.'
+        setVerificationNotice(warningMessage)
+        setVerificationLink(data?.verificationUrl || null)
+        toast.error(warningMessage)
+        return
+      }
+
+      setVerificationLink(data?.verificationUrl || null)
+      toast.success('Email de verification envoye. Consultez votre boite mail.')
+    } catch (err: any) {
+      toast.error(err?.message || 'Erreur lors de l\'envoi de l\'email')
+    } finally {
+      setSendingVerification(false)
     }
   }
 
   const handleRetry = () => {
     reset()
     setFieldErrors({})
+    setFormError(null)
+    setVerificationNotice(null)
+    setVerificationLink(null)
   }
 
   return (
@@ -139,8 +247,44 @@ export default function LoginPage() {
             <p className="text-gray-600 dark:text-gray-300">Connectez-vous à votre compte</p>
           </div>
 
-          {/* Error Alert */}
-          {error && (
+          {/* Error Alert - Ne pas afficher pour les erreurs d'identifiants invalides (gérées par fieldErrors) */}
+          {formError && (
+            <ErrorAlert
+              message={formError}
+              severity="error"
+              onClose={() => setFormError(null)}
+              onRetry={handleRetry}
+              className="mb-6"
+            />
+          )}
+
+          {verificationNotice && (
+            <ErrorAlert
+              message={verificationNotice}
+              severity="info"
+              title="Email non verifie"
+              onClose={() => setVerificationNotice(null)}
+              onRetry={sendingVerification ? undefined : handleResendVerification}
+              retryText={sendingVerification ? 'Envoi en cours...' : 'Renvoyer l\'email'}
+              className="mb-6"
+            />
+          )}
+
+          {verificationLink && (
+            <div className="mb-6 rounded-xl border border-blue-200 dark:border-blue-700/60 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-sm text-blue-800 dark:text-blue-200">
+              <div className="font-semibold mb-1">Lien de verification</div>
+              <a
+                href={verificationLink}
+                target="_blank"
+                rel="noreferrer"
+                className="break-all text-blue-700 dark:text-blue-300 underline"
+              >
+                Ouvrir le lien
+              </a>
+            </div>
+          )}
+
+          {error && !formError && errorInfo?.code !== 'INVALID_CREDENTIALS' && !error.includes('Identifiants invalides') && (
             <ErrorAlert
               message={error}
               severity={isRateLimitError(errorInfo) ? 'warning' : 'error'}
@@ -149,6 +293,8 @@ export default function LoginPage() {
                   ? 'Compte temporairement bloqué'
                   : errorInfo?.code === 'TOO_MANY_REQUESTS'
                   ? 'Trop de tentatives'
+                  : errorInfo?.code === 'USER_BLOCKED'
+                  ? 'Compte bloqué'
                   : 'Erreur de connexion'
               }
               onClose={handleRetry}

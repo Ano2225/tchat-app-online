@@ -1,16 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
-const adminAuth = require('../middleware/adminAuth');
-const adminRateLimit = require('../middleware/rateLimitAdmin');
-const adminLogger = require('../middleware/adminLogger');
+const { adminMiddleware } = require('../middleware/authBetter');
 const { csrfProtection } = require('../middleware/csrf');
 
-// Middleware d'authentification, rate limiting, CSRF et logging admin
-router.use(adminRateLimit);
-router.use(adminAuth);
+// Middleware d'authentification admin et CSRF
+router.use(adminMiddleware);
 router.use(csrfProtection);
-router.use(adminLogger);
 
 // Statistiques
 router.get('/stats', adminController.getStats);

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/authBetter');
 const { csrfProtection } = require('../middleware/csrf');
 const MessageController = require('../controllers/MessageController');
 

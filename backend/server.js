@@ -5,16 +5,6 @@ const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const connectDB = require('./config/database');
-const authRoutes = require('./routes/auth');
-const tokenRoutes = require('./routes/token');
-const messageRoutes = require('./routes/message');
-const channelRoutes = require('./routes/channel');
-const userRoutes = require('./routes/user');
-const uploadRoutes = require('./routes/upload');
-const adminRoutes = require('./routes/admin');
-const reportRoutes = require('./routes/reports');
-const aiAgentRoutes = require('./routes/aiAgents');
-const socketHandlers = require('./socket/socketHandlers');
 const { generalLimiter } = require('./middleware/rateLimiter');
 const { sanitizeInput } = require('./middleware/validation');
 const {
@@ -26,8 +16,6 @@ const {
   sanitizeInput: securitySanitize,
   secureLogger
 } = require('./middleware/security');
-const { bruteForceProtection } = require('./middleware/bruteForce');
-const { socketAuthMiddleware } = require('./middleware/socketAuth');
 const helmet = require('helmet');
 
 
@@ -37,27 +25,12 @@ class ChatServer {
     this.server = http.createServer(this.app);
     this.io = socketIo(this.server, {
       cors: {
-        origin: process.env.FRONTEND_URL || "http://localhost:3000",
-        methods: ["GET", "POST"],
-        credentials: true
-      },
-      // Add authentication middleware
-      allowRequest: (req, callback) => {
-        // Allow health checks without auth
-        if (req._query && req._query.healthcheck) {
-          return callback(null, true);
-        }
-        callback(null, true);
+        origin: ["http://localhost:3000"],
+        methods: ["GET", "POST"]
       }
     });
 
-    // Apply Socket.IO authentication middleware
-    this.io.use(socketAuthMiddleware);
-
     this.initMiddlewares();
-    this.connectDatabase();
-    this.setupRoutes();
-    this.initSocketEvents();
   }
 
   initMiddlewares() {
@@ -77,10 +50,6 @@ class ChatServer {
     // Rate limiting et protection
     this.app.use(globalRateLimit);
     this.app.use(secureLogger);
-
-    // Brute force protection (ACTIVÉ)
-    this.app.use('/api/auth/login', bruteForceProtection);
-    this.app.use('/api/auth/register', bruteForceProtection);
   }
 
   async connectDatabase() {
@@ -90,31 +59,9 @@ class ChatServer {
 
   async initializeDatabase() {
     try {
-      const bcrypt = require('bcryptjs');
-      const User = require('./models/User');
       const Channel = require('./models/Channel');
       const Game = require('./models/Game');
       const { getRandomQuestion } = require('./services/questionService');
-
-      // Créer admin par défaut
-      const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-      const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-      
-      const existingAdmin = await User.findOne({ username: adminUsername });
-      if (!existingAdmin) {
-        const hashedPassword = await bcrypt.hash(adminPassword, 10);
-        await User.create({
-          username: adminUsername,
-          email: process.env.ADMIN_EMAIL || 'admin@babichat.com',
-          password: hashedPassword,
-          role: 'admin',
-          age: 25,
-          sexe: 'autre',
-          ville: 'Admin City',
-          isAnonymous: false
-        });
-        console.log('✅ Admin créé:', adminUsername);
-      }
 
       // Créer canaux par défaut
       const defaultChannels = ['General', 'Music', 'Sport'];
@@ -145,8 +92,16 @@ class ChatServer {
   }
 
   setupRoutes() {
-    this.app.use('/api/auth', authRateLimit, authRoutes);
-    this.app.use('/api/token', tokenRoutes);
+    const authBetterRoutes = require('./routes/authBetter');
+    const messageRoutes = require('./routes/message');
+    const channelRoutes = require('./routes/channel');
+    const userRoutes = require('./routes/user');
+    const uploadRoutes = require('./routes/upload');
+    const adminRoutes = require('./routes/admin');
+    const reportRoutes = require('./routes/reports');
+    const aiAgentRoutes = require('./routes/aiAgents');
+
+    this.app.use('/api/auth', authRateLimit, authBetterRoutes);
     this.app.use('/api/messages', messageRateLimit, messageRoutes(this.io));
     this.app.use('/api/channels', channelRoutes);
     this.app.use('/api/user', userRoutes);
@@ -159,18 +114,11 @@ class ChatServer {
     this.app.get('/health', (req, res) => {
       res.json({ status: 'OK', timestamp: new Date().toISOString() });
     });
-
-    // Global error handler
-    this.app.use((err, req, res, next) => {
-      console.error('[ERROR]', err.stack);
-      res.status(err.status || 500).json({
-        error: err.message || 'Internal server error',
-        code: err.code || 'INTERNAL_ERROR'
-      });
-    });
   }
 
   initSocketEvents() {
+    const socketHandlers = require('./socket/socketHandlers');
+
     this.io.on('connection', (socket) => {
       socketHandlers(this.io, socket)
     });
@@ -178,6 +126,10 @@ class ChatServer {
   }
 
   async start() {
+    await this.connectDatabase();
+    this.setupRoutes();
+    this.initSocketEvents();
+
     const PORT = process.env.PORT || 8000;
     this.server.listen(PORT, () => {
       console.log(`🚀 Serveur démarré sur le port ${PORT}`);
@@ -186,4 +138,7 @@ class ChatServer {
 }
 
 const chatServer = new ChatServer();
-chatServer.start();
+chatServer.start().catch((error) => {
+  console.error('❌ Échec du démarrage du serveur:', error);
+  process.exit(1);
+});

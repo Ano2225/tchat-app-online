@@ -98,21 +98,31 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      const response = await axios.post('/api/auth/register', {
-        username: formData.username.trim(),
+      const { useAuthStore } = await import('@/store/authStore')
+      const authStore = useAuthStore.getState()
+      
+      const result = await authStore.signUp({
         email: formData.email.trim(),
         password: formData.password,
+        username: formData.username.trim(),
         age: parseInt(formData.age),
         sexe: formData.sexe,
         ville: formData.ville.trim()
       })
 
-      if (response.status === 201) {
-        toast.success('Inscription réussie! Vous pouvez maintenant vous connecter.')
-        router.push('/login')
+      if (result.success) {
+        if (result.verificationRequired) {
+          toast.success('Inscription réussie. Vérifiez votre email pour activer votre compte.')
+          router.push('/login')
+          return
+        }
+
+        toast.success('Inscription réussie! Bienvenue sur BabiChat!')
+        router.push('/chat')
+      } else {
+        toast.error(result.error || 'Erreur lors de l\'inscription')
       }
     } catch (err: any) {
-      // Use centralized error handler
       const { handleError } = await import('@/utils/errorHandler')
       handleError(err, 'Erreur lors de l\'inscription')
     } finally {

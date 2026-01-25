@@ -26,47 +26,113 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, onSelect
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [loading, setLoading] = useState(true)
 
+  // Debug: log when component mounts/updates
   useEffect(() => {
-    if (!socket) return
+    console.log('[UsersOnline] Component mounted/updated, socket:', !!socket, 'currentRoom:', currentRoom)
+  }, [socket, currentRoom])
+
+  useEffect(() => {
+    if (!socket) {
+      console.log('[UsersOnline] No socket available')
+      return
+    }
+
+    console.log('[UsersOnline] Setting up listeners, socket connected:', socket.connected, 'currentRoom:', currentRoom)
 
     const handleGlobalUsersUpdate = (usernames: any[] | { room: string; users: any[] }) => {
-      const list = Array.isArray(usernames) ? usernames : (usernames.users || [])
-      const onlineUsers = list.map((item, index) => {
-        if (typeof item === 'string') {
-          return { id: `user_${index}`, username: item, isOnline: true }
-        }
-        return {
-          id: `user_${index}`,
-          username: item.username,
-          avatarUrl: item.avatarUrl || undefined,
-          sexe: item.sexe || 'autre',
-          isOnline: true
-        }
-      })
-      setUsers(onlineUsers)
-      setLoading(false)
+      console.log('[UsersOnline] Received update_user_list:', usernames)
+      // Only use global users if we're not in a specific room
+      if (!currentRoom) {
+        const list = Array.isArray(usernames) ? usernames : (usernames.users || [])
+        const onlineUsers = list.map((item, index) => {
+          if (typeof item === 'string') {
+            return { id: `user_${index}`, username: item, isOnline: true }
+          }
+          return {
+            id: item.username || `user_${index}`,
+            username: item.username,
+            avatarUrl: item.avatarUrl || undefined,
+            sexe: item.sexe || 'autre',
+            isOnline: true
+          }
+        })
+        setUsers(onlineUsers)
+        setLoading(false)
+      }
     }
 
     const handleRoomUsersUpdate = (payload: any[] | { room: string; users: any[] }) => {
-      const list = Array.isArray(payload) ? payload : (payload.users || [])
-      const onlineUsers = list.map((item, index) => {
-        if (typeof item === 'string') return { id: `room_user_${index}`, username: item, isOnline: true }
-        return { id: `room_user_${index}`, username: item.username, avatarUrl: item.avatarUrl || undefined, sexe: item.sexe || 'autre', isOnline: true }
-      })
-      setUsers(onlineUsers)
-      setLoading(false)
+      console.log('[UsersOnline] Received update_room_user_list:', payload)
+      // Only process if it's for the current room (or if no room is specified, accept it)
+      const payloadRoom = typeof payload === 'object' && !Array.isArray(payload) ? payload.room : null
+      if (!currentRoom || !payloadRoom || payloadRoom === currentRoom) {
+        const list = Array.isArray(payload) ? payload : (payload.users || [])
+        const onlineUsers = list.map((item, index) => {
+          if (typeof item === 'string') {
+            return { id: `room_user_${index}`, username: item, isOnline: true }
+          }
+          return { 
+            id: item.username || `room_user_${index}`,
+            username: item.username, 
+            avatarUrl: item.avatarUrl || undefined, 
+            sexe: item.sexe || 'autre', 
+            isOnline: true 
+          }
+        })
+        console.log('[UsersOnline] Setting users:', onlineUsers.length, 'users')
+        setUsers(onlineUsers)
+        setLoading(false)
+      }
     }
 
     socket.on('update_user_list', handleGlobalUsersUpdate)
     socket.on('update_room_user_list', handleRoomUsersUpdate)
+    
+    console.log('[UsersOnline] Event listeners registered')
 
-    if (currentRoom) {
-      socket.emit('get_room_users', currentRoom)
+    // Request room users if in a room (with delay to ensure user is registered and room is joined)
+    const requestUsers = () => {
+      if (currentRoom && socket.connected) {
+        console.log('[UsersOnline] Emitting get_room_users for:', currentRoom)
+        socket.emit('get_room_users', currentRoom)
+      } else {
+        console.log('[UsersOnline] Cannot request users - connected:', socket.connected, 'room:', currentRoom)
+      }
     }
-
+    
+    const tryRequestUsersWithDelay = () => {
+      // Delay to ensure user is registered on socket and room is joined
+      setTimeout(requestUsers, 1500)
+    }
+    
+    // Handle socket connect event
+    const handleConnect = () => {
+      console.log('[UsersOnline] Socket connected event received')
+      if (currentRoom) {
+        tryRequestUsersWithDelay()
+      }
+    }
+    
+    if (currentRoom) {
+      console.log('[UsersOnline] Setting up for room:', currentRoom, 'socket connected:', socket.connected)
+      
+      // Always listen for connect events
+      socket.on('connect', handleConnect)
+      
+      // If already connected, try to request users
+      if (socket.connected) {
+        tryRequestUsersWithDelay()
+      }
+    } else {
+      // If no room, we'll rely on update_user_list
+      console.log('[UsersOnline] No current room, waiting for update_user_list')
+      setLoading(false)
+    }
+    
     return () => {
       socket.off('update_user_list', handleGlobalUsersUpdate)
       socket.off('update_room_user_list', handleRoomUsersUpdate)
+      socket.off('connect', handleConnect)
     }
   }, [socket, currentRoom])
 

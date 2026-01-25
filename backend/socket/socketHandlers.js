@@ -82,59 +82,70 @@ module.exports = (io, socket) => {
 
   // --- Send a message to a public room ---
   socket.on('send_message', async (messageData) => {
-    const { sender, content, room, replyTo, isAIChat } = messageData;
-    if (room && sender && content) {
-      try {
-        const user = await User.findById(sender.id);
-        if (!user) return;
+    const { sender, content, room, replyTo, replyPreview, isAIChat } = messageData;
+    if (!room || !content) return;
 
-        // S'assurer que socket a les bonnes infos utilisateur
+    try {
+      const senderId = socket.userId || sender?.id;
+      if (!senderId) return;
+
+      if (!socket.userId || !socket.username || !socket.userMeta) {
+        const user = await User.findById(senderId).select('username avatarUrl sexe');
+        if (!user) return;
         socket.userId = user._id.toString();
         socket.username = user.username;
-        
-        // Toujours sauvegarder et afficher le message d'abord
-        const newMessage = await Message.create({
-          sender: user._id,
-          content,
-          room,
-          replyTo: replyTo || null,
-        });
-
-        await newMessage.populate('sender', 'username avatarUrl sexe');
-        if (replyTo) {
-          await newMessage.populate('replyTo');
-        }
-
-        const enrichedMessage = {
-          _id: newMessage._id.toString(),
-          sender: {
-            _id: newMessage.sender._id.toString(),
-            username: newMessage.sender.username,
-            avatarUrl: newMessage.sender.avatarUrl,
-          },
-          content: newMessage.content,
-          room: newMessage.room,
-          replyTo: newMessage.replyTo,
-          reactions: newMessage.reactions || [],
-          createdAt: newMessage.createdAt,
+        socket.userMeta = {
+          avatarUrl: user.avatarUrl || null,
+          sexe: user.sexe || null
         };
-
-        // Envoyer le message immédiatement
-        io.to(room).emit('receive_message', enrichedMessage);
-        
-
-        
-        // Puis traiter la logique de jeu si nécessaire
-        if (room === 'Game') {
-          // Traiter la réponse de jeu de manière asynchrone
-          setImmediate(() => {
-            gameHandlers.handleChatMessage(socket, { room, message: content }, io);
-          });
-        }
-
-      } catch (error) {
-        console.error('Error processing message:', error);
       }
+
+      // Vérifier que le socket est dans la room, sinon le rejoindre
+      const rooms = Array.from(socket.rooms || []);
+      if (!rooms.includes(room)) {
+        socket.join(room);
+        socket.currentRoom = room;
+        console.log(`User ${socket.username} auto-joined room ${room} to send message`);
+      }
+
+      const newMessage = new Message({
+        sender: socket.userId,
+        content,
+        room,
+        replyTo: replyTo || null
+      });
+
+      const enrichedMessage = {
+        _id: newMessage._id.toString(),
+        sender: {
+          _id: socket.userId,
+          username: socket.username,
+          avatarUrl: socket.userMeta?.avatarUrl || undefined,
+          sexe: socket.userMeta?.sexe || undefined
+        },
+        content,
+        room,
+        replyTo: replyPreview || null,
+        reactions: [],
+        createdAt: newMessage.createdAt
+      };
+
+      // Envoyer le message immédiatement
+      io.to(room).emit('receive_message', enrichedMessage);
+
+      // Sauvegarder en arrière-plan pour réduire la latence
+      newMessage.save().catch((error) => {
+        console.error('Error saving message:', error);
+      });
+
+      // Puis traiter la logique de jeu si nécessaire
+      if (room === 'Game') {
+        setImmediate(() => {
+          gameHandlers.handleChatMessage(socket, { room, message: content }, io);
+        });
+      }
+    } catch (error) {
+      console.error('Error processing message:', error);
     }
   });
 
@@ -226,6 +237,10 @@ module.exports = (io, socket) => {
         currentUserId = user._id.toString();
         socket.userId = currentUserId;
         socket.username = username;
+        socket.userMeta = {
+          avatarUrl: user.avatarUrl || null,
+          sexe: user.sexe || null
+        };
         
         // GESTION DES SESSIONS UNIQUES POUR UTILISATEURS AUTHENTIFIÉS
         // Si l'utilisateur est déjà connecté, déconnecter les anciennes sessions
@@ -284,6 +299,10 @@ module.exports = (io, socket) => {
         currentUserId = `anon_${socket.id}`;
         socket.userId = currentUserId;
         socket.username = username;
+        socket.userMeta = {
+          avatarUrl: null,
+          sexe: null
+        };
       }
 
       // Créer une nouvelle entrée pour ce socket uniquement
@@ -332,6 +351,12 @@ module.exports = (io, socket) => {
         
         currentUserId = user._id.toString();
         userIdToUsername.set(currentUserId, newUsername);
+        socket.userId = currentUserId;
+        socket.username = newUsername;
+        socket.userMeta = {
+          avatarUrl: user.avatarUrl || null,
+          sexe: user.sexe || null
+        };
         
         // Mettre le nouvel utilisateur en ligne
         await User.findByIdAndUpdate(user._id, { 
@@ -542,10 +567,52 @@ module.exports = (io, socket) => {
 
   // --- Provide a way for clients to request current users in a room ---
   socket.on('get_room_users', (room) => {
+    console.log(`[get_room_users] Request received for room: ${room}, socket: ${socket.id}, username: ${socket.username}`);
     try {
-      if (!room || typeof room !== 'string') return;
-      const usernames = getUsernamesInRoom(room);
-      socket.emit('update_room_user_list', { room, users: usernames });
+      if (!room || typeof room !== 'string') {
+        console.log('[get_room_users] Invalid room parameter');
+        return;
+      }
+      // Use the same enriched logic as emitRoomUserList
+      (async () => {
+        try {
+          const usersInfo = [];
+          const roomInfo = io.sockets.adapter.rooms.get(room);
+          console.log(`[get_room_users] Room info exists: ${!!roomInfo}, size: ${roomInfo ? roomInfo.size : 0}`);
+          if (!roomInfo) {
+            console.log(`[get_room_users] No users in room ${room}, emitting empty list`);
+            socket.emit('update_room_user_list', { room, users: [] });
+            return;
+          }
+
+          for (const socketId of roomInfo) {
+            const s = io.sockets.sockets.get(socketId);
+            if (s && s.username) {
+              let avatarUrl = null;
+              let sexe = null;
+              if (s.userId) {
+                try {
+                  const dbUser = await User.findById(s.userId).select('avatarUrl sexe');
+                  if (dbUser && dbUser.avatarUrl) avatarUrl = dbUser.avatarUrl;
+                  if (dbUser && dbUser.sexe) sexe = dbUser.sexe;
+                } catch (err) {
+                  // ignore per-user DB errors
+                }
+              }
+              usersInfo.push({ username: s.username, avatarUrl, sexe: sexe || 'autre' });
+              console.log(`[get_room_users] Added user: ${s.username} to room ${room}`);
+            }
+          }
+
+          console.log(`[get_room_users] Emitting ${usersInfo.length} users for room ${room}`);
+          socket.emit('update_room_user_list', { room, users: usersInfo });
+        } catch (err) {
+          console.error('Error building room user info for get_room_users:', err);
+          // Fallback to plain usernames
+          const usernames = getUsernamesInRoom(room);
+          socket.emit('update_room_user_list', { room, users: usernames });
+        }
+      })();
     } catch (err) {
       console.error('Error in get_room_users:', err);
     }
@@ -642,14 +709,18 @@ module.exports = (io, socket) => {
 
   // Emit users present in a specific room to members of that room
   function emitRoomUserList(room) {
+    console.log(`[emitRoomUserList] Called for room: ${room}`);
     try {
       const usernames = getUsernamesInRoom(room);
+      console.log(`[emitRoomUserList] Found ${usernames.length} usernames in room ${room}`);
       // Build enriched user info (username + avatarUrl) for members of the room
       (async () => {
         try {
           const usersInfo = [];
           const roomInfo = io.sockets.adapter.rooms.get(room);
+          console.log(`[emitRoomUserList] Room ${room} has ${roomInfo ? roomInfo.size : 0} sockets`);
           if (!roomInfo) {
+            console.log(`[emitRoomUserList] No room info, emitting empty list`);
             io.to(room).emit('update_room_user_list', { room, users: [] });
             return;
           }
@@ -672,6 +743,7 @@ module.exports = (io, socket) => {
             }
           }
 
+          console.log(`[emitRoomUserList] Emitting ${usersInfo.length} users to room ${room}`);
           io.to(room).emit('update_room_user_list', { room, users: usersInfo });
         } catch (err) {
           console.error('Error building room user info for', room, err);

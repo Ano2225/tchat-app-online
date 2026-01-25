@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const reportController = require('../controllers/reportController');
-const auth = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/authBetter');
 const { csrfProtection } = require('../middleware/csrf');
 
 // Middleware d'authentification pour toutes les routes
-router.use(auth);
+router.use(authMiddleware);
 
 // Signaler un utilisateur
 router.post('/report', csrfProtection, reportController.reportUser);

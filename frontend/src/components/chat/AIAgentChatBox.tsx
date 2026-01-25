@@ -1,10 +1,20 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
+import type { EmojiClickData } from 'emoji-picker-react'
 import { useAuthStore } from '@/store/authStore'
-import EmojiPicker, { EmojiClickData } from 'emoji-picker-react'
 import QuickReactions from './QuickReactions'
 import AIStatus from './AIStatus'
+
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-72 h-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-center text-sm text-gray-500">
+      Chargement des emojis...
+    </div>
+  )
+})
 
 interface AIAgent {
   id: string
@@ -34,6 +44,9 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const emojiPickerRef = useRef<HTMLDivElement>(null)
+  const emojiButtonRef = useRef<HTMLButtonElement>(null)
+  const emojiPrefetched = useRef(false)
 
   const getSuggestions = () => {
     const suggestions = {
@@ -54,6 +67,16 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose 
   }
 
   useEffect(() => {
+    if (!emojiPrefetched.current) {
+      emojiPrefetched.current = true
+      const idleCallback = (window as any).requestIdleCallback
+      if (typeof idleCallback === 'function') {
+        idleCallback(() => import('emoji-picker-react'))
+      } else {
+        setTimeout(() => import('emoji-picker-react'), 800)
+      }
+    }
+
     const welcomeMessages = {
       alex: "Salut mec ! 😎 Moi c'est Alex, ton nouveau pote virtuel ! On peut parler de tout - gaming, films, musique, ou juste de la vie ! Tu fais quoi de beau ?",
       emma: "Coucou ! 🌸 Je suis Emma, ta nouvelle copine virtuelle ! J'adore écouter et partager. Raconte-moi un peu qui tu es !"
@@ -68,6 +91,33 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose 
     }
     setMessages([welcomeMessage])
   }, [agent])
+
+  useEffect(() => {
+    if (!showEmojiPicker) return
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node
+      if (emojiPickerRef.current?.contains(target)) return
+      if (emojiButtonRef.current?.contains(target)) return
+      setShowEmojiPicker(false)
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowEmojiPicker(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('touchstart', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('touchstart', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showEmojiPicker])
 
   const scrollToBottom = () => {
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
@@ -129,7 +179,10 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose 
     <div className="relative">
       {/* Emoji Picker */}
       {showEmojiPicker && (
-        <div className="fixed bottom-20 right-6 z-[9999]">
+        <div
+          ref={emojiPickerRef}
+          className="fixed bottom-20 right-6 z-[9999] transition-all duration-150 ease-out"
+        >
           <EmojiPicker onEmojiClick={(emojiObject: EmojiClickData) => {
             setNewMessage(prev => prev + emojiObject.emoji)
             setShowEmojiPicker(false)
@@ -262,10 +315,12 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose 
           <button
             type="button"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            ref={emojiButtonRef}
             className={`bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 text-gray-600 dark:text-gray-300 p-3 rounded-xl text-lg hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-600 dark:hover:to-gray-500 transition-all duration-200 hover:scale-110 active:scale-95 shadow-md ${
               showEmojiPicker ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''
             }`}
             title="Ajouter un emoji"
+            aria-expanded={showEmojiPicker}
           >
             😊
           </button>

@@ -26,8 +26,8 @@ export interface ErrorResponse {
  */
 const ERROR_MESSAGES: Record<string, string> = {
   // Authentication errors
-  'INVALID_CREDENTIALS': 'Nom d\'utilisateur ou mot de passe incorrect',
-  'USER_NOT_FOUND': 'Utilisateur introuvable',
+  'INVALID_CREDENTIALS': 'Les identifiants sont incorrects. Vérifiez votre nom d\'utilisateur/email et votre mot de passe',
+  'USER_NOT_FOUND': 'Aucun compte trouvé avec ces identifiants',
   'USER_BLOCKED': 'Votre compte a été bloqué. Contactez le support.',
   'ACCOUNT_DISABLED': 'Votre compte a été désactivé',
   'EMAIL_ALREADY_EXISTS': 'Cet email est déjà utilisé',
@@ -76,17 +76,43 @@ export function extractErrorInfo(error: unknown): ApiError {
     const statusCode = axiosError.response?.status;
     const data = axiosError.response?.data;
     
-    // Extract error code
-    const code = data?.code || 
-                 (statusCode === 401 ? 'INVALID_CREDENTIALS' : 
-                  statusCode === 403 ? 'ACCESS_DENIED' :
-                  statusCode === 404 ? 'NOT_FOUND' :
-                  statusCode === 429 ? 'TOO_MANY_REQUESTS' :
-                  statusCode === 500 ? 'SERVER_ERROR' :
-                  'UNKNOWN_ERROR');
-    
-    // Extract message
+    // Extract message first to check for specific error patterns
     const message = data?.error || data?.message || axiosError.message;
+    
+    // Extract error code - check message content for specific patterns
+    let code = data?.code;
+    
+    if (!code) {
+      // Check message content for specific error patterns (case insensitive)
+      const messageLower = typeof message === 'string' ? message.toLowerCase() : '';
+      
+      if (messageLower.includes('identifiants invalides')) {
+        code = 'INVALID_CREDENTIALS';
+      } else if (messageLower.includes('bloqué') || messageLower.includes('bloque')) {
+        code = 'USER_BLOCKED';
+      } else if (statusCode === 401) {
+        code = 'INVALID_CREDENTIALS';
+      } else if (statusCode === 403) {
+        code = messageLower.includes('bloqué') || messageLower.includes('bloque') 
+          ? 'USER_BLOCKED' 
+          : 'ACCESS_DENIED';
+      } else if (statusCode === 404) {
+        code = 'NOT_FOUND';
+      } else if (statusCode === 429) {
+        code = 'TOO_MANY_REQUESTS';
+      } else if (statusCode === 500) {
+        code = 'SERVER_ERROR';
+      } else if (statusCode === 400) {
+        // Pour les erreurs 400, on essaie de détecter le type
+        if (messageLower.includes('identifiants')) {
+          code = 'INVALID_CREDENTIALS';
+        } else {
+          code = 'VALIDATION_ERROR';
+        }
+      } else {
+        code = 'UNKNOWN_ERROR';
+      }
+    }
     
     // Handle validation errors
     if (data?.errors && Array.isArray(data.errors)) {

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
 import axiosInstance from '@/utils/axiosInstance';
 import BlockedUsers from '@/components/settings/BlockedUsers';
@@ -46,7 +47,12 @@ const PasswordChangeSection: React.FC = () => {
       setPasswords({currentPassword: '', newPassword: '', confirmPassword: ''});
       setShowPasswordForm(false);
     } catch (error: any) {
-      setMessage({type: 'error', text: error.response?.data?.message || 'Erreur lors du changement'});
+      const errorCode = error?.response?.data?.code;
+      if (errorCode === 'INVALID_PASSWORD') {
+        setMessage({type: 'error', text: 'Mot de passe actuel incorrect'});
+      } else {
+        setMessage({type: 'error', text: error.response?.data?.message || 'Erreur lors du changement'});
+      }
     } finally {
       setLoading(false);
     }
@@ -136,6 +142,12 @@ const PasswordChangeSection: React.FC = () => {
           >
             {loading ? 'Modification...' : 'Modifier le mot de passe'}
           </button>
+          <div className="text-xs text-center text-gray-500 dark:text-gray-400">
+            Mot de passe oublié ?{' '}
+            <Link href="/forgot-password" className="text-blue-600 hover:underline">
+              Réinitialiser
+            </Link>
+          </div>
         </form>
       )}
     </div>
@@ -279,7 +291,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
                   <div>
                     <span className="text-gray-500 dark:text-gray-400">Sexe</span>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {user?.sexe === 'male' ? 'Homme' : user?.sexe === 'female' ? 'Femme' : user?.sexe === 'autre' ? 'Autre' : 'Non renseigné'}
+                      {user?.sexe === 'homme' || user?.sexe === 'male'
+                        ? 'Homme'
+                        : user?.sexe === 'femme' || user?.sexe === 'female'
+                        ? 'Femme'
+                        : user?.sexe === 'autre'
+                        ? 'Autre'
+                        : 'Non renseigné'}
                     </p>
                   </div>
                   <div className="col-span-2">

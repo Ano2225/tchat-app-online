@@ -44,6 +44,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const user = useAuthStore((state) => state.user);
+  const isGameChannel = currentRoom === 'Game';
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -51,11 +52,6 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
 
   useEffect(() => {
     if (!currentRoom) return;
-
-    // Si c'est le canal Game, rejoindre automatiquement le canal de jeu
-    if (currentRoom === 'Game' && socket) {
-      socket.emit('join_game_channel', currentRoom);
-    }
 
     setLoading(true);
     axiosInstance
@@ -68,6 +64,10 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
         console.error('Failed to load messages:', error?.message || 'Unknown error');
         setLoading(false);
       });
+
+    if (!isGameChannel) {
+      setGameMessages([]);
+    }
   }, [currentRoom, socket]);
 
   useEffect(() => {
@@ -99,10 +99,12 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     };
 
     const handleGameMessage = (gameMessage: any) => {
-      setGameMessages((prev) => [...prev, { ...gameMessage, id: Date.now() }]);
+      if (!isGameChannel) return;
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      setGameMessages((prev) => [...prev, { ...gameMessage, id }].slice(-3));
       setTimeout(() => {
-        setGameMessages((prev) => prev.filter(msg => msg.id !== gameMessage.id));
-      }, 10000); // Supprimer après 10 secondes
+        setGameMessages((prev) => prev.filter(msg => msg.id !== id));
+      }, 8000); // Supprimer après 8 secondes
     };
 
     socket.on('receive_message', handleReceiveMessage);
@@ -114,7 +116,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
       socket.off('reaction_updated', handleReactionUpdated);
       socket.off('game_message', handleGameMessage);
     };
-  }, [socket]);
+  }, [socket, isGameChannel]);
 
   useEffect(() => {
     scrollToBottom();
@@ -159,15 +161,6 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
 
 
   
-  // Nettoyer la connexion au canal de jeu lors du changement de canal
-  useEffect(() => {
-    return () => {
-      if (currentRoom === 'Game' && socket) {
-        socket.emit('leave_game_channel', currentRoom);
-      }
-    };
-  }, [currentRoom, socket]);
-
   const [showScrollButton, setShowScrollButton] = React.useState(false);
   const messagesContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -181,6 +174,10 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
   const scrollToBottomSmooth = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  const channelSubtitle = isGameChannel
+    ? 'Quiz en temps réel • Répondez directement dans le chat'
+    : `Canal public • ${messages.length} message${messages.length > 1 ? 's' : ''}`;
 
   return (
     <div 
@@ -198,7 +195,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
             <div className="min-w-0 flex-1">
               <h3 className="font-bold text-gray-900 dark:text-white text-base md:text-lg truncate">{currentRoom}</h3>
               <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 truncate">
-                Canal public • {messages.length} message{messages.length > 1 ? 's' : ''}
+                {channelSubtitle}
               </p>
             </div>
           </div>
@@ -210,11 +207,11 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
       </div>
 
       {/* Messages de jeu */}
-      {gameMessages.map((gameMsg) => (
-        <GameMessage 
-          key={gameMsg.id} 
-          content={gameMsg.content || gameMsg.data?.content || ''} 
-          timestamp={gameMsg.timestamp || new Date().toISOString()} 
+      {isGameChannel && gameMessages.map((gameMsg) => (
+        <GameMessage
+          key={gameMsg.id}
+          content={gameMsg.content || gameMsg.data?.content || ''}
+          timestamp={gameMsg.timestamp || new Date().toISOString()}
         />
       ))}
 
@@ -237,8 +234,11 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
       ) : messages.length > 0 ? (
         <div className="space-y-2 md:space-y-3">
           {messages.map((msg) => {
-            const isOwnMessage = msg.sender._id === user?.id;
-            const isQuizBot = msg.sender.username === 'Quiz Bot';
+            const sender = msg.sender || null;
+            const senderId = sender?._id;
+            const senderName = sender?.username || 'Utilisateur inconnu';
+            const isOwnMessage = !!senderId && senderId === user?.id;
+            const isQuizBot = senderName === 'Quiz Bot';
 
             // Afficher les messages du Quiz Bot avec le composant GameMessage
             if (isQuizBot) {
@@ -262,19 +262,19 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center space-x-2">
                         <GenderAvatar
-                          username={msg.sender?.username || 'Utilisateur inconnu'}
-                          avatarUrl={msg.sender?.avatarUrl}
-                          sexe={msg.sender?.sexe}
+                          username={senderName}
+                          avatarUrl={sender?.avatarUrl}
+                          sexe={sender?.sexe}
                           size="md"
                           onClick={() => {
                             console.log('Clicked on user:', msg.sender);
-                            if (msg.sender._id !== user?.id) {
-                              setSelectedUser(msg.sender);
+                            if (sender && senderId !== user?.id) {
+                              setSelectedUser(sender);
                             }
                           }}
                         />
                         <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {msg.sender?.username || 'Utilisateur inconnu'}
+                          {senderName}
                         </span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           {formatTime(msg.createdAt)}
@@ -295,13 +295,13 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                   )}
 
                   {/* Message de réponse */}
-                  {msg.replyTo && msg.replyTo.sender && (
+                  {msg.replyTo && (
                     <div className="mb-2 ml-10 p-2 bg-gray-100 dark:bg-white/10 rounded-lg border-l-2 border-primary-500">
                       <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                        Réponse à {msg.replyTo.sender.username}
+                        Réponse à {msg.replyTo.sender?.username || 'Utilisateur inconnu'}
                       </div>
                       <div className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                        {msg.replyTo.content}
+                        {msg.replyTo.content || 'Message original indisponible'}
                       </div>
                     </div>
                   )}
@@ -332,7 +332,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                         reactions={msg.reactions || []}
                         onAddReaction={handleAddReaction}
                         isOwn={isOwnMessage}
-                        senderId={msg.sender._id}
+                        senderId={senderId}
                       />
                     </div>
                   </div>

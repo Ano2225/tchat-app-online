@@ -1,6 +1,5 @@
 'use client';
 
-import { useGame } from '@/hooks/useGame';
 import { useGameStore } from '@/store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, memo, useMemo } from 'react';
@@ -16,7 +15,6 @@ export default function GamePanel({ channel, socket }: GamePanelProps) {
   
   if (channel !== 'Game') return null;
   
-  const gameData = useGame(channel, socket);
   const { isActive, currentQuestion, leaderboard, timeLeft, winner, explanation, hasAnswered, isLoading } = useGameStore();
   
   useEffect(() => {

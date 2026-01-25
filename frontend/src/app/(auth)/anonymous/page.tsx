@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/authStore'
 import axiosInstance from '@/utils/axiosInstance'
 import ThemeToggle from '@/components/ui/ThemeToggle'
+import { handleError } from '@/utils/errorHandler'
 import { User, Theater, Calendar, Info } from 'lucide-react'
 
 export default function AnonymousPage() {
@@ -54,25 +55,25 @@ export default function AnonymousPage() {
     setLoading(true)
 
     try {
-      const response = await axiosInstance.post('/auth/anonymous', {
-        username: formData.username.trim(),
-        age,
-        sexe: formData.sexe
-      })
+      const authStore = useAuthStore.getState()
+      const result = await authStore.signInAnonymous(formData.username.trim())
 
-      if (!response.data?.user || !response.data?.token) {
-        throw new Error('Réponse serveur invalide')
+      if (result.success) {
+        // Mettre à jour les infos supplémentaires si nécessaire
+        if (formData.age || formData.sexe) {
+          await authStore.updateUser({
+            age: parseInt(formData.age),
+            sexe: formData.sexe || 'autre'
+          })
+        }
+        
+        toast.success('Connexion anonyme réussie!')
+        router.push('/chat')
+      } else {
+        toast.error(result.error || 'Erreur de connexion')
       }
-
-      login({
-        user: response.data.user,
-        token: response.data.token
-      })
-
-      toast.success('Connexion anonyme réussie!')
-      router.push('/chat')
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Erreur de connexion')
+      handleError(err)
     } finally {
       setLoading(false)
     }

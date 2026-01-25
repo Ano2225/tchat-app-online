@@ -44,7 +44,8 @@ router.post('/chat', async (req, res) => {
     res.json({ response });
   } catch (error) {
     console.error('Error in AI chat:', error);
-    res.status(500).json({ error: 'Erreur lors de la génération de la réponse' });
+    // Retourner l'erreur réelle au lieu d'un message générique
+    res.status(500).json({ error: error.message || 'Erreur lors de la génération de la réponse' });
   }
 });
 

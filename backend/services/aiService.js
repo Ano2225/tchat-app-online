@@ -100,7 +100,8 @@ class AIService {
       }
     } catch (error) {
       console.error(`❌ ${this.aiProvider} Error:`, error.message);
-      return this.getPresetResponse(message, agent, context);
+      // Ne pas utiliser de fallback, lancer l'erreur pour que l'API renvoie une erreur
+      throw new Error(`Erreur lors de la génération de la réponse: ${error.message}`);
     }
   }
 

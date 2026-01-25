@@ -9,7 +9,7 @@ import ChatChannel from '@/components/chat/ChatChannel';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ChatInput from '@/components/chat/ChatInput';
 import GamePanel from '@/components/Game/GamePanel';
-import axiosInstance from '@/utils/axiosInstance';
+import { useGame } from '@/hooks/useGame';
 import UsersOnline from '@/components/chat/UsersOnline';
 import AIAgentChatBox from '@/components/chat/AIAgentChatBox';
 import toast from 'react-hot-toast';
@@ -35,7 +35,6 @@ const ChatPage = () => {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [currentRoom, setCurrentRoom] = useState('General');
   const [socket, setSocket] = useState<Socket | null>(null);
   const [registeredOnSocket, setRegisteredOnSocket] = useState(false);
@@ -44,18 +43,8 @@ const ChatPage = () => {
 
   const previousRoomRef = useRef<string | null>(null);
 
+  useGame(currentRoom, socket);
 
-
-  const loadRoomMessages = async () => {
-    if (!currentRoom) return;
-    
-    try {
-      const res = await axiosInstance.get(`/messages/${currentRoom}`);
-      setMessages(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   useEffect(() => {
     const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000');
@@ -110,21 +99,21 @@ const ChatPage = () => {
   useEffect(() => {
     if (!socket) return;
     
-    const handleReceive = (msg: Message) => {
-      console.log('[CHAT] Message received:', msg);
-      if (msg.room === currentRoom) {
-        setMessages((prev) => [...prev, msg]);
-      }
-    };
-    
     const handleGameError = (error: any) => {
-      // Only log if error has meaningful content
-      if (error && typeof error === 'object' && error.message) {
-        console.error('[GAME] Game error:', error.message);
+      const message =
+        error && typeof error === 'object' && typeof error.message === 'string'
+          ? error.message
+          : null;
+
+      if (message && currentRoom === 'Game') {
+        toast.error(message, { duration: 4500, position: 'top-center' });
+      }
+
+      if (message) {
+        console.error('[GAME] Game error:', message);
       } else if (error && Object.keys(error).length > 0) {
         console.error('[GAME] Game error:', error);
       }
-      // Silently ignore empty error objects
     };
     
     const handleUsernameTaken = (data: any) => {
@@ -160,14 +149,12 @@ const ChatPage = () => {
       }, 3000);
     };
     
-    socket.on('receive_message', handleReceive);
     socket.on('game_error', handleGameError);
     socket.on('username_taken', handleUsernameTaken);
     socket.on('username_reserved', handleUsernameReserved);
     socket.on('session_replaced', handleSessionReplaced);
     
     return () => {
-      socket.off('receive_message', handleReceive);
       socket.off('game_error', handleGameError);
       socket.off('username_taken', handleUsernameTaken);
       socket.off('username_reserved', handleUsernameReserved);
@@ -187,10 +174,9 @@ const ChatPage = () => {
       }
     }
   }, [socket, registeredOnSocket, user?.username]);
-  useEffect(() => { loadRoomMessages(); }, [currentRoom]);
+  // Messages are handled within ChatMessage.
 
   const handleJoinRoom = (roomName: string) => {
-    setMessages([]);
     setCurrentRoom(roomName);
     setReplyTo(null); // Clear reply when changing rooms
   };

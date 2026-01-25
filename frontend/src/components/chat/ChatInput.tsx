@@ -1,9 +1,19 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import dynamic from 'next/dynamic'
+import type { EmojiClickData } from 'emoji-picker-react'
 import { useAuthStore } from '@/store/authStore'
 import { Socket } from 'socket.io-client'
-import EmojiPicker, { EmojiClickData } from 'emoji-picker-react'
+
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-72 h-40 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-center text-sm text-gray-500">
+      Chargement des emojis...
+    </div>
+  )
+})
 
 interface Message {
   _id: string;
@@ -32,12 +42,65 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [isTyping, setIsTyping] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const emojiPickerRef = useRef<HTMLDivElement>(null)
+  const emojiButtonRef = useRef<HTMLButtonElement>(null)
+  const emojiPrefetched = useRef(false)
   const user = useAuthStore((state) => state.user)
+
+  useEffect(() => {
+    if (emojiPrefetched.current) return
+    emojiPrefetched.current = true
+
+    const idleCallback = (window as any).requestIdleCallback
+    if (typeof idleCallback === 'function') {
+      idleCallback(() => import('emoji-picker-react'))
+    } else {
+      setTimeout(() => import('emoji-picker-react'), 800)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!showEmojiPicker) return
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node
+      if (emojiPickerRef.current?.contains(target)) return
+      if (emojiButtonRef.current?.contains(target)) return
+      setShowEmojiPicker(false)
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowEmojiPicker(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('touchstart', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('touchstart', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showEmojiPicker])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!message.trim() || !socket || !user) return
+
+    const replyPreview = replyTo
+      ? {
+          _id: replyTo._id,
+          content: replyTo.content,
+          sender: {
+            _id: replyTo.sender?._id,
+            username: replyTo.sender?.username
+          }
+        }
+      : null
 
     const messageData = {
       content: message.trim(),
@@ -46,7 +109,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
         id: user.id,
         username: user.username
       },
-      replyTo: replyTo?._id || null
+      replyTo: replyTo?._id || null,
+      replyPreview
     }
 
     socket.emit('send_message', messageData)
@@ -67,12 +131,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMessage(e.target.value)
     
+    if (!user) return // Protection contre user null
+    
     if (!isTyping && e.target.value.length > 0) {
       setIsTyping(true)
-      socket?.emit('typing_start', { room: currentRoom, username: user?.username })
+      socket?.emit('typing_start', { room: currentRoom, username: user.username })
     } else if (isTyping && e.target.value.length === 0) {
       setIsTyping(false)
-      socket?.emit('typing_stop', { room: currentRoom, username: user?.username })
+      socket?.emit('typing_stop', { room: currentRoom, username: user.username })
     }
   }
 
@@ -121,7 +187,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
       )}
       
       {showEmojiPicker && (
-        <div className="absolute bottom-full right-4 mb-2 z-10">
+        <div
+          ref={emojiPickerRef}
+          className="absolute bottom-full right-4 mb-2 z-10 transition-all duration-150 ease-out"
+        >
           <EmojiPicker onEmojiClick={onEmojiClick} />
         </div>
       )}
@@ -153,9 +222,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
           <button
             type="button"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            ref={emojiButtonRef}
             className="p-2 md:p-3 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 border border-gray-300 dark:border-white/20 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
             title="Ajouter un emoji"
             aria-label="Add emoji"
+            aria-expanded={showEmojiPicker}
           >
             <span className="text-base md:text-lg">😊</span>
           </button>
