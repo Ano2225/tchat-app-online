@@ -55,10 +55,10 @@ const GenderAvatar: React.FC<GenderAvatarProps> = ({
       className={`${sizeClasses[size]} rounded-full shadow-sm ${clickable ? 'hover:scale-110 cursor-pointer' : ''} transition-transform overflow-hidden border-2 ${getGenderBorderColor(sexe)} ${className}`}
       title={clickable ? "Voir le profil" : undefined}
     >
-      {avatarUrl && avatarUrl.startsWith('http') ? (
+      {avatarUrl && /^https?:\/\//.test(avatarUrl) ? (
         <div className="relative w-full h-full">
-          <img 
-            src={avatarUrl.replace(/&amp;/g, '&').replace(/&#x2F;/g, '/')} 
+          <img
+            src={avatarUrl}
             alt={username}
             className="w-full h-full object-cover"
           />

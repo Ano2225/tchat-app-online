@@ -237,8 +237,8 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ 
-        user: state.user, 
+      partialize: (state) => ({
+        user: state.user,
         token: state.token,
         session: state.session,
         isAnonymous: state.isAnonymous
@@ -246,3 +246,13 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 )
+
+// Cross-tab logout sync: when another tab clears auth, reset this tab too
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'auth-storage' && !e.newValue) {
+      useAuthStore.setState({ user: null, token: null, session: null, isAnonymous: false });
+    }
+  });
+}
+

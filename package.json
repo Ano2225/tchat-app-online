@@ -8,7 +8,8 @@
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
     "init-channels": "node backend/scripts/initChannels.js",
-    "init-db": "node backend/scripts/initDatabase.js"
+    "init-db": "node backend/scripts/initDatabase.js",
+    "init-admin": "node backend/scripts/initAdmin.js"
   },
   "keywords": [],
   "author": "Arouna Ouattara",

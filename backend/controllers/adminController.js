@@ -87,11 +87,11 @@ class AdminController {
       
       newUsers.forEach(user => {
         activities.push({
-          _id: user._id,
+          _id: String(user._id),
           type: 'user_join',
           description: `${user.username} ${user.isAnonymous ? '(anonyme)' : ''} a rejoint la plateforme`,
           timestamp: user.createdAt,
-          userId: user._id,
+          userId: String(user._id),
           username: user.username
         });
       });
@@ -104,31 +104,33 @@ class AdminController {
         .limit(5);
         
       recentMessages.forEach(message => {
-        const location = message.recipient ? `en privé à ${message.recipient.username}` : `dans ${message.room || 'général'}`;
+        if (!message.sender) return; // skip if sender was deleted
+        const location = message.recipient ? `en privé à ${message.recipient?.username ?? '?'}` : `dans ${message.room || 'général'}`;
         activities.push({
-          _id: message._id,
+          _id: String(message._id),
           type: 'message_sent',
           description: `${message.sender.username} a envoyé un message ${location}`,
           timestamp: message.createdAt,
-          userId: message.sender._id,
+          userId: String(message.sender._id),
           username: message.sender.username
         });
       });
-      
+
       // Signalements récents
       const recentReports = await Report.find()
         .populate('reportedBy', 'username')
         .populate('reportedUser', 'username')
         .sort({ createdAt: -1 })
         .limit(3);
-        
+
       recentReports.forEach(report => {
+        if (!report.reportedBy || !report.reportedUser) return; // skip if user was deleted
         activities.push({
-          _id: report._id,
+          _id: String(report._id),
           type: 'user_reported',
           description: `${report.reportedBy.username} a signalé ${report.reportedUser.username}`,
           timestamp: report.createdAt,
-          userId: report.reportedBy._id,
+          userId: String(report.reportedBy._id),
           username: report.reportedBy.username
         });
       });
@@ -163,12 +165,13 @@ class AdminController {
       const limit = parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
       const search = req.query.search || '';
-      
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
       // Construire le filtre de recherche
-      const filter = search ? {
+      const filter = escapedSearch ? {
         $or: [
-          { username: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } }
+          { username: { $regex: escapedSearch, $options: 'i' } },
+          { email: { $regex: escapedSearch, $options: 'i' } }
         ]
       } : {};
       
@@ -245,68 +248,84 @@ class AdminController {
   async getConnectionAnalytics(req, res) {
     try {
       const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      
-      // Analytics par jour (7 derniers jours)
-      const dailyStats = await User.aggregate([
-        {
-          $match: {
-            lastSeen: { $gte: last7Days }
-          }
-        },
-        {
-          $group: {
-            _id: {
-              day: { $dayOfWeek: "$lastSeen" },
-              date: { $dateToString: { format: "%Y-%m-%d", date: "$lastSeen" } }
-            },
-            count: { $sum: 1 }
-          }
-        },
-        { $sort: { "_id.date": 1 } }
-      ]);
-      
-      // Analytics par heure (dernières 24h)
       const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      const hourlyStats = await User.aggregate([
-        {
-          $match: {
-            lastSeen: { $gte: last24h }
-          }
-        },
-        {
-          $group: {
-            _id: { $hour: "$lastSeen" },
-            count: { $sum: 1 }
-          }
-        },
-        { $sort: { "_id": 1 } }
+
+      const [dailyStats, hourlyStats, dailyNewUsers, dailyMessages] = await Promise.all([
+        // Utilisateurs actifs par jour (7 derniers jours)
+        User.aggregate([
+          { $match: { lastSeen: { $gte: last7Days } } },
+          {
+            $group: {
+              _id: {
+                day: { $dayOfWeek: '$lastSeen' },
+                date: { $dateToString: { format: '%Y-%m-%d', date: '$lastSeen' } }
+              },
+              count: { $sum: 1 }
+            }
+          },
+          { $sort: { '_id.date': 1 } }
+        ]),
+        // Connexions par heure (24h)
+        User.aggregate([
+          { $match: { lastSeen: { $gte: last24h } } },
+          { $group: { _id: { $hour: '$lastSeen' }, count: { $sum: 1 } } },
+          { $sort: { '_id': 1 } }
+        ]),
+        // Nouveaux inscrits par jour (7 derniers jours)
+        User.aggregate([
+          { $match: { createdAt: { $gte: last7Days }, isAnonymous: false } },
+          {
+            $group: {
+              _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+              count: { $sum: 1 }
+            }
+          },
+          { $sort: { '_id': 1 } }
+        ]),
+        // Messages envoyés par jour (7 derniers jours)
+        Message.aggregate([
+          { $match: { createdAt: { $gte: last7Days } } },
+          {
+            $group: {
+              _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+              count: { $sum: 1 }
+            }
+          },
+          { $sort: { '_id': 1 } }
+        ])
       ]);
-      
+
       // Heure de pic
-      const peakHour = hourlyStats.reduce((max, current) => 
-        current.count > max.count ? current : max, 
-        { _id: 0, count: 0 }
-      );
-      
+      const peakHour = hourlyStats.reduce((max, cur) => cur.count > max.count ? cur : max, { _id: 0, count: 0 });
+
       // Jour de pic
-      const peakDay = dailyStats.reduce((max, current) => 
-        current.count > max.count ? current : max,
-        { _id: { day: 0 }, count: 0 }
-      );
-      
+      const peakDay = dailyStats.reduce((max, cur) => cur.count > max.count ? cur : max, { _id: { day: 0 }, count: 0 });
+
       const dayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-      
+
+      // Construire une timeline commune sur 7 jours
+      const timeline = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+        const dateStr = d.toISOString().slice(0, 10);
+        const label = d.toLocaleDateString('fr-FR', { weekday: 'short', month: 'short', day: 'numeric' });
+        const activeEntry = dailyStats.find(s => s._id.date === dateStr);
+        const newUsersEntry = dailyNewUsers.find(s => s._id === dateStr);
+        const messagesEntry = dailyMessages.find(s => s._id === dateStr);
+        timeline.push({
+          date: dateStr,
+          label,
+          activeUsers: activeEntry?.count ?? 0,
+          newUsers: newUsersEntry?.count ?? 0,
+          messages: messagesEntry?.count ?? 0,
+        });
+      }
+
       res.json({
-        dailyStats,
+        timeline,
         hourlyStats,
-        peakHour: {
-          hour: peakHour._id,
-          count: peakHour.count
-        },
-        peakDay: {
-          day: dayNames[peakDay._id.day - 1] || 'N/A',
-          count: peakDay.count
-        }
+        peakHour: { hour: peakHour._id, count: peakHour.count },
+        peakDay: { day: dayNames[peakDay._id.day - 1] || 'N/A', count: peakDay.count }
       });
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', error: error.message });

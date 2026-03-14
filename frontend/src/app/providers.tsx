@@ -66,6 +66,17 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     handleNavigation();
   }, [hasHydrated, token, isAnonymous, pathname, router]);
 
+  // M7: Cross-tab logout sync — if another tab clears auth storage, log out this tab too
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'auth-storage' && event.newValue === null) {
+        useAuthStore.setState({ user: null, token: null, session: null, isAnonymous: false });
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   if (isLoading || !hasHydrated || !themeReady) {
     return (
       <div className="flex h-screen items-center justify-center bg-white dark:bg-gray-900">

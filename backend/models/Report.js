@@ -1,13 +1,14 @@
 const mongoose = require('mongoose');
 
 const ReportSchema = new mongoose.Schema({
+  // String refs — better-auth stores user _id as 32-char hex string, not ObjectId
   reportedBy: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     ref: 'User',
     required: true
   },
   reportedUser: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     ref: 'User',
     required: true
   },

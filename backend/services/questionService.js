@@ -264,15 +264,17 @@ const getRandomQuestion = async () => {
     
     const categoryInfo = TRIVIA_CATEGORIES[randomCategoryId] || { name: 'Divers', emoji: '❓' };
     
+    // React JSX auto-escapes all content — no need to HTML-encode here;
+    // sanitizeText was double-encoding entities (&#x2F; etc.) causing display bugs.
     const formattedQuestion = {
-      question: sanitizeText(questionFr),
-      options: shuffledOptions.map(sanitizeText),
+      question: questionFr,
+      options: shuffledOptions,
       correctAnswer: correctIndex,
-      correctAnswerText: sanitizeText(correctAnswerFr),
-      category: sanitizeText(categoryInfo.name),
+      correctAnswerText: correctAnswerFr,
+      category: categoryInfo.name,
       categoryEmoji: categoryInfo.emoji,
-      difficulty: sanitizeText(translateDifficulty(triviaQuestion.difficulty)),
-      explanation: sanitizeText(`La bonne réponse était : ${correctAnswerFr}`),
+      difficulty: translateDifficulty(triviaQuestion.difficulty),
+      explanation: `La bonne réponse était : ${correctAnswerFr}`,
       source: 'Open Trivia DB + DeepL'
     };
     

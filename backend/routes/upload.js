@@ -19,14 +19,36 @@ if (!cloudinaryConfig.cloud_name || !cloudinaryConfig.api_key || !cloudinaryConf
 // Configure Cloudinary
 cloudinary.config(cloudinaryConfig);
 
+// Magic bytes signatures for allowed file types
+const MAGIC_BYTES = [
+    { bytes: [0xFF, 0xD8, 0xFF], mime: 'image/jpeg' },
+    { bytes: [0x89, 0x50, 0x4E, 0x47], mime: 'image/png' },
+    { bytes: [0x47, 0x49, 0x46, 0x38], mime: 'image/gif' },
+    { bytes: [0x42, 0x4D], mime: 'image/bmp' },
+    { bytes: [0x52, 0x49, 0x46, 0x46], mime: 'image/webp' }, // RIFF header (WebP)
+    { bytes: [0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70], mime: 'video/mp4' }, // ftyp MP4
+    { bytes: [0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70], mime: 'video/mp4' },
+];
+
+function detectMimeFromBuffer(buffer) {
+    for (const sig of MAGIC_BYTES) {
+        if (buffer.length >= sig.bytes.length) {
+            const match = sig.bytes.every((byte, i) => buffer[i] === byte);
+            if (match) return sig.mime;
+        }
+    }
+    return null;
+}
+
 // Configure Multer pour le stockage en mémoire
 const storage = multer.memoryStorage();
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, 
+    limits: { fileSize: 10 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/x-flv', 'video/webm']; 
-        if (!allowedTypes.includes(file.mimetype)) {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp', 'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/x-flv', 'video/webm'];
+        const allowedExtensions = /\.(jpe?g|png|gif|bmp|webp|mp4|mpeg|mov|avi|flv|webm)$/i;
+        if (!allowedTypes.includes(file.mimetype) || !allowedExtensions.test(file.originalname)) {
             return cb(new Error(`Type de fichier non supporté: ${file.mimetype}. Types acceptés: ${allowedTypes.join(', ')}`));
         }
         cb(null, true);
@@ -44,6 +66,13 @@ router.post('/', csrfProtection, authMiddleware, upload.single('media'), async (
         }
 
         const fileBuffer = req.file.buffer;
+
+        // Server-side magic bytes validation (defeats MIME spoofing)
+        const detectedMime = detectMimeFromBuffer(fileBuffer);
+        const isImage = req.file.mimetype.startsWith('image/');
+        if (isImage && detectedMime === null) {
+            return res.status(415).json({ error: 'Le contenu du fichier ne correspond pas à un format image valide.' });
+        }
 
         const uploadPromise = new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream({

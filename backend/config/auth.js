@@ -39,13 +39,15 @@ const auth = betterAuth({
   plugins: [bearer()],
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true,
+    requireEmailVerification: false, // MVP: désactivé — les utilisateurs se connectent immédiatement
   },
-  emailVerification: {
-    sendOnSignUp: true,
-    sendOnSignIn: true,
-    sendVerificationEmail,
-  },
+  // MVP: email verification désactivée pour réduire la friction et supprimer la dépendance SMTP
+  // Réactiver avec requireEmailVerification: true + les 3 lignes ci-dessous quand SMTP est prêt.
+  // emailVerification: {
+  //   sendOnSignUp: true,
+  //   sendOnSignIn: true,
+  //   sendVerificationEmail,
+  // },
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,

@@ -35,15 +35,22 @@ const processQueue = (error: Error | null, token: string | null = null) => {
   failedQueue = [];
 };
 
-// Request interceptor - Add auth token
+// Request interceptor - Add auth token (read from Zustand store, not directly from localStorage)
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token');
-    
+    // Lazy import to avoid circular dependency; falls back gracefully if store unavailable
+    let token: string | null = null;
+    try {
+      const { useAuthStore } = require('@/store/authStore');
+      token = useAuthStore.getState().token;
+    } catch {
+      // store not available in SSR context
+    }
+
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error) => {
@@ -82,40 +89,45 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('refreshToken');
+      // Read refresh token from Zustand store, not directly from localStorage
+      let refreshToken: string | null = null;
+      try {
+        const { useAuthStore } = require('@/store/authStore');
+        refreshToken = useAuthStore.getState().session?.token ?? null;
+      } catch {
+        // store not available
+      }
 
       if (!refreshToken) {
-        // No refresh token available - logout
         handleLogout();
         return Promise.reject(error);
       }
 
       try {
-        // Attempt to refresh token
         const response = await axios.post(`${API_URL}/token/refresh`, {
           refreshToken,
         });
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
+        const { accessToken } = response.data;
 
-        // Store new tokens
-        localStorage.setItem('token', accessToken);
-        if (newRefreshToken) {
-          localStorage.setItem('refreshToken', newRefreshToken);
+        // Update token in Zustand store
+        try {
+          const { useAuthStore } = require('@/store/authStore');
+          const state = useAuthStore.getState();
+          if (state.session) {
+            useAuthStore.setState({ token: accessToken, session: { ...state.session, token: accessToken } });
+          }
+        } catch {
+          // store not available
         }
 
-        // Update authorization header
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         }
 
-        // Process queued requests
         processQueue(null, accessToken);
-
-        // Retry original request
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        // Refresh failed - logout
         processQueue(refreshError as Error, null);
         handleLogout();
         return Promise.reject(refreshError);
@@ -129,13 +141,16 @@ axiosInstance.interceptors.response.use(
 );
 
 /**
- * Handle logout - clear tokens and redirect
+ * Handle logout - clear Zustand store and redirect
  */
 function handleLogout() {
-  localStorage.removeItem('token');
-  localStorage.removeItem('refreshToken');
-  
-  // Redirect to login if not already there
+  try {
+    const { useAuthStore } = require('@/store/authStore');
+    useAuthStore.getState().logout();
+  } catch {
+    // store not available in SSR
+  }
+
   if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
     window.location.href = '/login';
   }

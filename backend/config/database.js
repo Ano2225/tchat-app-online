@@ -1,9 +1,23 @@
+const path = require('path');
 const mongoose = require('mongoose');
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env'), override: true });
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    const rawUri = process.env.MONGODB_URI || '';
+    if (rawUri) {
+      const maskedUri = rawUri.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:****@');
+      console.log(`MongoDB URI: ${maskedUri}`);
+    } else {
+      console.warn('MongoDB URI non défini');
+    }
+    await mongoose.connect(process.env.MONGODB_URI, {
+      maxPoolSize: 50,          // support 100 concurrent users with headroom
+      minPoolSize: 5,           // keep 5 connections warm
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 10000,
+    });
     console.log('MongoDB connecté avec succès');
     await removeLegacyUserIdIndex();
   } catch (error) {

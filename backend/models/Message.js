@@ -5,10 +5,16 @@ const MessageSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  // String refs — better-auth stores user _id as 32-char hex string, not ObjectId
   sender: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     ref: 'User',
     required: true,
+  },
+  // Denormalized username — preserved even if the account is later deleted
+  senderUsername: {
+    type: String,
+    default: null,
   },
   room: { // For public chats
     type: String,
@@ -16,7 +22,7 @@ const MessageSchema = new mongoose.Schema({
     default: null,
   },
   recipient: { // For private chats
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     ref: 'User',
   },
   media_url: { // URL to the uploaded image or video
@@ -25,7 +31,7 @@ const MessageSchema = new mongoose.Schema({
   media_type: { // e.g., 'image', 'video'
     type: String,
   },
-  replyTo: { // Message being replied to
+  replyTo: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Message',
     default: null,
@@ -71,4 +77,10 @@ const MessageSchema = new mongoose.Schema({
     content: String
   }]
 });
+
+// Indexes for frequently queried fields
+MessageSchema.index({ room: 1, createdAt: -1 });                      // public channel queries
+MessageSchema.index({ sender: 1, recipient: 1, createdAt: -1 });      // private message history
+MessageSchema.index({ recipient: 1, read: 1 });                       // unread count queries
+
 module.exports = mongoose.model('Message', MessageSchema);

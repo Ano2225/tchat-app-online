@@ -11,8 +11,11 @@ import ChatInput from '@/components/chat/ChatInput';
 import GamePanel from '@/components/Game/GamePanel';
 import { useGame } from '@/hooks/useGame';
 import UsersOnline from '@/components/chat/UsersOnline';
-import AIAgentChatBox from '@/components/chat/AIAgentChatBox';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import toast from 'react-hot-toast';
+import PrivateChatBox from '@/components/chat/PrivateChatBox';
+import GenderAvatar from '@/components/ui/GenderAvatar';
+import axiosInstance from '@/utils/axiosInstance';
 
 interface Message {
   _id: string;
@@ -39,12 +42,33 @@ const ChatPage = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [registeredOnSocket, setRegisteredOnSocket] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
-  const [selectedAgent, setSelectedAgent] = useState<any>(null);
+  const [unreadMap, setUnreadMap] = useState<Record<string, { count: number; sender: { _id: string; username: string; avatarUrl?: string; sexe?: string } }>>({});
+  const [notifChatUser, setNotifChatUser] = useState<{ _id: string; username: string; avatarUrl?: string; sexe?: string } | null>(null);
+  const openChatUserIdRef = React.useRef<string | null>(null);
 
   const previousRoomRef = useRef<string | null>(null);
 
-  useGame(currentRoom, socket);
+  // Load initial unread counts from DB on mount
+  useEffect(() => {
+    if (!user?.id) return;
+    axiosInstance.get(`/messages/conversations/${user.id}`)
+      .then(res => {
+        const data: Array<{
+          user: { _id: string; username: string; avatarUrl?: string; sexe?: string };
+          unreadCount: number;
+        }> = Array.isArray(res.data) ? res.data : [];
+        const initial: typeof unreadMap = {};
+        for (const conv of data) {
+          if (conv.unreadCount > 0 && conv.user?._id) {
+            initial[conv.user._id] = { count: conv.unreadCount, sender: conv.user };
+          }
+        }
+        setUnreadMap(initial);
+      })
+      .catch(() => {});
+  }, [user?.id]);
 
+  useGame(currentRoom, socket);
 
   useEffect(() => {
     const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000');
@@ -99,24 +123,7 @@ const ChatPage = () => {
   useEffect(() => {
     if (!socket) return;
     
-    const handleGameError = (error: any) => {
-      const message =
-        error && typeof error === 'object' && typeof error.message === 'string'
-          ? error.message
-          : null;
-
-      if (message && currentRoom === 'Game') {
-        toast.error(message, { duration: 4500, position: 'top-center' });
-      }
-
-      if (message) {
-        console.error('[GAME] Game error:', message);
-      } else if (error && Object.keys(error).length > 0) {
-        console.error('[GAME] Game error:', error);
-      }
-    };
-    
-    const handleUsernameTaken = (data: any) => {
+    const handleUsernameTaken = (data: { message?: string }) => {
       toast.error(data.message || 'Ce nom d\'utilisateur est déjà utilisé.', {
         duration: 6000,
         position: 'top-center',
@@ -127,7 +134,7 @@ const ChatPage = () => {
       }, 2000);
     };
     
-    const handleUsernameReserved = (data: any) => {
+    const handleUsernameReserved = (data: { message?: string }) => {
       toast.error(data.message || 'Ce nom d\'utilisateur appartient à un compte enregistré.', {
         duration: 6000,
         position: 'top-center',
@@ -138,7 +145,7 @@ const ChatPage = () => {
       }, 2000);
     };
     
-    const handleSessionReplaced = (data: any) => {
+    const handleSessionReplaced = (data: { message?: string }) => {
       toast.error(data.message || 'Votre session a été remplacée par une nouvelle connexion.', {
         duration: 5000,
         position: 'top-center',
@@ -149,16 +156,59 @@ const ChatPage = () => {
       }, 3000);
     };
     
-    socket.on('game_error', handleGameError);
+    const handleNewPrivateMessage = (data: { message: { _id: string; content?: string; sender: { _id: string; username: string; avatarUrl?: string; sexe?: string }; createdAt: string }; senderId: string }) => {
+      const sender = data.message.sender;
+      const senderId = sender._id;
+      // If chatbox is open for this sender, let the chatbox handle it (via new_private_message fallback)
+      if (openChatUserIdRef.current === senderId) return;
+      // Update unread count
+      setUnreadMap(prev => ({
+        ...prev,
+        [senderId]: {
+          count: (prev[senderId]?.count || 0) + 1,
+          sender,
+        },
+      }));
+      // Show notification toast
+      toast((t) => (
+        <div className="flex items-center gap-3 min-w-0">
+          <GenderAvatar
+            username={sender.username}
+            avatarUrl={sender.avatarUrl}
+            sexe={sender.sexe}
+            size="sm"
+            className="w-9 h-9 flex-shrink-0"
+            clickable={false}
+          />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm text-gray-900 truncate">{sender.username}</p>
+            <p className="text-xs text-gray-500 truncate">{data.message.content || '📎 Image'}</p>
+          </div>
+          <button
+            onClick={() => {
+              toast.dismiss(t.id);
+              openChatUserIdRef.current = senderId;
+              setNotifChatUser(sender);
+              setUnreadMap(prev => { const m = { ...prev }; delete m[senderId]; return m; });
+            }}
+            className="flex-shrink-0 bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-blue-600 transition-colors font-medium"
+          >
+            Répondre
+          </button>
+        </div>
+      ), { duration: 6000, position: 'bottom-right' });
+    };
+
     socket.on('username_taken', handleUsernameTaken);
     socket.on('username_reserved', handleUsernameReserved);
     socket.on('session_replaced', handleSessionReplaced);
-    
+    socket.on('new_private_message', handleNewPrivateMessage);
+
     return () => {
-      socket.off('game_error', handleGameError);
       socket.off('username_taken', handleUsernameTaken);
       socket.off('username_reserved', handleUsernameReserved);
       socket.off('session_replaced', handleSessionReplaced);
+      socket.off('new_private_message', handleNewPrivateMessage);
     };
   }, [socket, currentRoom]);
   // Note: we emit `user_connected` on socket 'connect' and gate joins until registration.
@@ -189,12 +239,25 @@ const ChatPage = () => {
     setReplyTo(null);
   };
 
+  const handleOpenChatFromSidebar = (user: { _id: string; username: string; avatarUrl?: string; sexe?: string }) => {
+    openChatUserIdRef.current = user._id;
+    setNotifChatUser(user);
+    setUnreadMap(prev => { const m = { ...prev }; delete m[user._id]; return m; });
+  };
+
   const [showChannels, setShowChannels] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
+  const [showGame, setShowGame] = useState(false);
+  const isGameRoom = currentRoom === 'Game';
 
   return (
     <div className="h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-neutral-dark dark:via-gray-900 dark:to-neutral-dark">
-      <ChatHeader users={user || undefined} socket={socket} />
+      <ChatHeader
+        users={user || undefined}
+        socket={socket}
+        totalUnread={Object.values(unreadMap).reduce((s, e) => s + e.count, 0)}
+        onOpenChat={handleOpenChatFromSidebar}
+      />
       
       {/* Mobile: Floating action buttons */}
       <div className="md:hidden fixed bottom-20 left-4 z-30 flex flex-col gap-2">
@@ -216,7 +279,33 @@ const ChatPage = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
         </button>
+        {isGameRoom && (
+          <button
+            onClick={() => setShowGame(!showGame)}
+            className="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform"
+            aria-label="Toggle game panel"
+          >
+            🧠
+          </button>
+        )}
       </div>
+
+      {/* Mobile Game Panel overlay */}
+      {isGameRoom && showGame && (
+        <div className="lg:hidden fixed inset-0 z-50 flex items-end">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowGame(false)} />
+          <div className="relative w-full max-h-[80vh] bg-white dark:bg-gray-900 rounded-t-2xl overflow-y-auto p-4 space-y-3">
+            <button
+              onClick={() => setShowGame(false)}
+              className="absolute top-3 right-4 text-gray-500 hover:text-gray-800 dark:hover:text-white text-2xl"
+              aria-label="Fermer le quiz"
+            >
+              ×
+            </button>
+            <GamePanel channel={currentRoom} socket={socket} />
+          </div>
+        </div>
+      )}
 
       <div className="flex h-[calc(100vh-80px)] gap-2 p-2 relative">
         {/* Channel Sidebar - Desktop always visible, Mobile overlay */}
@@ -244,21 +333,22 @@ const ChatPage = () => {
         <div className="flex flex-1 gap-2 min-w-0">
           {/* Chat principal */}
           <div className="flex flex-col flex-1 bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl overflow-hidden shadow-lg min-w-0">
-            <ChatMessage currentRoom={currentRoom} socket={socket} onReply={handleReply} />
-            <ChatInput 
-              currentRoom={currentRoom} 
-              socket={socket} 
-              replyTo={replyTo}
-              onCancelReply={handleCancelReply}
-            />
+            <ErrorBoundary>
+              <ChatMessage currentRoom={currentRoom} socket={socket} onReply={handleReply} />
+            </ErrorBoundary>
+            <ErrorBoundary>
+              <ChatInput
+                currentRoom={currentRoom}
+                socket={socket}
+                replyTo={replyTo}
+                onCancelReply={handleCancelReply}
+              />
+            </ErrorBoundary>
           </div>
           
-          {/* GamePanel seulement pour le canal Game - Hidden on mobile */}
           {currentRoom === 'Game' && (
-            <div className="hidden lg:block w-80 bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl overflow-hidden shadow-lg">
-              <div className="p-3 h-full overflow-y-auto">
-                <GamePanel channel={currentRoom} socket={socket} />
-              </div>
+            <div className="hidden lg:flex w-80 flex-col bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl overflow-y-auto shadow-lg p-3 gap-3">
+              <GamePanel channel={currentRoom} socket={socket} />
             </div>
           )}
         </div>
@@ -270,21 +360,50 @@ const ChatPage = () => {
           ${showUsers ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
         `}>
           <div className="h-full md:h-auto md:mt-0 mt-20">
-            <UsersOnline 
-              socket={socket} 
-              currentRoom={currentRoom}
-              onSelectAgent={setSelectedAgent}
-            />
+            <ErrorBoundary>
+              <UsersOnline
+                socket={socket}
+                currentRoom={currentRoom}
+                unreadMap={unreadMap}
+                onOpenChat={handleOpenChatFromSidebar}
+              />
+            </ErrorBoundary>
           </div>
         </div>
       </div>
-      
-      {/* AI Agent Chat Box */}
-      {selectedAgent && (
-        <AIAgentChatBox
-          agent={selectedAgent}
+      {/* Private chat opened via notification or sidebar click */}
+      {notifChatUser && socket && (
+        <PrivateChatBox
+          recipient={notifChatUser}
           socket={socket}
-          onClose={() => setSelectedAgent(null)}
+          onClose={() => {
+            openChatUserIdRef.current = null;
+            setNotifChatUser(null);
+            // Refresh unread map from DB so header badge reflects read state
+            if (user?.id) {
+              axiosInstance.get(`/messages/conversations/${user.id}`)
+                .then(res => {
+                  const data: Array<{
+                    user: { _id: string; username: string; avatarUrl?: string; sexe?: string };
+                    unreadCount: number;
+                  }> = Array.isArray(res.data) ? res.data : [];
+                  setUnreadMap(prev => {
+                    const next = { ...prev };
+                    // Update counts from DB; remove entries that are now read
+                    for (const conv of data) {
+                      if (!conv.user?._id) continue;
+                      if (conv.unreadCount > 0) {
+                        next[conv.user._id] = { count: conv.unreadCount, sender: conv.user };
+                      } else {
+                        delete next[conv.user._id];
+                      }
+                    }
+                    return next;
+                  });
+                })
+                .catch(() => {});
+            }
+          }}
         />
       )}
     </div>

@@ -1,15 +1,77 @@
 const Message = require("../models/Message");
+const User = require("../models/User");
+
+/**
+ * Resolve a sender ID to a display object.
+ * Called with the RAW ID (always available via lean()) so we never lose it.
+ *
+ *  anon_<username>   → { username } — anonymous user, history preserved by username
+ *  24-char hex       → "Ancien utilisateur" — message pre-migration (ObjectId era)
+ *  anything else     → "Utilisateur supprimé" — registered user whose account was deleted
+ */
+function fallbackSender(rawId, displayName = null) {
+  const id = rawId ? String(rawId) : null;
+
+  // Priority: use saved username if available (covers deleted accounts gracefully)
+  if (displayName) return { _id: id, username: displayName, avatarUrl: null, sexe: null };
+
+  if (!id) return { _id: null, username: 'Utilisateur supprimé', avatarUrl: null, sexe: null };
+
+  // Anonymous user — extract username from stable ID "anon_<username>"
+  if (id.startsWith('anon_')) {
+    const username = id.slice(5) || 'Anonyme';
+    return { _id: id, username, avatarUrl: null, sexe: null };
+  }
+
+  // Legacy ObjectId or deleted account with no saved username
+  return { _id: id, username: 'Utilisateur supprimé', avatarUrl: null, sexe: null };
+}
+
+/**
+ * Manually populate sender for a list of lean message objects.
+ * Using lean() preserves the raw sender ID so fallbackSender always has it,
+ * unlike Mongoose .populate() which silently sets sender=null on lookup failure.
+ */
+async function populateSenders(msgs) {
+  // Collect all non-anon sender IDs that need a DB lookup
+  const registeredIds = [...new Set(
+    msgs.map(m => m.sender).filter(id => id && !String(id).startsWith('anon_'))
+  )];
+
+  // Single query for all registered users
+  const users = registeredIds.length
+    ? await User.find({ _id: { $in: registeredIds } }).select('username avatarUrl sexe email').lean()
+    : [];
+  const userMap = new Map(users.map(u => [String(u._id), u]));
+
+  return msgs.map(msg => {
+    const rawId = String(msg.sender ?? '');
+    const found = rawId ? userMap.get(rawId) : null;
+    if (found) return { ...msg, sender: found };
+    // User not found in DB — use denormalized senderUsername saved at write time
+    const displayName = msg.senderUsername || null;
+    return { ...msg, sender: fallbackSender(rawId, displayName) };
+  });
+}
 
 class MessageController {
 
-  // Retrieve public messages for a given room
+  // Retrieve public messages for a given room (paginated)
   async getMessagesByChanel(req, res) {
     const { room } = req.params;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+    const before = req.query.before; // cursor: ISO date or ObjectId of oldest message loaded
     try {
-      const messages = await Message.find({ room })
-        .populate('sender', 'username email avatarUrl sexe')
-        .sort({ createdAt: 1 });
+      const filter = before
+        ? { room, createdAt: { $lt: new Date(before) } }
+        : { room };
 
+      const raw = await Message.find(filter)
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean();
+
+      const messages = await populateSenders(raw.reverse());
       res.status(200).json(messages);
     } catch (error) {
       console.error('Error while fetching messages:', error);
@@ -19,14 +81,16 @@ class MessageController {
 
   // Send a message in a public room
   async createMessage(req, res) {
-    const { content, sender, room } = req.body;
+    const { content, room } = req.body;
+    const sender = req.user?._id || req.user?.id;
 
     if (!content || !sender || !room) {
       return res.status(400).json({ error: "All fields are required." });
     }
 
     try {
-      const message = await Message.create({ content, sender, room });
+      const senderUser = await User.findById(sender).select('username').lean();
+      const message = await Message.create({ content, sender, senderUsername: senderUser?.username || null, room });
       await message.populate('sender', 'username email avatarUrl sexe');
       res.status(201).json(message);
     } catch (error) {
@@ -40,15 +104,27 @@ class MessageController {
     const { userId, recipientId } = req.params;
 
     try {
-      const messages = await Message.find({
+      // Check blocking in both directions
+      const [u1, u2] = await Promise.all([
+        User.findById(userId).select('blockedUsers').lean(),
+        User.findById(recipientId).select('blockedUsers').lean(),
+      ]);
+      const u1Blocked = u1?.blockedUsers || [];
+      const u2Blocked = u2?.blockedUsers || [];
+      if (u1Blocked.includes(recipientId) || u2Blocked.includes(userId)) {
+        return res.status(403).json({ error: 'Utilisateur bloqué', isBlocked: true });
+      }
+
+      const raw = await Message.find({
         $or: [
           { sender: userId, recipient: recipientId },
           { sender: recipientId, recipient: userId }
         ]
       })
-      .populate('sender', 'username email avatarUrl sexe')
-      .sort({ createdAt: 1 });
+      .sort({ createdAt: 1 })
+      .lean();
 
+      const messages = await populateSenders(raw);
       res.status(200).json(messages);
     } catch (error) {
       console.error("Error while fetching private messages:", error);
@@ -57,8 +133,9 @@ class MessageController {
   }
 
   // Send a private message
-  async sendPrivateMessage(req, res, io) { 
-    const { content, sender, recipient, media_url, media_type } = req.body;
+  async sendPrivateMessage(req, res, io) {
+    const { content, recipient, media_url, media_type } = req.body;
+    const sender = req.user?._id || req.user?.id;
 
     if (!sender || !recipient) {
       return res.status(400).json({ error: "Sender and recipient are required." });
@@ -69,9 +146,21 @@ class MessageController {
     }
 
     try {
+      // Check blocking before creating message
+      const [senderUser, recipientUser] = await Promise.all([
+        User.findById(sender).select('blockedUsers username').lean(),
+        User.findById(recipient).select('blockedUsers').lean(),
+      ]);
+      const sBlocked = senderUser?.blockedUsers || [];
+      const rBlocked = recipientUser?.blockedUsers || [];
+      if (sBlocked.includes(recipient) || rBlocked.includes(sender)) {
+        return res.status(403).json({ error: 'Utilisateur bloqué', isBlocked: true });
+      }
+
       const message = await Message.create({
         content,
         sender,
+        senderUsername: senderUser?.username || null,
         recipient,
         media_url,
         media_type,
@@ -103,48 +192,79 @@ class MessageController {
     const { userId } = req.params;
 
     try {
-      // Retrieve all relevant messages for the user
-      const messages = await Message.find({
-        recipient: { $ne: null },
-        $or: [
-          { sender: userId },
-          { recipient: userId }
-        ]
-      })
-      .populate('sender', 'username email avatarUrl sexe')
-      .populate('recipient', 'username email avatarUrl sexe')
-      .sort({ createdAt: -1 });
+      // Get caller's blocked list to exclude those conversations
+      const callerUser = await User.findById(userId).select('blockedUsers').lean();
+      const blockedSet = new Set(callerUser?.blockedUsers || []);
 
-      // Group by participant
-      const conversationMap = new Map();
-
-      for (const msg of messages) {
-        const otherUser = msg.sender._id.toString() === userId
-          ? msg.recipient
-          : msg.sender;
-
-        if (!otherUser) continue;
-
-        const otherUserId = otherUser._id.toString();
-
-        if (!conversationMap.has(otherUserId)) {
-          // Explicitly retrieve the number of unread messages
-          const unreadCount = await Message.countDocuments({
-            sender: otherUserId,
-            recipient: userId,
-            read: false
-          });
-
-          conversationMap.set(otherUserId, {
-            user: otherUser,
-            lastMessage: msg,
-            hasNewMessages: unreadCount > 0,
-            unreadCount: unreadCount 
-          });
+      // Single aggregation: get last message + unread count per conversation partner
+      // sender/recipient are stored as strings (better-auth 32-char IDs), no ObjectId cast needed
+      const aggregation = await Message.aggregate([
+        {
+          $match: {
+            recipient: { $ne: null },
+            $or: [
+              { sender: userId },
+              { recipient: userId }
+            ]
+          }
+        },
+        { $sort: { createdAt: -1 } },
+        {
+          $group: {
+            _id: {
+              $cond: [
+                { $eq: ['$sender', userId] },
+                '$recipient',
+                '$sender'
+              ]
+            },
+            lastMessage: { $first: '$$ROOT' },
+            unreadCount: {
+              $sum: {
+                $cond: [
+                  { $and: [
+                    { $eq: ['$recipient', userId] },
+                    { $eq: ['$read', false] }
+                  ]},
+                  1, 0
+                ]
+              }
+            }
+          }
         }
-      }
+      ]);
 
-      const conversations = Array.from(conversationMap.values());
+      // Collect all unique user IDs needed (partner + lastMessage participants)
+      const allIds = new Set();
+      for (const entry of aggregation) {
+        if (entry._id) allIds.add(String(entry._id));
+        if (entry.lastMessage?.sender)    allIds.add(String(entry.lastMessage.sender));
+        if (entry.lastMessage?.recipient) allIds.add(String(entry.lastMessage.recipient));
+      }
+      // Only look up registered users (not anon_ IDs)
+      const registeredIds = [...allIds].filter(id => !id.startsWith('anon_'));
+      const usersFound = registeredIds.length
+        ? await User.find({ _id: { $in: registeredIds } }).select('username avatarUrl sexe email').lean()
+        : [];
+      const userMap = new Map(usersFound.map(u => [String(u._id), u]));
+      const resolveUser = (rawId) => rawId ? (userMap.get(String(rawId)) || fallbackSender(String(rawId))) : null;
+
+      const conversations = aggregation
+        .filter(entry => {
+          const partnerId = String(entry._id ?? '');
+          return partnerId && !blockedSet.has(partnerId);
+        })
+        .map(entry => ({
+          user: resolveUser(entry._id),
+          lastMessage: {
+            ...entry.lastMessage,
+            sender:    resolveUser(entry.lastMessage?.sender),
+            recipient: resolveUser(entry.lastMessage?.recipient),
+          },
+          hasNewMessages: entry.unreadCount > 0,
+          unreadCount: entry.unreadCount
+        }));
+
       res.status(200).json(conversations);
     } catch (error) {
       console.error("Error while fetching conversations:", error);

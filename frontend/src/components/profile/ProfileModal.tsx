@@ -5,7 +5,8 @@ import axiosInstance from '@/utils/axiosInstance';
 import BlockedUsers from '@/components/settings/BlockedUsers';
 import GenderAvatar from '@/components/ui/GenderAvatar';
 import AvatarUpload from '@/components/ui/AvatarUpload';
-import { Settings, User, UserX, X, Lock, Eye, EyeOff } from 'lucide-react';
+import { Settings, User, UserX, X, Lock, Eye, EyeOff, Pencil, Check } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 // Composant pour le changement de mot de passe
 const PasswordChangeSection: React.FC = () => {
@@ -161,10 +162,50 @@ interface ProfileModalProps {
 const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
   const { user, updateUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'blocked'>('profile');
+  const [isEditing, setIsEditing] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [editForm, setEditForm] = useState({
+    username: user?.username || '',
+    age: user?.age?.toString() || '',
+    sexe: user?.sexe || 'autre',
+    ville: user?.ville || '',
+  });
 
   const handleAvatarUpdate = (avatarUrl: string | null) => {
     if (user) {
       updateUser({ ...user, avatarUrl: avatarUrl || undefined });
+    }
+  };
+
+  const handleStartEdit = () => {
+    setEditForm({
+      username: user?.username || '',
+      age: user?.age?.toString() || '',
+      sexe: user?.sexe || 'autre',
+      ville: user?.ville || '',
+    });
+    setIsEditing(true);
+  };
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      const payload: Record<string, unknown> = {
+        username: editForm.username.trim(),
+        sexe: editForm.sexe,
+        ville: editForm.ville.trim(),
+      };
+      if (editForm.age) payload.age = Number(editForm.age);
+
+      const { data } = await axiosInstance.put('/user', payload);
+      await updateUser(data);
+      setIsEditing(false);
+      toast.success('Profil mis à jour');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || 'Erreur lors de la mise à jour');
+    } finally {
+      setSavingProfile(false);
     }
   };
   
@@ -273,38 +314,111 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
 
               {/* Informations personnelles */}
               <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 space-y-3">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Informations personnelles</h3>
-                
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-gray-500 dark:text-gray-400">Nom d'utilisateur</span>
-                    <p className="font-medium text-gray-900 dark:text-white">{user?.username}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 dark:text-gray-400">Email</span>
-                    <p className="font-medium text-gray-900 dark:text-white">{(user as any)?.email || 'Non renseigné'}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 dark:text-gray-400">Âge</span>
-                    <p className="font-medium text-gray-900 dark:text-white">{user?.age || 'Non renseigné'}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500 dark:text-gray-400">Sexe</span>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {user?.sexe === 'homme' || user?.sexe === 'male'
-                        ? 'Homme'
-                        : user?.sexe === 'femme' || user?.sexe === 'female'
-                        ? 'Femme'
-                        : user?.sexe === 'autre'
-                        ? 'Autre'
-                        : 'Non renseigné'}
-                    </p>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="text-gray-500 dark:text-gray-400">Ville</span>
-                    <p className="font-medium text-gray-900 dark:text-white">{user?.ville || 'Non renseignée'}</p>
-                  </div>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Informations personnelles</h3>
+                  {!isEditing ? (
+                    <button
+                      onClick={handleStartEdit}
+                      className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                    >
+                      <Pencil className="w-3 h-3" /> Modifier
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setIsEditing(false)}
+                        className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        onClick={handleSaveProfile}
+                        disabled={savingProfile}
+                        className="flex items-center gap-1 text-xs bg-blue-500 text-white px-2 py-1 rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                      >
+                        <Check className="w-3 h-3" />
+                        {savingProfile ? 'Enregistrement...' : 'Sauvegarder'}
+                      </button>
+                    </div>
+                  )}
                 </div>
+
+                {!isEditing ? (
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">Nom d'utilisateur</span>
+                      <p className="font-medium text-gray-900 dark:text-white">{user?.username}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">Email</span>
+                      <p className="font-medium text-gray-900 dark:text-white truncate">{(user as { email?: string })?.email || 'Non renseigné'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">Âge</span>
+                      <p className="font-medium text-gray-900 dark:text-white">{user?.age || 'Non renseigné'}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">Sexe</span>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {user?.sexe === 'homme' || user?.sexe === 'male' ? 'Homme'
+                          : user?.sexe === 'femme' || user?.sexe === 'female' ? 'Femme'
+                          : user?.sexe === 'autre' ? 'Autre'
+                          : 'Non renseigné'}
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-500 dark:text-gray-400">Ville</span>
+                      <p className="font-medium text-gray-900 dark:text-white">{user?.ville || 'Non renseignée'}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <label className="block text-gray-500 dark:text-gray-400 mb-1">Nom d'utilisateur</label>
+                      <input
+                        type="text"
+                        value={editForm.username}
+                        onChange={e => setEditForm(p => ({ ...p, username: e.target.value }))}
+                        maxLength={30}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-gray-500 dark:text-gray-400 mb-1">Âge</label>
+                        <input
+                          type="number"
+                          value={editForm.age}
+                          onChange={e => setEditForm(p => ({ ...p, age: e.target.value }))}
+                          min={13} max={120}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-500 dark:text-gray-400 mb-1">Sexe</label>
+                        <select
+                          value={editForm.sexe}
+                          onChange={e => setEditForm(p => ({ ...p, sexe: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                        >
+                          <option value="homme">Homme</option>
+                          <option value="femme">Femme</option>
+                          <option value="autre">Autre</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-gray-500 dark:text-gray-400 mb-1">Ville</label>
+                      <input
+                        type="text"
+                        value={editForm.ville}
+                        onChange={e => setEditForm(p => ({ ...p, ville: e.target.value }))}
+                        maxLength={60}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Section changement de mot de passe */}

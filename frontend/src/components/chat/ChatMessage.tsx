@@ -26,8 +26,17 @@ interface Message {
   };
   content: string;
   createdAt: string;
+  room?: string;
   replyTo?: Message;
   reactions?: Reaction[];
+  isGameMessage?: boolean;
+}
+
+interface GameMessage {
+  id: string;
+  content?: string;
+  data?: { content?: string };
+  timestamp?: string;
 }
 
 interface ChatMessagesProps {
@@ -36,11 +45,15 @@ interface ChatMessagesProps {
   onReply?: (message: Message) => void;
 }
 
+const PAGE_SIZE = 50;
+
 const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onReply }) => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [gameMessages, setGameMessages] = useState<any[]>([]);
+  const [gameMessages, setGameMessages] = useState<GameMessage[]>([]);
   const [selectedUser, setSelectedUser] = useState<Message['sender'] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const user = useAuthStore((state) => state.user);
@@ -50,55 +63,68 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const loadMessages = async (room: string) => {
+    setLoading(true);
+    try {
+      const res = await axiosInstance.get(`/messages/${room}?limit=${PAGE_SIZE}`);
+      const data: Message[] = res.data;
+      setMessages(data);
+      setHasMore(data.length === PAGE_SIZE);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Failed to load messages:', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMoreMessages = async () => {
+    if (!messages.length || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const oldest = messages[0].createdAt;
+      const res = await axiosInstance.get(`/messages/${currentRoom}?limit=${PAGE_SIZE}&before=${encodeURIComponent(oldest)}`);
+      const older: Message[] = res.data;
+      setMessages((prev) => [...older, ...prev]);
+      setHasMore(older.length === PAGE_SIZE);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Failed to load older messages:', msg);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   useEffect(() => {
     if (!currentRoom) return;
-
-    setLoading(true);
-    axiosInstance
-      .get(`/messages/${currentRoom}`)
-      .then((res) => {
-        setMessages(res.data);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error('Failed to load messages:', error?.message || 'Unknown error');
-        setLoading(false);
-      });
-
-    if (!isGameChannel) {
-      setGameMessages([]);
-    }
+    loadMessages(currentRoom);
+    if (!isGameChannel) setGameMessages([]);
   }, [currentRoom, socket]);
 
   useEffect(() => {
     if (!socket) return;
 
     const handleReceiveMessage = (message: Message) => {
-      if (message && message.content && message.sender) {
-        setMessages((prev) => {
-          const exists = prev.some(m => m._id === message._id);
-          if (exists) return prev;
-          const newMessages = [...prev, message];
-          return newMessages.length > 1000 ? newMessages.slice(-500) : newMessages;
-        });
+      if (!message || (!message.content && !message.isGameMessage)) return;
+      // Ensure sender always has a usable shape (anonymous users may lack a DB record)
+      if (!message.sender) {
+        (message as Message).sender = { _id: 'unknown', username: 'Anonyme' };
       }
-    };
-
-    const handleReactionUpdated = ({ messageId, reactions }: { messageId: string; reactions: Reaction[] }) => {
-      console.log('🎉 Reaction updated received:', { messageId, reactions, reactionsCount: reactions?.length || 0 });
       setMessages((prev) => {
-        const updated = prev.map(msg => {
-          if (msg._id === messageId) {
-            console.log('📝 Updating message:', msg._id, 'old reactions:', msg.reactions, 'new reactions:', reactions);
-            return { ...msg, reactions: reactions || [] };
-          }
-          return msg;
-        });
-        return updated;
+        const exists = prev.some(m => m._id === message._id);
+        if (exists) return prev;
+        const newMessages = [...prev, message];
+        return newMessages.length > 1000 ? newMessages.slice(-500) : newMessages;
       });
     };
 
-    const handleGameMessage = (gameMessage: any) => {
+    const handleReactionUpdated = ({ messageId, reactions }: { messageId: string; reactions: Reaction[] }) => {
+      setMessages((prev) =>
+        prev.map(msg => msg._id === messageId ? { ...msg, reactions: reactions || [] } : msg)
+      );
+    };
+
+    const handleGameMessage = (gameMessage: Omit<GameMessage, 'id'>) => {
       if (!isGameChannel) return;
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       setGameMessages((prev) => [...prev, { ...gameMessage, id }].slice(-3));
@@ -130,11 +156,23 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     });
   };
 
-  const getMessageColor = (isOwnMessage: boolean) => {
+  const getMessageColor = (isOwnMessage: boolean, sexe?: string) => {
     if (isOwnMessage) {
       return 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white';
     }
+    if (sexe === 'homme') {
+      return 'bg-blue-50 dark:bg-blue-900/30 text-gray-900 dark:text-white border border-blue-100 dark:border-blue-800/50';
+    }
+    if (sexe === 'femme') {
+      return 'bg-pink-50 dark:bg-pink-900/30 text-gray-900 dark:text-white border border-pink-100 dark:border-pink-800/50';
+    }
     return 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white';
+  };
+
+  const getNameColor = (sexe?: string) => {
+    if (sexe === 'homme') return 'text-blue-600 dark:text-blue-400';
+    if (sexe === 'femme') return 'text-pink-600 dark:text-pink-400';
+    return 'text-gray-900 dark:text-white';
   };
 
   const handleAddReaction = (messageId: string, emoji: string) => {
@@ -200,7 +238,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
             </div>
           </div>
           <div className="flex items-center space-x-1.5 md:space-x-2 flex-shrink-0">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
             <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">En ligne</span>
           </div>
         </div>
@@ -233,6 +271,19 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
         <ChatSkeleton count={6} />
       ) : messages.length > 0 ? (
         <div className="space-y-2 md:space-y-3">
+          {/* Load previous messages */}
+          {hasMore && (
+            <div className="flex justify-center py-2">
+              <button
+                onClick={loadMoreMessages}
+                disabled={loadingMore}
+                aria-label="Charger les messages précédents"
+                className="text-xs text-primary-500 hover:text-primary-600 disabled:opacity-50 px-4 py-1.5 border border-primary-300 dark:border-primary-700 rounded-full transition-colors"
+              >
+                {loadingMore ? 'Chargement…' : 'Charger les messages précédents'}
+              </button>
+            </div>
+          )}
           {messages.map((msg) => {
             const sender = msg.sender || null;
             const senderId = sender?._id;
@@ -273,7 +324,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                             }
                           }}
                         />
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                        <span className={`text-sm font-semibold ${getNameColor(sender?.sexe)}`}>
                           {senderName}
                         </span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -283,10 +334,10 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                       <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => handleReply(msg)}
+                          aria-label={`Répondre à ${senderName}`}
                           className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 group"
-                          title="Répondre"
                         >
-                          <svg className="w-4 h-4 text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                           </svg>
                         </button>
@@ -309,7 +360,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                   {/* Bulle de message */}
                   <div className={`${!isOwnMessage ? 'ml-10' : ''}`}>
                     <div
-                      className={`rounded-2xl p-3 ${getMessageColor(isOwnMessage)} ${
+                      className={`rounded-2xl p-3 ${getMessageColor(isOwnMessage, sender?.sexe)} ${
                         isOwnMessage ? 'rounded-br-md' : 'rounded-bl-md'
                       }`}
                     >

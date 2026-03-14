@@ -6,6 +6,9 @@ import { Socket } from 'socket.io-client';
 import chatService from '@/services/chatServices';
 import axiosInstance from '@/utils/axiosInstance';
 import GenderAvatar from '@/components/ui/GenderAvatar';
+import { reportService } from '@/services/reportService';
+import toast from 'react-hot-toast';
+import { ShieldBan, ShieldCheck } from 'lucide-react';
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
   ssr: false,
@@ -35,6 +38,7 @@ interface Message {
     username: string;
     avatarUrl?: string;
   };
+  recipient?: string;
   media_url?: string;
   media_type?: string;
   createdAt: string;
@@ -49,6 +53,8 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -77,8 +83,10 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         if (fetchedMessages.length > 0) {
           await chatService.markConversationAsRead(user.id, recipient._id);
         }
-      } catch (error) {
-        console.error('Error fetching private messages:', error);
+      } catch (error: unknown) {
+        const status = (error as { response?: { data?: { isBlocked?: boolean } } })?.response?.data?.isBlocked;
+        if (status) setIsBlocked(true);
+        else console.error('Error fetching private messages:', error);
       }
     };
 
@@ -86,7 +94,6 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
 
     if (socket && user?.id) {
       socket.emit('join_private_room', {
-        senderId: user.id,
         recipientId: recipient._id
       });
       socket.emit('check_user_online', recipient._id);
@@ -124,23 +131,32 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
     if (!socket || !recipient?._id || !user?.id) return;
 
     const handleReceiveMessage = (message: Message) => {
-      console.info('[PrivateChatBox] Message received', {
-        messageId: message._id,
-        senderId: message.sender._id,
-        senderUsername: message.sender.username,
-        recipientId: recipient._id,
-        hasMedia: !!message.media_url,
-        mediaType: message.media_type,
-        contentLength: message.content?.length || 0,
-        timestamp: message.createdAt
+      // Only handle messages that belong to this conversation
+      const involvedIds = [message.sender._id, message.recipient].filter(Boolean);
+      const isThisConversation =
+        involvedIds.includes(user.id) &&
+        involvedIds.includes(recipient._id);
+      if (!isThisConversation) return;
+
+      setMessages(prev => {
+        // Remove matching optimistic message (same sender + content + media_url)
+        const withoutOptimistic = prev.filter(m => {
+          if (!m._id.startsWith('optimistic_')) return true;
+          return !(
+            m.sender._id === message.sender._id &&
+            m.content === message.content &&
+            m.media_url === message.media_url
+          );
+        });
+        // Avoid duplicate real messages
+        if (withoutOptimistic.some(m => m._id === message._id)) return withoutOptimistic;
+        return [...withoutOptimistic, message];
       });
-      setMessages(prev => [...prev, message]);
       scrollToBottom();
-      
-      // Marquer automatiquement comme lu si la conversation est ouverte
+
+      // Auto-mark as read when chatbox is open
       if (socket && user?.id && message.sender._id !== user.id) {
         socket.emit('mark_messages_read', {
-          senderId: user.id,
           recipientId: message.sender._id
         });
       }
@@ -163,17 +179,26 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       if (userId === recipient._id) setIsRecipientOnline(false);
     };
 
+    // Fallback: also handle new_private_message via personal room
+    // This ensures the recipient sees the message even if the private room join failed
+    const handleNewPrivateMessageFallback = (data: { message: Message; senderId: string }) => {
+      if (data.senderId !== recipient._id) return;
+      handleReceiveMessage(data.message);
+    };
+
     socket.on('receive_private_message', handleReceiveMessage);
+    socket.on('new_private_message', handleNewPrivateMessageFallback);
     socket.on('messages_read', handleMessagesRead);
     socket.on('user_online', handleUserOnline);
     socket.on('user_offline', handleUserOffline);
-    socket.on('message_blocked', (data) => {
-      console.log('Message blocked:', data.message);
-      // Vous pouvez afficher une notification ici
+    socket.on('message_blocked', () => {
+      toast.error('Impossible d\'envoyer ce message — utilisateur bloqué.');
+      setIsBlocked(true);
     });
 
     return () => {
       socket.off('receive_private_message', handleReceiveMessage);
+      socket.off('new_private_message', handleNewPrivateMessageFallback);
       socket.off('messages_read', handleMessagesRead);
       socket.off('user_online', handleUserOnline);
       socket.off('user_offline', handleUserOffline);
@@ -199,13 +224,13 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       if (selectedFile) {
         const formData = new FormData();
         formData.append('media', selectedFile);
-        
+
         const uploadResponse = await axiosInstance.post('/upload', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
         });
-        
+
         mediaUrl = uploadResponse.data.url;
         mediaType = uploadResponse.data.media_type;
       }
@@ -214,10 +239,22 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       if (!messageContent && !mediaUrl) {
         throw new Error('Message must contain text or media');
       }
-      
-      console.log('Sending message with media:', { messageContent, mediaUrl, mediaType });
-      
-      // Envoyer directement via socket
+
+      // Optimistic display: add message immediately so sender sees it right away
+      const optimisticId = `optimistic_${Date.now()}`;
+      const optimisticMsg: Message = {
+        _id: optimisticId,
+        content: messageContent,
+        sender: { _id: user.id, username: user.username },
+        media_url: mediaUrl,
+        media_type: mediaType,
+        createdAt: new Date().toISOString(),
+        read: false,
+      };
+      setMessages(prev => [...prev, optimisticMsg]);
+      scrollToBottom();
+
+      // Envoyer via socket
       socket.emit('send_private_message', {
         senderId: user.id,
         recipientId: recipient._id,
@@ -225,7 +262,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         media_url: mediaUrl,
         media_type: mediaType,
       });
-      
+
       setNewMessage('');
       setSelectedFile(null);
       setShowEmojiPicker(false);
@@ -277,8 +314,46 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
               </div>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/80 hover:text-white text-lg">×</button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                setBlockLoading(true);
+                try {
+                  if (isBlocked) {
+                    await reportService.unblockUser(recipient._id);
+                    setIsBlocked(false);
+                    toast.success(`${recipient.username} débloqué`);
+                  } else {
+                    await reportService.blockUser(recipient._id);
+                    setIsBlocked(true);
+                    toast.success(`${recipient.username} bloqué`);
+                  }
+                } catch {
+                  toast.error('Erreur lors de l\'opération');
+                } finally {
+                  setBlockLoading(false);
+                }
+              }}
+              disabled={blockLoading}
+              title={isBlocked ? 'Débloquer' : 'Bloquer'}
+              className="text-white/70 hover:text-white transition-colors disabled:opacity-50"
+            >
+              {isBlocked
+                ? <ShieldCheck className="w-4 h-4" />
+                : <ShieldBan className="w-4 h-4" />
+              }
+            </button>
+            <button onClick={onClose} className="text-white/80 hover:text-white text-lg">×</button>
+          </div>
         </div>
+
+        {/* Blocked banner */}
+        {isBlocked && (
+          <div className="bg-red-50 dark:bg-red-900/30 border-b border-red-200 dark:border-red-800 px-4 py-2 text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
+            <ShieldBan className="w-3 h-3 flex-shrink-0" />
+            Vous ne pouvez pas échanger de messages avec cet utilisateur.
+          </div>
+        )}
 
         {/* Messages */}
         <div className="h-80 overflow-y-auto bg-gray-50/50 dark:bg-gray-900/50 p-4">
@@ -297,16 +372,15 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                         ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-br-md' 
                         : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 rounded-bl-md shadow-sm'
                     }`}>
-                      {message.media_url && (
+                      {message.media_url && /^https?:\/\//.test(message.media_url) && (
                         <div className="mb-2">
-                          <img 
-                            src={message.media_url.replace(/&#x2F;/g, '/').replace(/&amp;/g, '&')} 
-                            alt="Image" 
-                            className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity" 
+                          <img
+                            src={message.media_url}
+                            alt="Image"
+                            className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                             onClick={() => {
-                              const url = message?.media_url?.replace(/&#x2F;/g, '/').replace(/&amp;/g, '&');
-                              if (url && (url.startsWith('/') || url.startsWith(window.location.origin))) {
-                                window.open(url, '_blank', 'noopener,noreferrer');
+                              if (/^https?:\/\//.test(message.media_url!)) {
+                                window.open(message.media_url, '_blank', 'noopener,noreferrer');
                               }
                             }}
                           />
@@ -327,7 +401,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         </div>
 
         {/* Input */}
-        <div className="border-t border-gray-200/50 dark:border-gray-600/50 p-4 bg-white/50 dark:bg-gray-800/50">
+        <div className={`border-t border-gray-200/50 dark:border-gray-600/50 p-4 bg-white/50 dark:bg-gray-800/50 ${isBlocked ? 'opacity-40 pointer-events-none select-none' : ''}`}>
           {selectedFile && (
             <div className="mb-2 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs flex items-center justify-between">
               <span>Image: {selectedFile.name}</span>

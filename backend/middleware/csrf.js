@@ -1,76 +1,66 @@
 const crypto = require('crypto');
 
-// Store CSRF tokens in memory (use Redis in production)
-const csrfTokens = new Map();
-
-// Cleanup old tokens every hour
-setInterval(() => {
-  const now = Date.now();
-  for (const [token, data] of csrfTokens.entries()) {
-    if (now - data.createdAt > 3600000) { // 1 hour
-      csrfTokens.delete(token);
-    }
-  }
-}, 3600000);
+const CSRF_SECRET = process.env.CSRF_SECRET || process.env.BETTER_AUTH_SECRET || 'change-me-in-production';
+const TOKEN_TTL_MS = 3600000; // 1 hour
 
 /**
- * Generate CSRF token
+ * Generate a stateless HMAC-signed CSRF token.
+ * Format: <timestamp>.<hmac>
+ * No server-side storage needed — works across restarts and multiple instances.
  */
 const generateCsrfToken = (userId) => {
-  const token = crypto.randomBytes(32).toString('hex');
-  csrfTokens.set(token, {
-    userId,
-    createdAt: Date.now()
-  });
-  return token;
+  const timestamp = Date.now().toString();
+  const payload = `${userId}:${timestamp}`;
+  const hmac = crypto.createHmac('sha256', CSRF_SECRET).update(payload).digest('hex');
+  return `${timestamp}.${hmac}`;
 };
 
 /**
- * Validate CSRF token
+ * Validate a CSRF token for the given userId.
  */
 const validateCsrfToken = (token, userId) => {
-  if (!token) return false;
+  if (!token || typeof token !== 'string') return false;
 
-  const data = csrfTokens.get(token);
-  if (!data) return false;
+  const dotIndex = token.indexOf('.');
+  if (dotIndex === -1) return false;
 
-  // Check if token belongs to user
-  if (data.userId !== userId) return false;
+  const timestamp = token.slice(0, dotIndex);
+  const provided = token.slice(dotIndex + 1);
 
-  // Check if token is not expired (1 hour)
-  if (Date.now() - data.createdAt > 3600000) {
-    csrfTokens.delete(token);
-    return false;
-  }
+  // Check expiry
+  if (Date.now() - parseInt(timestamp, 10) > TOKEN_TTL_MS) return false;
 
-  return true;
+  // Constant-time comparison
+  const payload = `${userId}:${timestamp}`;
+  const expected = crypto.createHmac('sha256', CSRF_SECRET).update(payload).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(provided, 'hex'), Buffer.from(expected, 'hex'));
 };
 
 /**
  * CSRF Protection Middleware
  */
 const csrfProtection = (req, res, next) => {
-  // Skip CSRF for GET, HEAD, OPTIONS
+  // Skip CSRF for safe methods
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     return next();
   }
 
-  // Skip for health check
   if (req.path === '/health') {
     return next();
   }
 
-  // Get token from header or body
-  const token = req.headers['x-csrf-token'] || req.body._csrf;
+  const token = req.headers['x-csrf-token'] || req.body?._csrf;
 
-  // For authenticated requests, validate token
-  if (req.user && req.user.id) {
-    if (!validateCsrfToken(token, req.user.id)) {
-      console.log(`[CSRF] Invalid token for user: ${req.user.id}`);
-      return res.status(403).json({
-        error: 'Invalid CSRF token',
-        code: 'CSRF_INVALID'
-      });
+  if (req.user && (req.user.id || req.user._id)) {
+    const userId = String(req.user.id || req.user._id);
+    let valid = false;
+    try {
+      valid = validateCsrfToken(token, userId);
+    } catch {
+      valid = false;
+    }
+    if (!valid) {
+      return res.status(403).json({ error: 'Invalid CSRF token', code: 'CSRF_INVALID' });
     }
   }
 
@@ -81,11 +71,12 @@ const csrfProtection = (req, res, next) => {
  * Route to get CSRF token
  */
 const getCsrfToken = (req, res) => {
-  if (!req.user || !req.user.id) {
+  if (!req.user || (!req.user.id && !req.user._id)) {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const token = generateCsrfToken(req.user.id);
+  const userId = String(req.user.id || req.user._id);
+  const token = generateCsrfToken(userId);
   res.json({ csrfToken: token });
 };
 

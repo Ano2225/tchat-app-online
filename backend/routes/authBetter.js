@@ -239,7 +239,15 @@ router.post('/anonymous', async (req, res) => {
       });
     }
 
-    await ensureUsernameAvailable(username);
+    // Block if a registered (non-anonymous) user holds this username.
+    const existingRegistered = await User.findOne({ username, isAnonymous: { $ne: true } }).select('_id').lean();
+    if (existingRegistered) {
+      return res.status(409).json({ error: 'Ce nom d\'utilisateur est déjà pris par un compte inscrit' });
+    }
+
+    // Remove any stale anonymous account with this username to avoid the unique-index violation.
+    // Their messages remain visible via the denormalized senderUsername field.
+    await User.deleteOne({ username, isAnonymous: true });
 
     const ctx = await auth.$context;
     if (!ctx?.internalAdapter) {
@@ -247,7 +255,7 @@ router.post('/anonymous', async (req, res) => {
     }
 
     // Créer un utilisateur anonyme temporaire sans email verification
-    const anonymousEmail = `${username}_${Date.now()}@anonymous.local`;
+    const anonymousEmail = `${username}_${require('crypto').randomUUID()}@anonymous.local`;
     const anonymousUser = await ctx.internalAdapter.createUser({
       email: anonymousEmail,
       emailVerified: true,

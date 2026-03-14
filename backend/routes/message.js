@@ -10,7 +10,14 @@ module.exports = (io) => {
   router.post('/', authMiddleware, csrfProtection, MessageController.createMessage);
 
   // Private Messages
-  router.get('/private/:userId/:recipientId', authMiddleware, MessageController.getPrivateMessages);
+  router.get('/private/:userId/:recipientId', authMiddleware, (req, res, next) => {
+    const callerId = req.user?.id || req.user?._id?.toString();
+    const { userId, recipientId } = req.params;
+    if (callerId !== userId && callerId !== recipientId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    next();
+  }, MessageController.getPrivateMessages);
 
   router.post('/private', authMiddleware, csrfProtection, async (req, res, next) => {
     try {
@@ -21,7 +28,13 @@ module.exports = (io) => {
     }
   });
   
-  router.get('/conversations/:userId', authMiddleware, MessageController.getUserConversations);
+  router.get('/conversations/:userId', authMiddleware, (req, res, next) => {
+    const callerId = req.user?.id || req.user?._id?.toString();
+    if (callerId !== req.params.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    next();
+  }, MessageController.getUserConversations);
 
   router.post('/mark-as-read', authMiddleware, csrfProtection, async (req, res, next) => {
     try {

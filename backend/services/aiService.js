@@ -24,56 +24,17 @@ const AI_AGENTS = {
   }
 };
 
+// Groq free-tier model — fast and capable
+const GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+const GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
+
 class AIService {
   constructor() {
-    // Configuration IA
-    this.aiProvider = process.env.AI_PROVIDER || 'ollama';
-    
-    // Ollama (Local Llama)
-    this.ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
-    this.llamaModel = process.env.LLAMA_MODEL || 'llama3.2:3b';
-    
-    // Hugging Face
-    this.hfApiKey = process.env.HUGGINGFACE_API_KEY;
-    this.hfModel = process.env.HUGGINGFACE_MODEL || 'meta-llama/Llama-3.2-3B-Instruct';
-    
-    console.log(`🤖 AI Provider: ${this.aiProvider}`);
-  }
-
-  async initVertexAI() {
-    try {
-      if (this.projectId) {
-        // Import corrigé pour Vertex AI
-        let VertexAI;
-        try {
-          const aiplatform = require('@google-cloud/aiplatform');
-          VertexAI = aiplatform.VertexAI;
-          if (!VertexAI) {
-            console.log('❌ VertexAI non trouvé, essai import alternatif...');
-            const { v1 } = aiplatform;
-            if (v1?.PredictionServiceClient) {
-              console.log('ℹ️ Utilisation de l\'API v1 au lieu de VertexAI');
-              return; // Skip VertexAI init
-            }
-          }
-        } catch (importError) {
-          console.log('❌ Erreur import Vertex AI:', importError.message);
-          return;
-        }
-
-        if (VertexAI) {
-          this.vertexAI = new VertexAI({
-            project: this.projectId,
-            location: this.location,
-          });
-          this.generativeModel = this.vertexAI.getGenerativeModel({
-            model: this.model,
-          });
-          console.log('✅ Vertex AI initialized successfully');
-        }
-      }
-    } catch (error) {
-      console.log('❌ Vertex AI initialization failed:', error.message);
+    this.groqApiKey = process.env.GROQ_API_KEY;
+    if (!this.groqApiKey) {
+      console.warn('⚠️  GROQ_API_KEY manquante — les réponses IA utiliseront le mode preset');
+    } else {
+      console.log(`🤖 AI Provider: Groq (${GROQ_MODEL})`);
     }
   }
 
@@ -87,61 +48,24 @@ class AIService {
 
   async generateResponse(message, agentId = 'alex', context = []) {
     const agent = this.getAgent(agentId);
-    
+
+    if (!this.groqApiKey) {
+      return this.getPresetResponse(message, agent, context);
+    }
+
     try {
-      switch (this.aiProvider) {
-        case 'ollama':
-          return await this.generateOllamaResponse(message, agent, context);
-        case 'huggingface':
-          return await this.generateHuggingFaceResponse(message, agent, context);
-        default:
-          console.log('🤖 Using preset responses');
-          return this.getPresetResponse(message, agent, context);
-      }
+      return await this.generateGroqResponse(message, agent, context);
     } catch (error) {
-      console.error(`❌ ${this.aiProvider} Error:`, error.message);
-      // Ne pas utiliser de fallback, lancer l'erreur pour que l'API renvoie une erreur
+      console.error('❌ Groq Error:', error.message);
       throw new Error(`Erreur lors de la génération de la réponse: ${error.message}`);
     }
   }
 
-  async generateVertexAIResponse(message, agent, context = []) {
+  async generateGroqResponse(message, agent, context = []) {
     const systemPrompt = `${agent.personality}
 
-Tu t'intéresses à : ${agent.interests?.join(', ') || 'tout et n\'importe quoi'}.
-Ton style de conversation est ${agent.conversationStyle || 'amical'}.
-Tes spécialités : ${agent.specialties.join(', ')}.
-
-Réponds TOUJOURS en français, de manière naturelle et dans le style de ${agent.name}. Utilise des emojis quand c'est approprié. Garde tes réponses courtes et engageantes (max 2-3 phrases).`;
-
-    // Construire l'historique pour Gemini
-    let conversationHistory = systemPrompt + '\n\n';
-    context.slice(-5).forEach(msg => {
-      conversationHistory += `${msg.role === 'user' ? 'Utilisateur' : agent.name}: ${msg.content}\n`;
-    });
-    conversationHistory += `Utilisateur: ${message}\n${agent.name}:`;
-
-    const result = await this.generativeModel.generateContent({
-      contents: [{
-        role: 'user',
-        parts: [{ text: conversationHistory }]
-      }],
-      generationConfig: {
-        maxOutputTokens: 120,
-        temperature: 0.9,
-        topP: 0.8,
-      },
-    });
-
-    const response = result.response;
-    return response.candidates[0]?.content?.parts[0]?.text || this.getPresetResponse(message, agent, context);
-  }
-
-  async generateOpenAIResponse(message, agent, context = []) {
-    const systemPrompt = `${agent.personality}
-
-Tu t'intéresses à : ${agent.interests?.join(', ') || 'tout et n\'importe quoi'}.
-Ton style de conversation est ${agent.conversationStyle || 'amical'}.
+Tu t'intéresses à : ${agent.interests.join(', ')}.
+Ton style de conversation est ${agent.conversationStyle}.
 Tes spécialités : ${agent.specialties.join(', ')}.
 
 Réponds TOUJOURS en français, de manière naturelle et dans le style de ${agent.name}. Utilise des emojis quand c'est approprié. Garde tes réponses courtes et engageantes (max 2-3 phrases).`;
@@ -153,31 +77,29 @@ Réponds TOUJOURS en français, de manière naturelle et dans le style de ${agen
     ];
 
     const response = await axios.post(
-      this.openaiUrl,
+      `${GROQ_BASE_URL}/chat/completions`,
       {
-        model: this.openaiModel,
+        model: GROQ_MODEL,
         messages,
         max_tokens: 120,
         temperature: 0.9,
-        presence_penalty: 0.6,
-        frequency_penalty: 0.3
+        top_p: 0.8
       },
       {
         headers: {
-          'Authorization': `Bearer ${this.openaiKey}`,
+          'Authorization': `Bearer ${this.groqApiKey}`,
           'Content-Type': 'application/json'
         },
         timeout: 10000
       }
     );
 
-    return response.data.choices[0]?.message?.content || this.getPresetResponse(message, agent, context);
+    return response.data.choices?.[0]?.message?.content || this.getPresetResponse(message, agent, context);
   }
 
   getPresetResponse(message, agent, context = []) {
     const lowerMessage = message.toLowerCase();
-    
-    // Réponses naturelles d'amis virtuels
+
     const responses = {
       alex: {
         greetings: [
@@ -239,51 +161,34 @@ Réponds TOUJOURS en français, de manière naturelle et dans le style de ${agen
       }
     };
 
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
     const agentResponses = responses[agent.name.toLowerCase()] || responses.alex;
-    
-    // Détection contextuelle intelligente
-    if (lowerMessage.match(/\b(salut|hello|bonjour|hey|yo|coucou)\b/)) {
-      return agentResponses.greetings[Math.floor(Math.random() * agentResponses.greetings.length)];
-    }
-    
-    if (lowerMessage.match(/\b(aide|help|problème|bug|erreur|souci)\b/)) {
-      return agentResponses.help[Math.floor(Math.random() * agentResponses.help.length)];
-    }
-    
-    // Réponses spécialisées par agent
+
+    if (lowerMessage.match(/\b(salut|hello|bonjour|hey|yo|coucou)\b/)) return pick(agentResponses.greetings);
+    if (lowerMessage.match(/\b(aide|help|problème|bug|erreur|souci)\b/)) return pick(agentResponses.help);
+
     if (agent.name.toLowerCase() === 'alex') {
-      if (lowerMessage.match(/\b(jeu|game|gaming|jouer|gamer|fifa|valorant|fortnite)\b/)) {
-        return agentResponses.gaming[Math.floor(Math.random() * agentResponses.gaming.length)];
-      }
-      if (lowerMessage.match(/\b(film|cinéma|movie|série|netflix|marvel)\b/)) {
-        return agentResponses.movies[Math.floor(Math.random() * agentResponses.movies.length)];
-      }
+      if (lowerMessage.match(/\b(jeu|game|gaming|jouer|gamer|fifa|valorant|fortnite)\b/)) return pick(agentResponses.gaming);
+      if (lowerMessage.match(/\b(film|cinéma|movie|série|netflix|marvel)\b/)) return pick(agentResponses.movies);
     }
-    
+
     if (agent.name.toLowerCase() === 'emma') {
-      if (lowerMessage.match(/\b(créatif|art|dessin|peinture|créativité|design)\b/)) {
-        return agentResponses.creative[Math.floor(Math.random() * agentResponses.creative.length)];
-      }
-      if (lowerMessage.match(/\b(triste|déprimé|mal|problème|difficulté|stress)\b/)) {
-        return agentResponses.feelings[Math.floor(Math.random() * agentResponses.feelings.length)];
-      }
+      if (lowerMessage.match(/\b(créatif|art|dessin|peinture|créativité|design)\b/)) return pick(agentResponses.creative);
+      if (lowerMessage.match(/\b(triste|déprimé|mal|problème|difficulté|stress)\b/)) return pick(agentResponses.feelings);
     }
-    
-    // Réponse contextuelle basée sur l'historique récent
+
     const recentContext = context.slice(-2);
     if (recentContext.length > 0) {
-      const lastUserMessage = recentContext.find(msg => msg.role === 'user')?.content?.toLowerCase();
-      if (lastUserMessage) {
-        if (lastUserMessage.includes('triste') || lastUserMessage.includes('déprimé')) {
-          const supportResponses = agent.name.toLowerCase() === 'alex' ? 
-            ['Hey, ça va aller ! 💪 Tu veux en parler ?', 'Courage mec ! 🤗 Je suis là pour toi'] :
-            ['Oh non... 🥺 Raconte-moi ce qui ne va pas', 'Je suis là pour toi ❤️ Veux-tu qu\'on en discute ?'];
-          return supportResponses[Math.floor(Math.random() * supportResponses.length)];
-        }
+      const lastUserMsg = recentContext.find(msg => msg.role === 'user')?.content?.toLowerCase();
+      if (lastUserMsg?.match(/triste|déprimé/)) {
+        const supportResponses = agent.name.toLowerCase() === 'alex'
+          ? ['Hey, ça va aller ! 💪 Tu veux en parler ?', 'Courage mec ! 🤗 Je suis là pour toi']
+          : ['Oh non... 🥺 Raconte-moi ce qui ne va pas', 'Je suis là pour toi ❤️ Veux-tu qu\'on en discute ?'];
+        return pick(supportResponses);
       }
     }
-    
-    return agentResponses.default[Math.floor(Math.random() * agentResponses.default.length)];
+
+    return pick(agentResponses.default);
   }
 }
 

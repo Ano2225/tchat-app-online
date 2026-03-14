@@ -23,8 +23,9 @@ const AlertSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // String ref — better-auth user IDs are 32-char strings, not ObjectId
   relatedUserId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     ref: 'User'
   },
   relatedReportId: {

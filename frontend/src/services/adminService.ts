@@ -12,8 +12,16 @@ export interface DashboardStats {
   totalReports: number;
 }
 
+export interface TimelineEntry {
+  date: string;
+  label: string;
+  activeUsers: number;
+  newUsers: number;
+  messages: number;
+}
+
 export interface ConnectionAnalytics {
-  dailyStats: Array<{ _id: { day: number; date: string }; count: number }>;
+  timeline: TimelineEntry[];
   hourlyStats: Array<{ _id: number; count: number }>;
   peakHour: { hour: number; count: number };
   peakDay: { day: string; count: number };

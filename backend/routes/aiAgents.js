@@ -1,6 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const aiService = require('../services/aiService');
+const { authMiddleware } = require('../middleware/authBetter');
+const { enforceAIQuota } = require('../middleware/aiQuota');
+
+const requireNonAnonymous = (req, res, next) => {
+  if (req.user?.isAnonymous) {
+    return res.status(403).json({ error: 'Les comptes anonymes ne peuvent pas utiliser l’IA.' });
+  }
+  return next();
+};
 
 // Get all AI agents
 router.get('/', (req, res) => {
@@ -32,7 +41,7 @@ router.get('/:agentId', (req, res) => {
 });
 
 // Chat with agent
-router.post('/chat', async (req, res) => {
+router.post('/chat', authMiddleware, requireNonAnonymous, enforceAIQuota(), async (req, res) => {
   try {
     const { message, agentId, context = [] } = req.body;
     

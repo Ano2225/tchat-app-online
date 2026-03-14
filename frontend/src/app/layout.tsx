@@ -4,6 +4,7 @@ import AuthProvider from "./providers";
 import { Toaster } from 'react-hot-toast';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import Script from 'next/script';
 
 
 
@@ -19,6 +20,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
+      <head>
+        {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
+          <Script
+            src={`${process.env.NEXT_PUBLIC_UMAMI_URL || 'http://localhost:3001'}/script.js`}
+            data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+            strategy="afterInteractive"
+            defer
+          />
+        )}
+      </head>
       <body className="antialiased">
         <ErrorBoundary>
           <NotificationProvider>

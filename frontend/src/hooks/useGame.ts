@@ -16,6 +16,7 @@ export const useGame = (channel: string, socket?: Socket | null) => {
     timeLeft,
     hasAnswered,
     lastAnswer,
+    correctAnswer,
     winner,
     explanation,
     isLoading,
@@ -24,6 +25,7 @@ export const useGame = (channel: string, socket?: Socket | null) => {
     setTimeLeft,
     setHasAnswered,
     setAnswerResult,
+    setCorrectAnswer,
     setWinner,
     setExplanation,
     updateLeaderboard,
@@ -108,7 +110,7 @@ export const useGame = (channel: string, socket?: Socket | null) => {
       try {
         if (result && result.userId === user.id) {
           if (!result.alreadyAnswered) {
-            setAnswerResult(result);
+            setAnswerResult({ isCorrect: result.isCorrect });
             setHasAnswered(true);
           }
         }
@@ -124,31 +126,34 @@ export const useGame = (channel: string, socket?: Socket | null) => {
     };
 
     const handleQuestionEnded = (data: any) => {
-      console.log('[GAME] Question ended:', data);
-      updateLeaderboard(data.leaderboard);
-      setExplanation(data.explanation);
+      updateLeaderboard(data.leaderboard || []);
+      setCorrectAnswer(data.correctAnswer || null);
+      setExplanation(data.explanation || null);
       setTimeLeft(0);
-      
+
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      
-      // Show loading state for next question
-      setTimeout(() => {
-        setLoading(true);
-      }, 5000);
-      
-      // Clear question after showing explanation
+
+      setTimeout(() => setLoading(true), 5000);
+
       setTimeout(() => {
         setHasAnswered(false);
         setAnswerResult(null);
+        setCorrectAnswer(null);
         setWinner(null);
         setExplanation(null);
         setQuestion(null);
-      }, 7000); // Longer delay to read explanation
+      }, 8000);
     };
 
+    const handleGameStarted = () => {
+      setLoading(true);
+      useGameStore.setState({ isActive: true });
+    };
+
+    socket.on('game_started', handleGameStarted);
     socket.on('game_state', handleGameState);
     socket.on('new_question', handleNewQuestion);
     socket.on('answer_result', handleAnswerResult);
@@ -164,6 +169,7 @@ export const useGame = (channel: string, socket?: Socket | null) => {
         socket.emit('leave_game_channel', channel);
         joinedRef.current = false;
       }
+      socket.off('game_started', handleGameStarted);
       socket.off('game_state', handleGameState);
       socket.off('new_question', handleNewQuestion);
       socket.off('answer_result', handleAnswerResult);
@@ -217,6 +223,7 @@ export const useGame = (channel: string, socket?: Socket | null) => {
     timeLeft: isGameChannel ? timeLeft : 0,
     hasAnswered: isGameChannel ? hasAnswered : false,
     lastAnswer: isGameChannel ? lastAnswer : null,
+    correctAnswer: isGameChannel ? correctAnswer : null,
     winner: isGameChannel ? winner : null,
     explanation: isGameChannel ? explanation : null,
     isLoading: isGameChannel ? isLoading : false,

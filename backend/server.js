@@ -1,4 +1,13 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env'), override: true });
+
+// Fail fast on missing required environment variables
+const REQUIRED_ENV_VARS = ['MONGODB_URI'];
+const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
+if (missingVars.length > 0) {
+  console.error(`❌ Missing required environment variables: ${missingVars.join(', ')}`);
+  process.exit(1);
+}
 
 const express = require('express');
 const http = require('http');
@@ -6,7 +15,6 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const connectDB = require('./config/database');
 const { generalLimiter } = require('./middleware/rateLimiter');
-const { sanitizeInput } = require('./middleware/validation');
 const {
   corsOptions,
   globalRateLimit,
@@ -23,11 +31,16 @@ class ChatServer {
   constructor() {
     this.app = express();
     this.server = http.createServer(this.app);
+    const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
+      .split(',')
+      .map(o => o.trim());
     this.io = socketIo(this.server, {
-      cors: {
-        origin: ["http://localhost:3000"],
-        methods: ["GET", "POST"]
-      }
+      cors: { origin: allowedOrigins, credentials: true },
+      maxHttpBufferSize: 1e6,        // 1 MB max event payload
+      pingTimeout: 20000,
+      pingInterval: 25000,
+      perMessageDeflate: { threshold: 512 }, // compress payloads > 512 B (~60% bandwidth reduction)
+      transports: ['websocket', 'polling'],   // prefer WS, fall back to polling
     });
 
     this.initMiddlewares();
@@ -42,10 +55,9 @@ class ChatServer {
     this.app.use(cors(corsOptions));
 
     // Parsing et validation
-    this.app.use(express.json({ limit: '10mb' }));
-    this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-    this.app.use(sanitizeInput);
-    this.app.use(securitySanitize);
+    this.app.use(express.json({ limit: '1mb' }));
+    this.app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+    this.app.use(securitySanitize); // strip dangerous HTML/JS patterns
 
     // Rate limiting et protection
     this.app.use(globalRateLimit);
@@ -60,8 +72,6 @@ class ChatServer {
   async initializeDatabase() {
     try {
       const Channel = require('./models/Channel');
-      const Game = require('./models/Game');
-      const { getRandomQuestion } = require('./services/questionService');
 
       // Créer canaux par défaut
       const defaultChannels = ['General', 'Music', 'Sport'];
@@ -73,19 +83,18 @@ class ChatServer {
         }
       }
 
-      // Initialiser le jeu
+      // MVP: Quiz/Game désactivé — trop lourd pour le MVP initial
+      // Réactiver en décommentant le bloc ci-dessous quand le scaling est prêt.
+      /*
+      const Game = require('./models/Game');
+      const { getRandomQuestion } = require('./services/questionService');
       const existingGame = await Game.findOne({ channel: 'Game' });
       if (!existingGame) {
         const question = getRandomQuestion();
-        await Game.create({
-          channel: 'Game',
-          isActive: true,
-          currentQuestion: { ...question, startTime: new Date(), answers: [] },
-          leaderboard: [],
-          questionHistory: []
-        });
+        await Game.create({ channel: 'Game', isActive: true, currentQuestion: { ...question, startTime: new Date(), answers: [] }, leaderboard: [], questionHistory: [] });
         console.log('✅ Système de jeu initialisé');
       }
+      */
     } catch (error) {
       console.error('❌ Erreur initialisation:', error.message);
     }
@@ -110,10 +119,12 @@ class ChatServer {
     this.app.use('/api/reports', reportRoutes);
     this.app.use('/api/ai-agents', aiAgentRoutes);
 
-    // Route de santé
-    this.app.get('/health', (req, res) => {
+    // Route de santé (both paths for convenience)
+    const healthHandler = (req, res) => {
       res.json({ status: 'OK', timestamp: new Date().toISOString() });
-    });
+    };
+    this.app.get('/health', healthHandler);
+    this.app.get('/api/health', healthHandler);
   }
 
   initSocketEvents() {

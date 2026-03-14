@@ -45,7 +45,7 @@ class ErrorBoundary extends Component<Props, State> {
             <Button onClick={() => window.location.reload()}>
               Rafraîchir la page
             </Button>
-            {this.state.error && (
+            {this.state.error && process.env.NODE_ENV === 'development' && (
               <details className="mt-4 text-left">
                 <summary className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200">
                   Détails de l'erreur

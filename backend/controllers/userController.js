@@ -1,13 +1,11 @@
 const User = require("../models/User");
+const mongoose = require('mongoose');
 
 class UserController  {
 
   async updateUserInfo(req, res) {
       try {
         const { username, age, ville, avatarUrl, bgColor } = req.body;
-    
-        console.log("📥 Reçu côté serveur :", { username, age, ville, avatarUrl, bgColor });
-        console.log("🔑 Utilisateur connecté :", req.user);
     
         const updateData = { username, age, ville };
         if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
@@ -32,7 +30,7 @@ class UserController  {
 
     async getCurrentUserProfile(req, res) {
       try {
-        const user = await User.findById(req.user.id).select('-password');
+        const user = await User.findById(req.user.id).select('-password -__v');
         
         if (!user) {
           return res.status(404).json({ message: 'Utilisateur non trouvé' });
@@ -49,13 +47,22 @@ class UserController  {
       try {
         const { id } = req.params;
 
-        const user = await User.findById(id).select("-password -email -createdAt -updatedAt");
-        
-        if(!user){
-          res.status(404).json({message: 'Utilisateur non trouvé'})
+        // Support both string IDs (better-auth 32-char) and legacy ObjectId (24-char hex)
+        const orConditions = [{ _id: id }];
+        if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+          orConditions.push({ _id: new mongoose.Types.ObjectId(id) });
         }
 
-        res.status(200).json(user)
+        const user = await User.collection.findOne(
+          { $or: orConditions },
+          { projection: { password: 0, email: 0, createdAt: 0, updatedAt: 0 } }
+        );
+
+        if (!user) {
+          return res.status(404).json({ message: 'Utilisateur non trouvé' });
+        }
+
+        res.status(200).json(user);
       } catch (error) {
         console.error("❌ Erreur getUserById :", error);
         res.status(500).json({ message: "Erreur serveur" });

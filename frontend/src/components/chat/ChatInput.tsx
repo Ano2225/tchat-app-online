@@ -44,20 +44,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const inputRef = useRef<HTMLInputElement>(null)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
-  const emojiPrefetched = useRef(false)
   const user = useAuthStore((state) => state.user)
-
-  useEffect(() => {
-    if (emojiPrefetched.current) return
-    emojiPrefetched.current = true
-
-    const idleCallback = (window as any).requestIdleCallback
-    if (typeof idleCallback === 'function') {
-      idleCallback(() => import('emoji-picker-react'))
-    } else {
-      setTimeout(() => import('emoji-picker-react'), 800)
-    }
-  }, [])
 
   useEffect(() => {
     if (!showEmojiPicker) return

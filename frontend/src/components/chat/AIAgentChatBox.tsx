@@ -37,7 +37,8 @@ interface AIAgentChatBoxProps {
 }
 
 const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose }) => {
-  const { user } = useAuthStore()
+  const user = useAuthStore((state) => state.user)
+  const token = useAuthStore((state) => state.token)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -47,6 +48,14 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose 
   const emojiPickerRef = useRef<HTMLDivElement>(null)
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
   const emojiPrefetched = useRef(false)
+  const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Clean up pending AI timeout when component unmounts
+  useEffect(() => {
+    return () => {
+      if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current)
+    }
+  }, [])
 
   const getSuggestions = () => {
     const suggestions = {
@@ -139,11 +148,14 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose 
     setIsTyping(true)
     scrollToBottom()
 
-    setTimeout(async () => {
+    aiTimeoutRef.current = setTimeout(async () => {
       try {
         const response = await fetch('/api/ai-agents/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
           body: JSON.stringify({
             message: userMessage.content,
             agentId: agent.id,
@@ -154,7 +166,32 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose 
           })
         })
 
-        const data = await response.json()
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          let errorMessage = "Désolé, je n'ai pas pu traiter ta demande."
+          if (response.status === 401) {
+            errorMessage = "Tu dois être connecté pour utiliser l’IA."
+          } else if (response.status === 403) {
+            errorMessage = "L’IA est réservée aux comptes inscrits. Connecte-toi pour continuer."
+          } else if (response.status === 429) {
+            errorMessage = "Tu as atteint ta limite de 20 messages IA pour aujourd'hui. Reviens demain."
+          } else if (data?.error) {
+            errorMessage = data.error
+          }
+
+          const aiMessage: Message = {
+            _id: (Date.now() + 1).toString(),
+            content: errorMessage,
+            sender: { _id: `ai_${agent.id}`, username: agent.name },
+            createdAt: new Date().toISOString(),
+            isAI: true
+          }
+          setMessages(prev => [...prev, aiMessage])
+          setIsTyping(false)
+          setShowSuggestions(false)
+          scrollToBottom()
+          return
+        }
         
         const aiMessage: Message = {
           _id: (Date.now() + 1).toString(),

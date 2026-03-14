@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/vertex-ai-key.json)",
+      "Read(**/*credentials*)",
+      "Read(**/*secret*)"
+    ],
+    "defaultMode": "bypassPermissions"
+  }
+}

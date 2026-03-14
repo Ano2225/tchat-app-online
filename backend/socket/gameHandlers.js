@@ -79,30 +79,36 @@ const handleChatMessage = async (socket, data, io) => {
   }
   
   // Vérifier si c'est une réponse à la question
-  const userAnswer = message.trim().toLowerCase();
+  const userAnswerRaw = message.trim().toLowerCase();
   const correctAnswer = game.currentQuestion.correctAnswerText?.toLowerCase() || '';
-  
-  console.log(`[GAME] User answer: "${userAnswer}", Correct answer: "${correctAnswer}"`);
-  
+
   // Vérifier si l'utilisateur a déjà répondu
   if (!game.currentQuestion.answers) {
     game.currentQuestion.answers = [];
   }
-  
+
   const existingAnswer = game.currentQuestion.answers.find(a => a.userId?.toString() === socket.userId);
   if (existingAnswer) {
-    console.log(`[GAME] User ${socket.username} already answered`);
-    return false; // Allow normal chat since user already answered
+    socket.emit('answer_result', { userId: socket.userId, isCorrect: existingAnswer.isCorrect, alreadyAnswered: true });
+    return false;
   }
-  
+
   const responseTime = Date.now() - game.currentQuestion.startTime.getTime();
-  
-  // Améliorer la comparaison des réponses
+
   const normalizeText = (text) => text.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
-  const normalizedUserAnswer = normalizeText(userAnswer);
+
+  // Support letter answers: A → options[0], B → options[1], etc.
+  const letterToIndex = { a: 0, b: 1, c: 2, d: 3 };
+  let resolvedAnswer = userAnswerRaw;
+  if (letterToIndex[userAnswerRaw] !== undefined && game.currentQuestion.options?.length) {
+    const opt = game.currentQuestion.options[letterToIndex[userAnswerRaw]];
+    if (opt) resolvedAnswer = opt.toLowerCase();
+  }
+
+  const normalizedUserAnswer = normalizeText(resolvedAnswer);
   const normalizedCorrectAnswer = normalizeText(correctAnswer);
-  
-  const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer || 
+
+  const isCorrect = normalizedUserAnswer === normalizedCorrectAnswer ||
                    normalizedUserAnswer.includes(normalizedCorrectAnswer) ||
                    normalizedCorrectAnswer.includes(normalizedUserAnswer);
   
@@ -112,11 +118,14 @@ const handleChatMessage = async (socket, data, io) => {
   game.currentQuestion.answers.push({
     userId: socket.userId,
     username: socket.username,
-    answer: userAnswer,
+    answer: resolvedAnswer,
     isCorrect,
     responseTime
   });
-  
+
+  // Notifier l'expéditeur du résultat de sa réponse
+  socket.emit('answer_result', { userId: socket.userId, isCorrect, alreadyAnswered: false });
+
   let points = 0;
   let isWinner = false;
   
