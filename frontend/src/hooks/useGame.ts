@@ -65,7 +65,7 @@ export const useGame = (channel: string, socket?: Socket | null) => {
           // Handle timer for current question
           if (state.currentQuestion && state.currentQuestion.startTime) {
             const elapsed = Date.now() - new Date(state.currentQuestion.startTime).getTime();
-            const remaining = Math.max(0, Math.floor((15000 - elapsed) / 1000));
+            const remaining = Math.max(0, Math.floor((10000 - elapsed) / 1000));
             console.log('[GAME] Question in progress, remaining time:', remaining);
             if (remaining > 0) {
               startTimer(remaining);
@@ -93,7 +93,7 @@ export const useGame = (channel: string, socket?: Socket | null) => {
         const questionData = {
           question: question.question || 'Question non disponible',
           options: question.options || [],
-          duration: question.duration || 15000,
+          duration: question.duration || 10000,
           explanation: question.explanation || '',
           category: question.category || 'Quiz',
           categoryEmoji: question.categoryEmoji || '❓',

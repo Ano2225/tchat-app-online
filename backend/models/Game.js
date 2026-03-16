@@ -35,8 +35,7 @@ const gameSchema = new mongoose.Schema({
     startTime: Date,
     answers: [{
       userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        type: String,
       },
       username: String,
       answer: String,
@@ -46,8 +45,7 @@ const gameSchema = new mongoose.Schema({
   },
   leaderboard: [{
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      type: String,
     },
     username: String,
     score: {
@@ -61,8 +59,7 @@ const gameSchema = new mongoose.Schema({
     explanation: String,
     answers: [{
       userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        type: String,
       },
       username: String,
       answer: String,

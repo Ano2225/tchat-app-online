@@ -1,6 +1,14 @@
 const Game = require('../models/Game');
 const User = require('../models/User');
+const { ObjectId } = require('mongodb');
 const { getRandomQuestion } = require('../services/questionService');
+
+function buildIdQuery(id) {
+  const str = String(id);
+  return /^[0-9a-f]{24}$/i.test(str)
+    ? { $or: [{ _id: str }, { _id: new ObjectId(str) }] }
+    : { _id: str };
+}
 const memoryCleanup = require('../utils/memoryCleanup');
 
 const activeGames = new Map();
@@ -8,7 +16,7 @@ const gameTimers = new Map();
 const userActionTimestamps = new Map();
 const gameCache = new Map(); // Cache pour éviter les requêtes DB répétées
 
-const QUESTION_DURATION = 15000;
+const QUESTION_DURATION = 10000;
 const PAUSE_BETWEEN_QUESTIONS = 8000; // Réduit pour plus de fluidité
 const RATE_LIMIT_WINDOW = 2000; // Augmenté à 2 secondes
 const MAX_ACTIONS_PER_WINDOW = 8; // Plus permissif pour les actions légitimes
@@ -87,7 +95,7 @@ const handleChatMessage = async (socket, data, io) => {
     game.currentQuestion.answers = [];
   }
 
-  const existingAnswer = game.currentQuestion.answers.find(a => a.userId?.toString() === socket.userId);
+  const existingAnswer = game.currentQuestion.answers.find(a => String(a.userId) === String(socket.userId));
   if (existingAnswer) {
     socket.emit('answer_result', { userId: socket.userId, isCorrect: existingAnswer.isCorrect, alreadyAnswered: true });
     return false;
@@ -137,7 +145,7 @@ const handleChatMessage = async (socket, data, io) => {
       isWinner = true;
       
       // S'assurer que le joueur existe dans le leaderboard
-      let player = game.leaderboard.find(p => p.userId?.toString() === socket.userId);
+      let player = game.leaderboard.find(p => String(p.userId) === String(socket.userId));
       if (!player) {
         player = {
           userId: socket.userId,
@@ -287,7 +295,7 @@ module.exports = (io, socket) => {
     
     // Vérifier que l'utilisateur est inscrit (pas anonyme)
     try {
-      const user = await User.findById(socket.userId);
+      const user = await User.collection.findOne(buildIdQuery(socket.userId), { projection: { isAnonymous: 1 } });
       if (!user || user.isAnonymous) {
         socket.emit('game_error', { message: 'Le quiz est réservé aux utilisateurs inscrits' });
         return;
@@ -341,7 +349,7 @@ module.exports = (io, socket) => {
 
     // Ajouter le joueur au leaderboard s'il n'y est pas déjà (une seule fois)
     if (socket.userId && socket.username) {
-      const existingPlayer = game.leaderboard.find(p => p.userId?.toString() === socket.userId);
+      const existingPlayer = game.leaderboard.find(p => String(p.userId) === String(socket.userId));
       if (!existingPlayer) {
         try {
           // Optimiser l'ajout au leaderboard

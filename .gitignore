@@ -30,6 +30,16 @@ pids
 # Coverage directory used by tools like istanbul
 coverage/
 
+# Claude Code
+.claude/
+CLAUDE.md
+
+# AI / IDE tools
+.augment
+.agents
+.vscode
+skills.lock.json
+
 # OS generated files
 .DS_Store
 .DS_Store?

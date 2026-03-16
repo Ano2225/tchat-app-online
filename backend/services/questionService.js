@@ -159,45 +159,65 @@ const translateDifficulty = (difficulty) => {
 };
 
 /**
- * Traduire un tableau de textes en français avec DeepL.
- * Si DEEPL_API_KEY est absente ou en cas d'erreur, on renvoie les textes d'origine.
+ * Traduire un texte en français via MyMemory (gratuit, sans clé).
+ */
+const translateOneMyMemory = async (text) => {
+  try {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|fr`;
+    const response = await axios.get(url, { timeout: 5000 });
+    const translated = response.data?.responseData?.translatedText;
+    if (translated && typeof translated === 'string') return translated;
+    return text;
+  } catch {
+    return text;
+  }
+};
+
+/**
+ * Traduire un tableau de textes en français.
+ * Priorité : DeepL (si DEEPL_API_KEY configurée) → MyMemory (gratuit, sans clé).
  */
 const translateTextsToFrench = async (texts) => {
-  // Si pas de clé configurée → on ne traduit pas
-  if (!DEEPL_API_KEY) {
-    console.warn('[TRIVIA_API] DEEPL_API_KEY not set, skipping translation');
-    return texts;
+  // 1. DeepL si clé disponible
+  if (DEEPL_API_KEY) {
+    try {
+      const params = new URLSearchParams();
+      texts.forEach((t) => params.append('text', t));
+      params.append('target_lang', 'FR');
+
+      const response = await axios.post(
+        'https://api-free.deepl.com/v2/translate',
+        params,
+        {
+          headers: {
+            'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          timeout: 5000,
+        }
+      );
+
+      const translations = response.data.translations || [];
+      if (translations.length === texts.length) {
+        console.log('[TRIVIA_API] Translated via DeepL');
+        return translations.map((t) => t.text);
+      }
+    } catch (err) {
+      console.warn('[TRIVIA_API] DeepL failed, falling back to MyMemory:', err.message);
+    }
   }
 
+  // 2. MyMemory (gratuit, sans clé) — requêtes séquentielles pour éviter le rate-limit
   try {
-    const params = new URLSearchParams();
-    texts.forEach((t) => params.append('text', t));
-    params.append('target_lang', 'FR');
-
-    const response = await axios.post(
-      'https://api-free.deepl.com/v2/translate', // si tu as un plan Pro: https://api.deepl.com/v2/translate
-      params,
-      {
-        headers: {
-          'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        timeout: 5000,
-        withCredentials: false
-      }
-    );
-
-    const translations = response.data.translations || [];
-    if (translations.length !== texts.length) {
-      console.warn('[TRIVIA_API] DeepL returned unexpected number of translations, using original texts');
-      return texts;
+    const results = [];
+    for (const text of texts) {
+      const translated = await translateOneMyMemory(text);
+      results.push(translated);
     }
-
-    return translations.map((t) => t.text);
-
+    console.log('[TRIVIA_API] Translated via MyMemory');
+    return results;
   } catch (err) {
-    console.error('[TRIVIA_API] Error translating with DeepL:', err.message);
+    console.error('[TRIVIA_API] MyMemory failed:', err.message);
     return texts;
   }
 };

@@ -8,85 +8,84 @@ interface GameMessageProps {
 }
 
 export default function GameMessage({ content, timestamp }: GameMessageProps) {
-  const isQuestion = content.includes('❓ **NOUVELLE QUESTION');
-  const isExplanation = content.includes('💡 **EXPLICATION**');
-  const isWinner = content.includes('🎉 **BONNE RÉPONSE !**');
-  const isTransition = content.includes('⏳ **Prochaine question');
+  const isWinner     = content.includes('BONNE RÉPONSE') || content.includes('BONNE REPONSE');
+  const isExpired    = content.includes('TEMPS ÉCOULÉ') || content.includes('TEMPS ECOULE');
+  const isTransition = content.includes('Prochaine question') || content.includes('prochaine question');
 
-  const getMessageStyle = () => {
-    if (isQuestion) {
-      return 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 border-blue-300 dark:border-blue-700';
-    }
-    if (isExplanation) {
-      return 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 border-green-300 dark:border-green-700';
-    }
-    if (isWinner) {
-      return 'bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/30 dark:to-orange-900/30 border-yellow-300 dark:border-yellow-700';
-    }
-    if (isTransition) {
-      return 'bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 border-purple-300 dark:border-purple-700';
-    }
-    return 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800';
-  };
+  const accentColor = isWinner  ? 'var(--online)'
+                    : isExpired ? 'var(--danger)'
+                    : 'var(--accent)';
+
+  const icon  = isWinner ? '🏆' : isExpired ? '⏰' : isTransition ? '⏳' : '🤖';
+  const label = isWinner ? 'Bonne réponse' : isExpired ? 'Temps écoulé' : isTransition ? 'Transition' : 'Quiz Bot';
 
   const formatContent = (text: string) => {
-    const parts = text.split(/(\*\*.*?\*\*|🅰️|🅱️|🅲️|🅳️|A\)|B\)|C\)|D\)|🥇|🥈|🥉|1\.|2\.|3\.|4\.|5\.)/);
-    
-    return parts.map((part, index) => {
+    const parts = text.split(/(\*\*.*?\*\*)/);
+    return parts.map((part, i) => {
       if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={index} className="font-bold text-lg">{part.slice(2, -2)}</strong>;
+        return (
+          <strong key={i} style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+            {part.slice(2, -2)}
+          </strong>
+        );
       }
-      if (/(🅰️|🅱️|🅲️|🅳️|A\)|B\)|C\)|D\))/.test(part)) {
-        return <span key={index} className="font-semibold text-blue-600 dark:text-blue-400">{part}</span>;
-      }
-      if (/(🥇|🥈|🥉|1\.|2\.|3\.|4\.|5\.)/.test(part)) {
-        return <span key={index} className="font-bold text-yellow-600 dark:text-yellow-400">{part}</span>;
-      }
-      return part.split('\n').map((line, lineIndex, lines) => (
-        lineIndex < lines.length - 1 ? [line, <br key={`${index}-${lineIndex}`} />] : line
-      )).flat();
-    }).flat();
+      return part.split('\n').flatMap((line, li, arr) =>
+        li < arr.length - 1 ? [line, <br key={`${i}-${li}`} />] : [line]
+      );
+    });
   };
 
-  const getIcon = () => {
-    if (isQuestion) return '❓';
-    if (isExplanation) return '💡';
-    if (isWinner) return '🏆';
-    if (isTransition) return '⏳';
-    return '🤖';
-  };
+  const timeStr = (() => {
+    try {
+      const d = new Date(timestamp);
+      return isNaN(d.getTime()) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch { return ''; }
+  })();
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.3 }}
-      className={`p-4 rounded-xl border-2 ${getMessageStyle()} mb-3 shadow-lg`}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border-default)',
+        borderLeft: `3px solid ${accentColor}`,
+        borderRadius: 'var(--radius-sm)',
+        padding: '10px 14px',
+        marginBottom: '6px',
+      }}
     >
-      <div className="flex items-center gap-3 mb-3">
-        <motion.div 
-          className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center shadow-md"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <span className="text-white text-lg">{getIcon()}</span>
-        </motion.div>
-        <div>
-          <div className="font-bold text-purple-700 dark:text-purple-300 text-lg">Quiz Bot</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            {(() => {
-              try {
-                const date = new Date(timestamp);
-                return isNaN(date.getTime()) ? 'Invalid time' : date.toLocaleTimeString();
-              } catch {
-                return 'Invalid time';
-              }
-            })()}
-          </div>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ fontSize: '13px', lineHeight: 1 }}>{icon}</span>
+          <span style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: '11px',
+            fontWeight: 700,
+            letterSpacing: '0.06em',
+            color: accentColor,
+            textTransform: 'uppercase' as const,
+          }}>
+            {label}
+          </span>
         </div>
+        {timeStr && (
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>
+            {timeStr}
+          </span>
+        )}
       </div>
-      
-      <div className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
+
+      {/* Body */}
+      <div style={{
+        fontFamily: 'var(--font-body)',
+        fontSize: '13px',
+        color: 'var(--text-secondary)',
+        lineHeight: 1.6,
+        whiteSpace: 'pre-wrap' as const,
+      }}>
         {formatContent(content)}
       </div>
     </motion.div>

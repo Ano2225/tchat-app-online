@@ -2,6 +2,7 @@ const User = require("../models/User");
 const Message = require("../models/Message");
 const aiService = require('../services/aiService');
 const { ObjectId } = require('mongodb');
+const gameHandlers = require('./gameHandlers');
 
 // ─── In-memory presence store ────────────────────────────────────────────────
 // username → Set<socketId>
@@ -149,6 +150,11 @@ module.exports = (io, socket) => {
       if (!Array.from(socket.rooms).includes(room)) {
         socket.join(room);
         socket.currentRoom = room;
+      }
+
+      // For the Game channel, let gameHandlers process potential answers first
+      if (room === 'Game') {
+        await gameHandlers.handleChatMessage(socket, { room, message: content }, io);
       }
 
       const newMessage = new Message({
@@ -600,6 +606,9 @@ module.exports = (io, socket) => {
       io.emit('presence_update', { userId: currentUserId, username: currentUsername, isOnline: false });
     }
   });
+
+  // ── Game handlers ─────────────────────────────────────────────────────────
+  gameHandlers(io, socket);
 
   // ─────────────────────────────────────────────────────────────────────────
   function getPrivateRoomId(id1, id2) {
