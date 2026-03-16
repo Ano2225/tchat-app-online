@@ -172,7 +172,7 @@ export default function GamePanel({ channel, socket }: GamePanelProps) {
 
   const answered      = hasAnswered || localAnswered;
   const answerCorrect = lastAnswer?.isCorrect ?? null;
-  const timerPct      = Math.max(0, (timeLeft / 10) * 100);
+  const timerPct      = Math.max(0, (timeLeft / 15) * 100);
   const timerColor    = timeLeft <= 5 ? 'var(--danger)' : timeLeft <= 10 ? 'var(--amber)' : 'var(--accent)';
   const timerBg       = timeLeft <= 5 ? 'rgba(239,68,68,0.1)' : timeLeft <= 10 ? 'rgba(245,158,11,0.1)' : 'var(--accent-dim)';
 

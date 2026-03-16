@@ -16,7 +16,7 @@ const gameTimers = new Map();
 const userActionTimestamps = new Map();
 const gameCache = new Map(); // Cache pour éviter les requêtes DB répétées
 
-const QUESTION_DURATION = 10000;
+const QUESTION_DURATION = 15000;
 const PAUSE_BETWEEN_QUESTIONS = 8000; // Réduit pour plus de fluidité
 const RATE_LIMIT_WINDOW = 2000; // Augmenté à 2 secondes
 const MAX_ACTIONS_PER_WINDOW = 8; // Plus permissif pour les actions légitimes
