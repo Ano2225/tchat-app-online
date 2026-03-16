@@ -24,6 +24,10 @@ const UserSchema = new mongoose.Schema({
   isBlocked: { type: Boolean, default: false },
   blockedUsers: [{ type: String, ref: 'User' }],
   
+  // Reset password
+  resetPasswordToken:   { type: String, default: null },
+  resetPasswordExpires: { type: Date,   default: null },
+
   // Timestamps
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }

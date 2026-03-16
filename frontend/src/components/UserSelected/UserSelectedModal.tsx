@@ -5,7 +5,7 @@ import { Socket } from 'socket.io-client';
 import axiosInstance from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
 import GenderAvatar from '@/components/ui/GenderAvatar';
-import { MessageCircle, AlertTriangle, UserX, Cake, MapPin } from 'lucide-react';
+import { MessageCircle, AlertTriangle, UserX, Cake, MapPin, Venus, Mars, CircleEllipsis, X } from 'lucide-react';
 
 interface UserProfile {
   _id: string;
@@ -22,196 +22,196 @@ interface Props {
   onClose: () => void;
 }
 
-const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showChat, setShowChat] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
+function sexeLabel(sexe?: string) {
+  if (sexe === 'femme' || sexe === 'female') return 'Femme';
+  if (sexe === 'homme' || sexe === 'male')   return 'Homme';
+  if (sexe === 'autre')                       return 'Autre';
+  return null;
+}
 
-  const handleClose = () => {
-    onClose();
-    setProfile(null);
-    setShowChat(false);
-  };
+function SexeIcon({ sexe }: { sexe?: string }) {
+  if (sexe === 'femme' || sexe === 'female') return <Venus className="w-3.5 h-3.5 text-pink-400" />;
+  if (sexe === 'homme' || sexe === 'male')   return <Mars  className="w-3.5 h-3.5 text-blue-400" />;
+  return <CircleEllipsis className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />;
+}
+
+const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
+  const [profile, setProfile]           = useState<UserProfile | null>(null);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState<string | null>(null);
+  const [showChat, setShowChat]         = useState(false);
+  const [showReportModal, setShowReport] = useState(false);
+  const [blocking, setBlocking]         = useState(false);
+
+  const handleClose = () => { onClose(); setProfile(null); setShowChat(false); };
 
   useEffect(() => {
-    let isCancelled = false;
+    let cancelled = false;
+    if (!userId || userId === profile?._id) return;
+    setLoading(true);
+    setError(null);
+    axiosInstance.get(`/user/${userId}`)
+      .then(r => { if (!cancelled) setProfile(r.data); })
+      .catch(e => { if (!cancelled) setError(e?.response?.data?.message || 'Profil introuvable'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [userId]);
 
-    const fetchProfile = async () => {
-      if (!userId) return;
-      
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const response = await axiosInstance.get(`/user/${userId}`);
-        if (!isCancelled) {
-          setProfile(response.data);
-        }
-      } catch (err: any) {
-        if (!isCancelled) {
-          setError(err?.response?.data?.message || 'Erreur lors du chargement du profil');
-        }
-      } finally {
-        if (!isCancelled) {
-          setLoading(false);
-        }
-      }
-    };
+  if (showChat && profile) return <PrivateChatBox recipient={profile} socket={socket} onClose={onClose} />;
 
-    if (userId && userId !== profile?._id) {
-      fetchProfile();
-    }
+  const backdrop = (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={handleClose} />
+  );
 
-    return () => {
-      isCancelled = true;
-    };
-  }, [userId, profile?._id]);
+  if (loading) return (
+    <>
+      {backdrop}
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 rounded-2xl p-6 flex items-center gap-3"
+        style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-lg)' }}>
+        <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
+        <span className="text-sm" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}>Chargement…</span>
+      </div>
+    </>
+  );
 
-  if (loading) {
-    return (
-      <>
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fade-in" onClick={handleClose} />
-        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl p-6 shadow-2xl z-50 animate-scale-in" role="dialog" aria-modal="true" aria-labelledby="loading-title">
-          <div className="flex items-center space-x-3">
-            <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <span id="loading-title" className="text-sm font-medium text-gray-900 dark:text-white">Chargement du profil...</span>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  if (error) {
-    return (
-      <>
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fade-in" onClick={handleClose} />
-        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl p-6 shadow-2xl z-50 animate-scale-in" role="alert" aria-live="assertive">
-          <div className="text-center">
-            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg className="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <p className="text-red-600 dark:text-red-400 text-sm mb-4">{error}</p>
-            <button 
-              onClick={handleClose} 
-              className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-4 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500"
-              aria-label="Close error dialog"
-            >
-              Fermer
-            </button>
-          </div>
-        </div>
-      </>
-    );
-  }
+  if (error) return (
+    <>
+      {backdrop}
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 rounded-2xl p-6 text-center w-72"
+        style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-lg)' }}>
+        <p className="text-sm mb-4" style={{ color: 'var(--danger)' }}>{error}</p>
+        <button onClick={handleClose} className="px-4 py-2 rounded-lg text-sm"
+          style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>Fermer</button>
+      </div>
+    </>
+  );
 
   if (!profile) return null;
 
-  if (showChat) {
-    return <PrivateChatBox recipient={profile} socket={socket} onClose={onClose} />;
-  }
+  const label = sexeLabel(profile.sexe);
+  const hasInfo = profile.age || label || profile.ville;
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-fade-in" onClick={handleClose} />
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 w-80 max-w-[90vw] z-50 animate-scale-in" role="dialog" aria-modal="true" aria-labelledby="profile-title">
-        {/* Header */}
-        <div className="relative p-6 text-center">
-          <button 
-            onClick={handleClose} 
-            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
-            aria-label="Close profile"
+      {backdrop}
+      <div
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-80 max-w-[92vw] rounded-2xl overflow-hidden"
+        style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-lg)' }}
+        role="dialog" aria-modal="true"
+      >
+        {/* ── Header band ── */}
+        <div className="relative px-6 pt-6 pb-5 text-center"
+          style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-subtle)' }}>
+          <button
+            onClick={handleClose}
+            className="absolute top-3 right-3 w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+            style={{ background: 'var(--bg-hover)', color: 'var(--text-muted)' }}
+            aria-label="Fermer"
           >
-            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="w-3.5 h-3.5" />
           </button>
-          
-          {/* Avatar */}
-          <div className="mx-auto mb-3">
-            <GenderAvatar
-              username={profile.username}
-              avatarUrl={profile.avatarUrl}
-              sexe={profile.sexe}
-              size="lg"
-              className="w-20 h-20 shadow-lg"
-            />
-          </div>
-          <h3 className="font-bold text-gray-900 dark:text-white text-xl mb-1">
+
+          <GenderAvatar
+            username={profile.username}
+            avatarUrl={profile.avatarUrl}
+            sexe={profile.sexe}
+            size="lg"
+            className="w-20 h-20 mx-auto mb-3 ring-2 ring-offset-2"
+            style={{ '--tw-ring-color': 'var(--accent-glow)', '--tw-ring-offset-color': 'var(--bg-elevated)' } as React.CSSProperties}
+          />
+
+          <h3 className="font-bold text-lg leading-tight mb-1" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
             {profile.username}
           </h3>
-          <div className="flex items-center justify-center space-x-1">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">En ligne</span>
+
+          <div className="flex items-center justify-center gap-1.5">
+            <span className="w-2 h-2 rounded-full" style={{ background: 'var(--online)' }} />
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>En ligne</span>
           </div>
         </div>
 
-        {/* Infos simples */}
-        <div className="px-6 pb-6 text-center space-y-2">
-          <div className="flex items-center justify-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+        {/* ── Info pills ── */}
+        {hasInfo && (
+          <div className="px-5 py-4 flex flex-wrap justify-center gap-2"
+            style={{ borderBottom: '1px solid var(--border-subtle)' }}>
             {profile.age && (
-              <div className="flex items-center gap-1">
-                <Cake className="w-4 h-4" />
-                <span>{profile.age} ans</span>
-              </div>
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+                style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}>
+                <Cake className="w-3.5 h-3.5" />
+                {profile.age} ans
+              </span>
+            )}
+            {label && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+                style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}>
+                <SexeIcon sexe={profile.sexe} />
+                {label}
+              </span>
             )}
             {profile.ville && (
-              <div className="flex items-center gap-1">
-                <MapPin className="w-4 h-4" />
-                <span>{profile.ville}</span>
-              </div>
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+                style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}>
+                <MapPin className="w-3.5 h-3.5" />
+                {profile.ville}
+              </span>
             )}
           </div>
-        </div>
+        )}
 
-        {/* Action buttons */}
-        <div className="p-6 pt-0 space-y-2">
+        {/* ── Actions ── */}
+        <div className="p-4 space-y-2">
+          {/* Message */}
           <button
             onClick={() => setShowChat(true)}
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90"
+            style={{ background: 'var(--accent)', color: '#fff', fontFamily: 'var(--font-ui)' }}
           >
             <MessageCircle className="w-4 h-4" />
             Envoyer un message
           </button>
-          
-          <div className="flex space-x-2">
+
+          {/* Report + Block */}
+          <div className="grid grid-cols-2 gap-2">
             <button
-              onClick={() => setShowReportModal(true)}
-              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              onClick={() => setShowReport(true)}
+              className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-colors"
+              style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
             >
-              <AlertTriangle className="w-4 h-4" />
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
               Signaler
             </button>
-            
+
             <button
               onClick={async () => {
+                setBlocking(true);
                 try {
                   await axiosInstance.post(`/reports/block/${profile._id}`);
-                  toast.success(`${profile.username} a été bloqué`);
+                  toast.success(`${profile.username} bloqué`);
                   handleClose();
-                } catch (error: any) {
-                  toast.error(error.response?.data?.message || 'Erreur lors du blocage');
+                } catch (e: any) {
+                  toast.error(e.response?.data?.message || 'Erreur');
+                } finally {
+                  setBlocking(false);
                 }
               }}
-              className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              disabled={blocking}
+              className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50"
+              style={{ background: 'var(--bg-elevated)', color: 'var(--danger)', border: '1px solid var(--border-default)' }}
             >
-              <UserX className="w-4 h-4" />
-              Bloquer
+              <UserX className="w-3.5 h-3.5" />
+              {blocking ? '…' : 'Bloquer'}
             </button>
           </div>
         </div>
-        
-        {showReportModal && (
-          <ReportModal
-            targetUserId={profile._id}
-            username={profile.username}
-            onClose={() => setShowReportModal(false)}
-          />
-        )}
       </div>
+
+      {showReportModal && (
+        <ReportModal
+          targetUserId={profile._id}
+          username={profile.username}
+          onClose={() => setShowReport(false)}
+        />
+      )}
     </>
   );
 };

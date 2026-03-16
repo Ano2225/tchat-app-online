@@ -121,6 +121,12 @@ export const useGame = (channel: string, socket?: Socket | null) => {
 
     const handleWinnerAnnounced = (data: any) => {
       console.log('[GAME] Winner announced:', data);
+      // Stop the frontend countdown immediately
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setTimeLeft(0);
       setWinner(data.winner);
       setExplanation(data.correctAnswer ? `Réponse correcte: ${data.correctAnswer}` : null);
     };

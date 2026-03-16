@@ -56,17 +56,12 @@ export default function AnonymousPage() {
 
     try {
       const authStore = useAuthStore.getState()
-      const result = await authStore.signInAnonymous(formData.username.trim())
+      const result = await authStore.signInAnonymous(formData.username.trim(), {
+        age: formData.age ? parseInt(formData.age) : undefined,
+        sexe: formData.sexe || 'autre',
+      })
 
       if (result.success) {
-        // Mettre à jour les infos supplémentaires si nécessaire
-        if (formData.age || formData.sexe) {
-          await authStore.updateUser({
-            age: parseInt(formData.age),
-            sexe: formData.sexe || 'autre'
-          })
-        }
-        
         toast.success('Connexion anonyme réussie!')
         router.push('/chat')
       } else {

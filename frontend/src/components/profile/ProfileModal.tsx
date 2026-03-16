@@ -213,8 +213,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
   if (user?.isAnonymous === true) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full mx-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Profil</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Profil</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none">×</button>
+          </div>
           <div className="text-center mb-4">
             <GenderAvatar
               username={user?.username || ''}
@@ -224,13 +227,37 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
               className="w-16 h-16 mx-auto mb-2"
               clickable={false}
             />
-            <p className="text-gray-600 dark:text-gray-400 text-sm">
-              Inscrivez-vous pour personnaliser votre profil
-            </p>
+            <p className="font-semibold text-gray-900 dark:text-white">{user?.username}</p>
           </div>
+          <div className="bg-gray-50 dark:bg-gray-700/30 rounded-xl p-4 mb-4 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500 dark:text-gray-400">Sexe</span>
+              <span className="font-medium text-gray-900 dark:text-white">
+                {user?.sexe === 'homme' || user?.sexe === 'male' ? 'Homme'
+                  : user?.sexe === 'femme' || user?.sexe === 'female' ? 'Femme'
+                  : user?.sexe === 'autre' ? 'Autre'
+                  : 'Non renseigné'}
+              </span>
+            </div>
+            {user?.age && (
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">Âge</span>
+                <span className="font-medium text-gray-900 dark:text-white">{user.age} ans</span>
+              </div>
+            )}
+            {user?.ville && (
+              <div className="flex justify-between">
+                <span className="text-gray-500 dark:text-gray-400">Ville</span>
+                <span className="font-medium text-gray-900 dark:text-white">{user.ville}</span>
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-center text-gray-500 dark:text-gray-400 mb-4">
+            Inscrivez-vous pour personnaliser votre profil
+          </p>
           <button
             onClick={onClose}
-            className="w-full bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
+            className="w-full bg-gray-500 text-white py-2 rounded-lg hover:bg-gray-600"
           >
             Fermer
           </button>

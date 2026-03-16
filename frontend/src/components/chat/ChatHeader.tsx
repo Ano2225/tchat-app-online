@@ -43,13 +43,21 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
   const [loadingConvs, setLoadingConvs] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
-  const handleLogout = () => {
-    if (socket) socket.disconnect()
-    logout()
-    setShowToast(true)
-    setTimeout(() => router.push('/'), 1000)
+  const handleLogout = async () => {
+    setLoggingOut(true)
+    try {
+      if (socket) socket.disconnect()
+      await logout()
+      setShowLogoutConfirm(false)
+      setShowToast(true)
+      setTimeout(() => router.push('/login'), 1000)
+    } finally {
+      setLoggingOut(false)
+    }
   }
 
   const fetchConversations = async () => {
@@ -370,7 +378,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
 
             {/* Logout */}
             <button
-              onClick={handleLogout}
+              onClick={() => setShowLogoutConfirm(true)}
               className="w-9 h-9 flex items-center justify-center rounded-xl transition-all"
               style={{
                 background: 'var(--bg-surface)',
@@ -396,6 +404,104 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
       </header>
 
       {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+
+      {/* Logout confirmation modal */}
+      {showLogoutConfirm && (
+        <div
+          className="fixed inset-0 z-[500] flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
+          onClick={e => { if (e.target === e.currentTarget && !loggingOut) setShowLogoutConfirm(false) }}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl p-6 flex flex-col gap-5"
+            style={{
+              background: 'var(--bg-panel)',
+              border: '1px solid var(--border-default)',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
+            }}
+          >
+            {/* Icon */}
+            <div className="flex flex-col items-center gap-3 text-center">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.25)' }}
+              >
+                <LogOut className="w-6 h-6" style={{ color: 'var(--danger)' }} />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
+                  Se déconnecter ?
+                </h2>
+                <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                  Vous serez redirigé vers la page de connexion.
+                </p>
+              </div>
+            </div>
+
+            {/* User card */}
+            <div
+              className="flex items-center gap-3 rounded-xl px-4 py-3"
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
+            >
+              <GenderAvatar
+                username={user?.username || ''}
+                avatarUrl={user?.avatarUrl}
+                sexe={user?.sexe}
+                size="sm"
+                className="w-9 h-9 rounded-lg flex-shrink-0"
+                clickable={false}
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
+                  {user?.username}
+                </p>
+                <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                  {user?.email || (user?.isAnonymous ? 'Compte anonyme' : '')}
+                </p>
+              </div>
+              <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+                <div className="w-2 h-2 rounded-full" style={{ background: 'var(--online)' }} />
+                <span className="text-xs" style={{ color: 'var(--online)' }}>En ligne</span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                disabled={loggingOut}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-40"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{ background: 'var(--danger)' }}
+              >
+                {loggingOut ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Déconnexion…</span>
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="w-4 h-4" />
+                    <span>Déconnecter</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showToast && (
         <Toast message="Déconnexion réussie" type="success" onClose={() => setShowToast(false)} />
       )}

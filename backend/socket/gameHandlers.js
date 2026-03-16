@@ -17,7 +17,7 @@ const userActionTimestamps = new Map();
 const gameCache = new Map(); // Cache pour éviter les requêtes DB répétées
 
 const QUESTION_DURATION = 15000;
-const PAUSE_BETWEEN_QUESTIONS = 8000; // Réduit pour plus de fluidité
+const PAUSE_BETWEEN_QUESTIONS = 5000;
 const RATE_LIMIT_WINDOW = 2000; // Augmenté à 2 secondes
 const MAX_ACTIONS_PER_WINDOW = 8; // Plus permissif pour les actions légitimes
 const MAX_LEADERBOARD_SIZE = 100; // Limiter la taille du leaderboard
@@ -184,7 +184,7 @@ const handleChatMessage = async (socket, data, io) => {
           room: channel,
           isGameMessage: true
         });
-      }, 1500); // Augmenté à 1.5 secondes
+      }, 800);
       
       // Terminer la question après un court délai
       const timersToClean = [`next_${channel}`, `transition_${channel}`, channel];
@@ -198,7 +198,7 @@ const handleChatMessage = async (socket, data, io) => {
       
       const endTimer = setTimeout(() => {
         endQuestion(channel, io);
-      }, 5500); // 5.5 secondes pour voir le gagnant
+      }, 3000); // 3s pour voir le gagnant puis question suivante
       
       gameTimers.set(`winner_${channel}`, endTimer);
     }

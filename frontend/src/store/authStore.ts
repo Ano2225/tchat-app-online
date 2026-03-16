@@ -45,7 +45,7 @@ interface AuthState {
     password: string
   }) => Promise<{ success: boolean; error?: string; code?: string }>
   
-  signInAnonymous: (username: string) => Promise<{ success: boolean; error?: string }>
+  signInAnonymous: (username: string, extra?: { age?: number; sexe?: string }) => Promise<{ success: boolean; error?: string }>
   
   signOut: () => Promise<void>
   
@@ -131,13 +131,13 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      signInAnonymous: async (username) => {
+      signInAnonymous: async (username, extra?: { age?: number; sexe?: string }) => {
         set({ isLoading: true })
         try {
           const response = await fetch('/api/auth/anonymous', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username })
+            body: JSON.stringify({ username, ...extra })
           })
           
           const result = await response.json()

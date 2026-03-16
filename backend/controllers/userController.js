@@ -12,9 +12,10 @@ class UserController {
 
   async updateUserInfo(req, res) {
     try {
-      const { username, age, ville, avatarUrl, bgColor } = req.body;
+      const { username, age, sexe, ville, avatarUrl, bgColor } = req.body;
 
       const updateData = { username, age, ville };
+      if (sexe !== undefined) updateData.sexe = sexe;
       if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
       if (bgColor) updateData.bgColor = bgColor;
 

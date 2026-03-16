@@ -2,7 +2,10 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../config/auth');
 const User = require('../models/User');
-const { getVerificationEmailPreview } = require('../services/emailService');
+const { ObjectId } = require('mongodb');
+const { getVerificationEmailPreview, sendMail } = require('../services/emailService');
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const { authMiddleware } = require('../middleware/authBetter');
 const { getCsrfToken } = require('../middleware/csrf');
 
@@ -241,6 +244,8 @@ router.post('/send-verification-email', handleSendVerificationEmail);
 router.post('/anonymous', async (req, res) => {
   try {
     const username = normalizeUsername(req.body?.username);
+    const age  = req.body?.age  ? parseInt(req.body.age)  : null;
+    const sexe = req.body?.sexe || null;
     
     if (!username) {
       return res.status(400).json({ error: 'Nom d\'utilisateur requis' });
@@ -282,14 +287,28 @@ router.post('/anonymous', async (req, res) => {
       return res.status(500).json({ error: 'Création utilisateur anonyme échouée' });
     }
 
+    // Save age & sexe directly at creation
+    const extra = {};
+    if (age)  extra.age  = age;
+    if (sexe) extra.sexe = sexe;
+    const anonId = String(anonymousUser.id || anonymousUser._id || '');
+    if (Object.keys(extra).length && anonId) {
+      // The _id may be stored as ObjectId (24-char) or string (32-char) — try both
+      const idQuery = /^[0-9a-f]{24}$/i.test(anonId)
+        ? { $or: [{ _id: anonId }, { _id: new ObjectId(anonId) }] }
+        : { _id: anonId };
+      await User.collection.updateOne(idQuery, { $set: extra });
+    }
+
     const session = await ctx.internalAdapter.createSession(anonymousUser.id);
     if (!session) {
       return res.status(500).json({ error: 'Création de session anonyme échouée' });
     }
 
+    // Spread extra into the response — Object.assign on better-auth object can silently fail
     res.json({
       success: true,
-      user: anonymousUser,
+      user: { ...anonymousUser, ...extra },
       session
     });
 
@@ -400,5 +419,89 @@ router.get('/verify-email', async (req, res) => {
 });
 
 router.get('/csrf-token', authMiddleware, getCsrfToken);
+
+/* ── Password reset ─────────────────────────────────────────────────────── */
+
+router.post('/request-password-reset', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email requis' });
+
+    const user = await User.findOne({ email: email.toLowerCase().trim(), isAnonymous: { $ne: true } });
+
+    // Always respond success to avoid user enumeration
+    if (!user) {
+      return res.json({ success: true, message: 'Si cet email existe, un lien a été envoyé.' });
+    }
+
+    // Generate a secure random token
+    const rawToken   = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const expires    = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await User.collection.updateOne(
+      { _id: user._id },
+      { $set: { resetPasswordToken: hashedToken, resetPasswordExpires: expires } }
+    );
+
+    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0].trim();
+    const resetUrl    = `${frontendUrl}/reset-password?token=${rawToken}`;
+
+    const result = await sendMail({
+      to: user.email,
+      subject: 'Réinitialisation de votre mot de passe',
+      text: `Bonjour ${user.username},\n\nCliquez sur le lien suivant pour réinitialiser votre mot de passe (valide 1 heure) :\n${resetUrl}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet email.`,
+      html: `<p>Bonjour <strong>${user.username}</strong>,</p><p>Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe (valide 1 heure) :</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>`
+    });
+
+    // Dev: return token in response if email not delivered
+    const response = { success: true, message: 'Si cet email existe, un lien a été envoyé.' };
+    if (!result.delivered) response.resetToken = rawToken; // visible in dev console only
+
+    return res.json(response);
+  } catch (error) {
+    console.error('Erreur request-password-reset:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ message: 'Token et nouveau mot de passe requis' });
+    if (newPassword.length < 6) return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 6 caractères' });
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken:   hashedToken,
+      resetPasswordExpires: { $gt: new Date() },
+      isAnonymous:          { $ne: true }
+    });
+
+    if (!user) return res.status(400).json({ message: 'Token invalide ou expiré' });
+
+    // Hash the new password using bcryptjs (same lib better-auth uses)
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the password in better-auth's account collection
+    const db = require('mongoose').connection.db;
+    await db.collection('account').updateOne(
+      { userId: String(user._id), providerId: 'credential' },
+      { $set: { password: hashedPassword } }
+    );
+
+    // Clear reset token
+    await User.collection.updateOne(
+      { _id: user._id },
+      { $unset: { resetPasswordToken: 1, resetPasswordExpires: 1 } }
+    );
+
+    return res.json({ success: true, message: 'Mot de passe réinitialisé avec succès' });
+  } catch (error) {
+    console.error('Erreur reset-password:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
 
 module.exports = router;

@@ -216,5 +216,6 @@ const getVerificationEmailPreview = (email) => {
 
 module.exports = {
   sendVerificationEmail,
-  getVerificationEmailPreview
+  getVerificationEmailPreview,
+  sendMail
 };

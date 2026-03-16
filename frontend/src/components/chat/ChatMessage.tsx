@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Socket } from 'socket.io-client';
 import axiosInstance from '@/utils/axiosInstance';
@@ -210,7 +211,9 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
   };
 
   const scrollToBottomSmooth = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({ top: messagesContainerRef.current.scrollHeight, behavior: 'smooth' });
+    }
   };
 
   const channelSubtitle = isGameChannel
@@ -253,18 +256,19 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
         />
       ))}
 
-      {/* Scroll to bottom button */}
-      {showScrollButton && (
+      {/* Scroll to bottom button — portal to avoid overflow/transform clipping */}
+      {showScrollButton && typeof document !== 'undefined' && createPortal(
         <button
           onClick={scrollToBottomSmooth}
-          className="fixed bottom-24 right-8 z-20 w-10 h-10 md:w-12 md:h-12 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center animate-slide-up focus:outline-none focus:ring-2 focus:ring-offset-2"
-          style={{ background: 'var(--accent)' }}
+          className="w-10 h-10 md:w-12 md:h-12 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center focus:outline-none"
+          style={{ position: 'fixed', bottom: '96px', right: '32px', zIndex: 9000, background: 'var(--accent)' }}
           aria-label="Scroll to bottom"
         >
           <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
           </svg>
-        </button>
+        </button>,
+        document.body
       )}
 
       {/* Messages */}

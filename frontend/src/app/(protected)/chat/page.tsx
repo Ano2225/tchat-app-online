@@ -16,6 +16,7 @@ import toast from 'react-hot-toast';
 import PrivateChatBox from '@/components/chat/PrivateChatBox';
 import GenderAvatar from '@/components/ui/GenderAvatar';
 import axiosInstance from '@/utils/axiosInstance';
+import MusicPlayer from '@/components/ui/MusicPlayer';
 
 interface Message {
   _id: string;
@@ -406,6 +407,7 @@ const ChatPage = () => {
           }}
         />
       )}
+      <MusicPlayer />
     </div>
   );
 };
