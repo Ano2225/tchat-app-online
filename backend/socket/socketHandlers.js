@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const Message = require("../models/Message");
 const aiService = require('../services/aiService');
+const { ObjectId } = require('mongodb');
 
 // ─── In-memory presence store ────────────────────────────────────────────────
 // username → Set<socketId>
@@ -133,7 +134,11 @@ module.exports = (io, socket) => {
           socket.username = socket.username || senderId.slice(5);
           socket.userMeta = { avatarUrl: null, sexe: null };
         } else {
-          const user = await User.findById(senderId).select('username avatarUrl sexe').lean();
+          const isObjId = /^[0-9a-f]{24}$/i.test(senderId);
+          const user = await User.collection.findOne(
+            isObjId ? { $or: [{ _id: senderId }, { _id: new ObjectId(senderId) }] } : { _id: senderId },
+            { projection: { username: 1, avatarUrl: 1, sexe: 1 } }
+          );
           if (!user) return;
           socket.username = user.username;
           socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null };
@@ -259,8 +264,11 @@ module.exports = (io, socket) => {
         userIdToUsername.set(currentUserId, username);
 
         // Fire-and-forget — don't block the socket event
-        User.findByIdAndUpdate(user._id, { isOnline: true, lastSeen: new Date() })
-          .catch(() => {});
+        const _uid = String(user._id);
+        User.collection.updateOne(
+          /^[0-9a-f]{24}$/i.test(_uid) ? { $or: [{ _id: _uid }, { _id: new ObjectId(_uid) }] } : { _id: _uid },
+          { $set: { isOnline: true, lastSeen: new Date() } }
+        ).catch(() => {});
 
       } else {
         // Anonymous user
@@ -311,7 +319,10 @@ module.exports = (io, socket) => {
 
       if (user) {
         if (currentUserId) {
-          User.findByIdAndUpdate(currentUserId, { isOnline: false, lastSeen: new Date() }).catch(() => {});
+          User.collection.updateOne(
+            /^[0-9a-f]{24}$/i.test(currentUserId) ? { $or: [{ _id: currentUserId }, { _id: new ObjectId(currentUserId) }] } : { _id: currentUserId },
+            { $set: { isOnline: false, lastSeen: new Date() } }
+          ).catch(() => {});
           userIdToUsername.delete(currentUserId);
         }
         currentUserId   = user._id.toString();
@@ -321,7 +332,11 @@ module.exports = (io, socket) => {
         userIdToUsername.set(currentUserId, newUsername);
         // Join personal room so direct delivery of private messages works
         socket.join(currentUserId);
-        User.findByIdAndUpdate(user._id, { isOnline: true, lastSeen: new Date() }).catch(() => {});
+        const _nuid = String(user._id);
+        User.collection.updateOne(
+          /^[0-9a-f]{24}$/i.test(_nuid) ? { $or: [{ _id: _nuid }, { _id: new ObjectId(_nuid) }] } : { _id: _nuid },
+          { $set: { isOnline: true, lastSeen: new Date() } }
+        ).catch(() => {});
         io.emit('presence_update', { userId: currentUserId, username: newUsername, isOnline: true });
       }
 
@@ -370,12 +385,20 @@ module.exports = (io, socket) => {
           { sender: recipientId, recipient: userId },
         ]
       })
-        .populate('sender', 'username email sexe avatarUrl')
         .sort({ createdAt: -1 })
         .limit(50)
         .lean();
 
       messages.reverse(); // oldest first for display
+
+      // Normalize: ensure sender is always an object (populate is unreliable with mixed _id types)
+      messages.forEach(m => {
+        if (!m.sender || typeof m.sender === 'string') {
+          m.sender = { _id: m.sender, username: m.senderUsername || 'Utilisateur' };
+        } else if (!m.sender._id) {
+          m.sender = { _id: String(m.sender), username: m.senderUsername || 'Utilisateur' };
+        }
+      });
 
       const roomId = getPrivateRoomId(userId, recipientId);
       io.to(roomId).emit('message_history', messages);
@@ -385,28 +408,76 @@ module.exports = (io, socket) => {
   });
 
   // ── Send private message ──────────────────────────────────────────────────
-  socket.on('send_private_message', async ({ recipientId, content, media_url, media_type }) => {
+  socket.on('send_private_message', async ({ optimisticId, recipientId, content, media_url, media_type }) => {
     const senderId = socket.userId;
     if (!senderId) { socket.emit('error', { message: 'Not authenticated' }); return; }
 
     try {
-      // Check blocking in parallel — lean() for speed
-      const [sender, recipient] = await Promise.all([
-        User.findById(senderId).select('blockedUsers').lean(),
-        User.findById(recipientId).select('blockedUsers').lean(),
-      ]);
+      // Anonymous users (anon_ prefix) are not stored in MongoDB — skip DB lookup
+      const isAnonSender = typeof senderId === 'string' && senderId.startsWith('anon_');
+      const isAnonRecipient = typeof recipientId === 'string' && recipientId.startsWith('anon_');
 
-      if (!sender || !recipient) return;
+      let sBlocked = [], rBlocked = [];
 
-      const sBlocked = sender.blockedUsers || [];
-      const rBlocked = recipient.blockedUsers || [];
-      if (sBlocked.includes(recipientId) || rBlocked.includes(senderId)) {
-        socket.emit('message_blocked', { message: 'Utilisateur bloqué.' });
+      // Use User.collection.findOne() to bypass Mongoose _id:false schema quirks.
+      // Also support legacy ObjectId _ids (24-char hex) alongside 32-char better-auth string _ids.
+      const buildIdQuery = (id) => {
+        const isObjectId = /^[0-9a-f]{24}$/i.test(id);
+        return isObjectId
+          ? { $or: [{ _id: id }, { _id: new ObjectId(id) }] }
+          : { _id: id };
+      };
+
+      if (!isAnonSender) {
+        const sender = await User.collection.findOne(
+          buildIdQuery(senderId),
+          { projection: { blockedUsers: 1 } }
+        );
+        if (!sender) {
+          socket.emit('private_message_error', { optimisticId, message: 'Session invalide.' });
+          return;
+        }
+        sBlocked = sender.blockedUsers || [];
+      }
+
+      if (!isAnonRecipient) {
+        const recipient = await User.collection.findOne(
+          buildIdQuery(recipientId),
+          { projection: { blockedUsers: 1 } }
+        );
+        if (!recipient) {
+          socket.emit('private_message_error', { optimisticId, message: 'Destinataire introuvable.' });
+          return;
+        }
+        rBlocked = recipient.blockedUsers || [];
+      }
+
+      const blockedByMe   = sBlocked.map(String).includes(String(recipientId));
+      const blockedByThem = rBlocked.map(String).includes(String(senderId));
+      if (blockedByMe || blockedByThem) {
+        socket.emit('message_blocked', { optimisticId, blockedByMe, blockedByThem });
         return;
       }
 
       const newMessage = await Message.create({ sender: senderId, senderUsername: socket.username || null, recipient: recipientId, content, media_url, media_type });
-      await newMessage.populate('sender', 'username email avatarUrl sexe');
+
+      // Build sender object from socket metadata — avoids populate() which fails
+      // for users with legacy ObjectId _ids due to Mongoose _id:false schema quirk
+      const messagePayload = {
+        _id: newMessage._id.toString(),
+        sender: {
+          _id: senderId,
+          username: socket.username,
+          avatarUrl: socket.userMeta?.avatarUrl || null,
+          sexe: socket.userMeta?.sexe || null,
+        },
+        recipient: recipientId,
+        content: newMessage.content,
+        media_url: newMessage.media_url || null,
+        media_type: newMessage.media_type || null,
+        createdAt: newMessage.createdAt,
+        replyTo: newMessage.replyTo || null,
+      };
 
       const roomId = getPrivateRoomId(senderId, recipientId);
 
@@ -421,18 +492,19 @@ module.exports = (io, socket) => {
       }
 
       // Deliver to private room (reaches both participants)
-      io.to(roomId).emit('receive_private_message', newMessage);
+      io.to(roomId).emit('receive_private_message', messagePayload);
 
       // Also deliver notification via personal room (for unread badge / toast)
       // even when no chatbox is open
       io.to(recipientId.toString()).emit('new_private_message', {
-        message: newMessage,
+        message: messagePayload,
         senderId,
         senderUsername: socket.username,
       });
 
     } catch (err) {
       console.error('send_private_message error:', err);
+      socket.emit('private_message_error', { optimisticId, message: 'Une erreur est survenue.' });
     }
   });
 
@@ -462,7 +534,11 @@ module.exports = (io, socket) => {
         socket.emit('user_online', recipientId);
         return;
       }
-      const user = await User.findById(recipientId).select('username').lean();
+      const _rid = String(recipientId);
+      const user = await User.collection.findOne(
+        /^[0-9a-f]{24}$/i.test(_rid) ? { $or: [{ _id: _rid }, { _id: new ObjectId(_rid) }] } : { _id: _rid },
+        { projection: { username: 1 } }
+      );
       if (user && connectedUsers.has(user.username)) {
         userIdToUsername.set(recipientId.toString(), user.username);
         socket.emit('user_online', recipientId);
@@ -509,8 +585,10 @@ module.exports = (io, socket) => {
       connectedUsers.delete(currentUsername);
 
       if (currentUserId) {
-        User.findByIdAndUpdate(currentUserId, { isOnline: false, lastSeen: new Date() })
-          .catch(() => {});
+        User.collection.updateOne(
+          /^[0-9a-f]{24}$/i.test(currentUserId) ? { $or: [{ _id: currentUserId }, { _id: new ObjectId(currentUserId) }] } : { _id: currentUserId },
+          { $set: { isOnline: false, lastSeen: new Date() } }
+        ).catch(() => {});
         userIdToUsername.delete(currentUserId);
       }
     }

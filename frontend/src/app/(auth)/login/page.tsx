@@ -225,7 +225,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-bg via-gray-100 to-neutral-bg dark:from-neutral-dark dark:via-gray-900 dark:to-neutral-dark flex items-center justify-center p-4">
+    <div className="min-h-screen bg-blue-50 dark:bg-gray-950 flex items-center justify-center p-4">
       {/* Header avec ThemeToggle */}
       <header className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-end">
         <ThemeToggle variant="inline" />
@@ -233,14 +233,14 @@ export default function LoginPage() {
       
       {/* Background Effects */}
       <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse delay-1000"></div>
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-15 animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse delay-1000"></div>
       </div>
 
       <div className="relative w-full max-w-md">
         <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-3xl p-8 shadow-2xl">
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/30">
               <MessageCircle className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Bon retour!</h1>
@@ -319,7 +319,7 @@ export default function LoginPage() {
                   className={`w-full bg-gray-50 dark:bg-white/10 border ${
                     fieldErrors.username
                       ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
-                      : 'border-gray-300 dark:border-white/20 focus:ring-primary-500'
+                      : 'border-gray-300 dark:border-white/20 focus:ring-blue-500'
                   } rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 transition-all`}
                   disabled={loading}
                   aria-invalid={!!fieldErrors.username}
@@ -351,7 +351,7 @@ export default function LoginPage() {
                   className={`w-full bg-gray-50 dark:bg-white/10 border ${
                     fieldErrors.password
                       ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
-                      : 'border-gray-300 dark:border-white/20 focus:ring-primary-500'
+                      : 'border-gray-300 dark:border-white/20 focus:ring-blue-500'
                   } rounded-xl pl-10 pr-12 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 transition-all`}
                   disabled={loading}
                   aria-invalid={!!fieldErrors.password}
@@ -376,16 +376,18 @@ export default function LoginPage() {
               )}
             </div>
 
-            <LoadingButton
+            <button
               type="submit"
-              loading={loading}
-              loadingText="Connexion..."
-              className="w-full"
-              variant="primary"
-              size="md"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-blue-500/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center justify-center"
             >
-              Se connecter
-            </LoadingButton>
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Connexion...
+                </>
+              ) : 'Se connecter'}
+            </button>
           </form>
 
           <div className="mt-8 text-center space-y-4">
@@ -406,12 +408,12 @@ export default function LoginPage() {
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 Pas encore de compte?{' '}
-                <Link href="/register" className="text-secondary-500 hover:text-secondary-600 font-medium">
+                <Link href="/register" className="text-blue-600 hover:text-blue-700 font-medium">
                   S'inscrire
                 </Link>
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                <Link href="/anonymous" className="text-turquoise-500 hover:text-turquoise-600 font-medium">
+                <Link href="/anonymous" className="text-blue-600 hover:text-blue-700 font-medium">
                   Continuer en mode anonyme
                 </Link>
               </p>

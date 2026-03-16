@@ -131,21 +131,21 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-bg via-gray-100 to-neutral-bg dark:from-neutral-dark dark:via-gray-900 dark:to-neutral-dark flex items-center justify-center p-4">
+    <div className="min-h-screen bg-purple-50 dark:bg-gray-950 flex items-center justify-center p-4">
       {/* Header avec ThemeToggle */}
       <header className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-end">
         <ThemeToggle variant="inline" />
       </header>
       
       <div className="absolute inset-0">
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-secondary-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse"></div>
-        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-turquoise-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse delay-1000"></div>
+        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-15 animate-pulse"></div>
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-purple-700 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse delay-1000"></div>
       </div>
 
       <div className="relative w-full max-w-md">
         <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-3xl p-8 shadow-2xl">
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-to-r from-secondary-500 to-turquoise-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <div className="w-20 h-20 bg-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/30">
               <Sparkles className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Rejoignez BabiChat</h1>
@@ -176,7 +176,7 @@ export default function RegisterPage() {
             {/* Progress Bar */}
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-4">
               <div 
-                className="bg-gradient-to-r from-secondary-500 to-turquoise-500 h-2 rounded-full transition-all duration-300"
+                className="bg-purple-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(currentStep / totalSteps) * 100}%` }}
               ></div>
             </div>
@@ -195,7 +195,7 @@ export default function RegisterPage() {
                       value={formData.username}
                       onChange={handleChange}
                       placeholder="Choisissez un pseudo"
-                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary-500 transition-all"
+                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
                       required
                     />
                     <div className="absolute inset-y-0 left-3 flex items-center">
@@ -213,7 +213,7 @@ export default function RegisterPage() {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="votre@email.com"
-                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary-500 transition-all"
+                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
                       required
                     />
                     <div className="absolute inset-y-0 left-3 flex items-center">
@@ -236,7 +236,7 @@ export default function RegisterPage() {
                       value={formData.password}
                       onChange={handleChange}
                       placeholder="Au moins 6 caractères"
-                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 pr-12 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary-500 transition-all"
+                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 pr-12 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
                       required
                     />
                     <div className="absolute inset-y-0 left-3 flex items-center">
@@ -261,7 +261,7 @@ export default function RegisterPage() {
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       placeholder="Répétez votre mot de passe"
-                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 pr-12 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary-500 transition-all"
+                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 pr-12 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
                       required
                     />
                     <div className="absolute inset-y-0 left-3 flex items-center">
@@ -292,7 +292,7 @@ export default function RegisterPage() {
                         value={formData.age}
                         onChange={handleChange}
                         placeholder="25"
-                        className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary-500 transition-all"
+                        className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
                         min="13"
                         max="25"
                         required
@@ -310,7 +310,7 @@ export default function RegisterPage() {
                         name="sexe"
                         value={formData.sexe}
                         onChange={handleChange}
-                        className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 pr-10 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-secondary-500 transition-all cursor-pointer"
+                        className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 pr-10 py-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all cursor-pointer"
                         style={{
                           appearance: 'none',
                           WebkitAppearance: 'none',
@@ -343,7 +343,7 @@ export default function RegisterPage() {
                       value={formData.ville}
                       onChange={handleChange}
                       placeholder="Treichville, Abidjan"
-                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary-500 transition-all"
+                      className="w-full bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
                       required
                     />
                     <div className="absolute inset-y-0 left-3 flex items-center">
@@ -368,7 +368,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-gradient-to-r from-secondary-600 to-secondary-500 text-white font-semibold py-3 rounded-xl hover:from-secondary-700 hover:to-secondary-600 transition-all disabled:opacity-50 shadow-lg"
+                className="flex-1 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-purple-500/20"
               >
                 {loading ? (
                   <div className="flex items-center justify-center">
@@ -397,12 +397,12 @@ export default function RegisterPage() {
             <div className="space-y-2">
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 Déjà un compte?{' '}
-                <Link href="/login" className="text-primary-500 hover:text-primary-600 font-medium">
+                <Link href="/login" className="text-purple-600 hover:text-purple-700 font-medium">
                   Se connecter
                 </Link>
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                <Link href="/anonymous" className="text-turquoise-500 hover:text-turquoise-600 font-medium">
+                <Link href="/anonymous" className="text-purple-600 hover:text-purple-700 font-medium">
                   Continuer en mode anonyme
                 </Link>
               </p>

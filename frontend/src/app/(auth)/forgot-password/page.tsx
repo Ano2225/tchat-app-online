@@ -56,7 +56,7 @@ const ForgotPasswordPage = () => {
             </p>
             <button
               onClick={() => router.push('/login')}
-              className="w-full bg-gradient-to-r from-primary-500 to-secondary-500 text-white py-3 rounded-xl font-medium hover:from-primary-600 hover:to-secondary-600 transition-all"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition-all shadow-lg shadow-blue-500/20"
             >
               Retour à la connexion
             </button>
@@ -96,7 +96,7 @@ const ForgotPasswordPage = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-primary-500 to-secondary-500 text-white py-3 rounded-xl font-medium hover:from-primary-600 hover:to-secondary-600 transition-all disabled:opacity-50"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
           >
             {loading ? 'Envoi...' : 'Envoyer le lien'}
           </button>

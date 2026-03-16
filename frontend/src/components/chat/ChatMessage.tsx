@@ -158,7 +158,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
 
   const getMessageColor = (isOwnMessage: boolean, sexe?: string) => {
     if (isOwnMessage) {
-      return 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white';
+      return 'text-white';
     }
     if (sexe === 'homme') {
       return 'bg-blue-50 dark:bg-blue-900/30 text-gray-900 dark:text-white border border-blue-100 dark:border-blue-800/50';
@@ -227,8 +227,8 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
       <div className="sticky top-0 z-50 bg-white dark:bg-gray-900/95 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl p-3 md:p-4 mb-3 md:mb-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full flex items-center justify-center shadow-sm flex-shrink-0">
-              <span className="text-white font-bold text-sm md:text-base">#</span>
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--accent-dim)' }}>
+              <span className="font-bold text-sm md:text-base" style={{ color: 'var(--accent)' }}>#</span>
             </div>
             <div className="min-w-0 flex-1">
               <h3 className="font-bold text-gray-900 dark:text-white text-base md:text-lg truncate">{currentRoom}</h3>
@@ -257,7 +257,8 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
       {showScrollButton && (
         <button
           onClick={scrollToBottomSmooth}
-          className="fixed bottom-24 right-8 z-20 w-10 h-10 md:w-12 md:h-12 bg-gradient-to-r from-primary-500 to-secondary-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center animate-slide-up focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+          className="fixed bottom-24 right-8 z-20 w-10 h-10 md:w-12 md:h-12 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center animate-slide-up focus:outline-none focus:ring-2 focus:ring-offset-2"
+          style={{ background: 'var(--accent)' }}
           aria-label="Scroll to bottom"
         >
           <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -363,6 +364,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                       className={`rounded-2xl p-3 ${getMessageColor(isOwnMessage, sender?.sexe)} ${
                         isOwnMessage ? 'rounded-br-md' : 'rounded-bl-md'
                       }`}
+                      style={isOwnMessage ? { background: 'var(--accent)' } : undefined}
                     >
                       <div className="text-sm leading-relaxed break-words">
                         {msg.content}

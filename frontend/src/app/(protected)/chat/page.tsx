@@ -251,7 +251,7 @@ const ChatPage = () => {
   const isGameRoom = currentRoom === 'Game';
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-neutral-dark dark:via-gray-900 dark:to-neutral-dark">
+    <div className="h-screen" style={{ background: 'var(--bg-base)' }}>
       <ChatHeader
         users={user || undefined}
         socket={socket}
@@ -263,7 +263,7 @@ const ChatPage = () => {
       <div className="md:hidden fixed bottom-20 left-4 z-30 flex flex-col gap-2">
         <button
           onClick={() => setShowChannels(!showChannels)}
-          className="w-12 h-12 bg-gradient-to-r from-primary-500 to-secondary-500 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform"
+          className="w-12 h-12 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform" style={{ background: 'var(--accent)' }}
           aria-label="Toggle channels"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -272,7 +272,7 @@ const ChatPage = () => {
         </button>
         <button
           onClick={() => setShowUsers(!showUsers)}
-          className="w-12 h-12 bg-gradient-to-r from-accent-500 to-green-500 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform"
+          className="w-12 h-12 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform" style={{ background: 'var(--accent)' }}
           aria-label="Toggle users"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,7 +282,7 @@ const ChatPage = () => {
         {isGameRoom && (
           <button
             onClick={() => setShowGame(!showGame)}
-            className="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform"
+            className="w-12 h-12 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform" style={{ background: 'var(--accent)' }}
             aria-label="Toggle game panel"
           >
             🧠
@@ -294,7 +294,7 @@ const ChatPage = () => {
       {isGameRoom && showGame && (
         <div className="lg:hidden fixed inset-0 z-50 flex items-end">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowGame(false)} />
-          <div className="relative w-full max-h-[80vh] bg-white dark:bg-gray-900 rounded-t-2xl overflow-y-auto p-4 space-y-3">
+          <div className="relative w-full max-h-[80vh] rounded-t-2xl overflow-y-auto p-4 space-y-3" style={{ background: 'var(--bg-panel)' }}>
             <button
               onClick={() => setShowGame(false)}
               className="absolute top-3 right-4 text-gray-500 hover:text-gray-800 dark:hover:text-white text-2xl"
@@ -332,7 +332,7 @@ const ChatPage = () => {
 
         <div className="flex flex-1 gap-2 min-w-0">
           {/* Chat principal */}
-          <div className="flex flex-col flex-1 bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl overflow-hidden shadow-lg min-w-0">
+          <div className="flex flex-col flex-1 rounded-xl overflow-hidden min-w-0" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}>
             <ErrorBoundary>
               <ChatMessage currentRoom={currentRoom} socket={socket} onReply={handleReply} />
             </ErrorBoundary>
@@ -347,7 +347,7 @@ const ChatPage = () => {
           </div>
           
           {currentRoom === 'Game' && (
-            <div className="hidden lg:flex w-80 flex-col bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl overflow-y-auto shadow-lg p-3 gap-3">
+            <div className="hidden lg:flex w-80 flex-col rounded-xl overflow-y-auto p-3 gap-3" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}>
               <GamePanel channel={currentRoom} socket={socket} />
             </div>
           )}

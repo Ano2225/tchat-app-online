@@ -80,21 +80,21 @@ export default function AnonymousPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-bg via-gray-100 to-neutral-bg dark:from-neutral-dark dark:via-gray-900 dark:to-neutral-dark flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-950 flex items-center justify-center p-4">
       {/* Header avec ThemeToggle */}
       <header className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-end">
         <ThemeToggle variant="inline" />
       </header>
       
       <div className="absolute inset-0">
-        <div className="absolute top-1/3 left-1/3 w-96 h-96 bg-gray-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse"></div>
-        <div className="absolute bottom-1/3 right-1/3 w-96 h-96 bg-primary-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse delay-1000"></div>
+        <div className="absolute top-1/3 left-1/3 w-96 h-96 bg-gray-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+        <div className="absolute bottom-1/3 right-1/3 w-96 h-96 bg-gray-600 rounded-full mix-blend-multiply filter blur-xl opacity-15 animate-pulse delay-1000"></div>
       </div>
 
       <div className="relative w-full max-w-md">
         <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-3xl p-8 shadow-2xl">
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-to-r from-gray-700 to-gray-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <div className="w-20 h-20 bg-gray-700 dark:bg-gray-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-gray-500/20">
               <User className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Mode Anonyme</h1>
@@ -172,7 +172,7 @@ export default function AnonymousPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-gray-700 to-gray-600 text-white font-semibold py-3 rounded-xl hover:from-gray-800 hover:to-gray-700 transition-all disabled:opacity-50 shadow-lg hover:shadow-xl"
+              className="w-full bg-gray-700 hover:bg-gray-800 active:bg-gray-900 text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-gray-500/20"
             >
               {loading ? (
                 <div className="flex items-center justify-center">
@@ -198,12 +198,12 @@ export default function AnonymousPage() {
             <div className="space-y-2">
               <p className="text-sm text-gray-600 dark:text-gray-300">
                 Vous avez déjà un compte?{' '}
-                <Link href="/login" className="text-primary-500 hover:text-primary-600 font-medium">
+                <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
                   Se connecter
                 </Link>
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                <Link href="/register" className="text-secondary-500 hover:text-secondary-600 font-medium">
+                <Link href="/register" className="text-purple-600 hover:text-purple-700 font-medium">
                   Créer un compte permanent
                 </Link>
               </p>

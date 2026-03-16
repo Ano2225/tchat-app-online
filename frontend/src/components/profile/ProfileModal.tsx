@@ -245,19 +245,20 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 w-96 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto z-[9999] animate-in fade-in-0 zoom-in-95 duration-300">
         
         {/* Header avec gradient */}
-        <div className="bg-gradient-to-r from-blue-500 via-indigo-600 to-purple-700 p-6 text-center rounded-t-2xl">
-          <button 
-            onClick={onClose} 
-            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-all duration-200 hover:scale-110"
+        <div className="p-6 text-center rounded-t-2xl relative" style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-default)' }}>
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 hover:scale-110"
+            style={{ background: 'var(--bg-hover)', color: 'var(--text-secondary)' }}
           >
-            <X className="w-4 h-4 text-white" />
+            <X className="w-4 h-4" />
           </button>
-          
+
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Settings className="w-5 h-5 text-white" />
-            <h2 className="text-xl font-bold text-white">Paramètres</h2>
+            <Settings className="w-5 h-5" style={{ color: 'var(--accent)' }} />
+            <h2 className="text-xl font-bold" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>Paramètres</h2>
           </div>
-          <p className="text-white/80 text-sm">Personnalisez votre profil</p>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Personnalisez votre profil</p>
         </div>
 
         {/* Onglets modernes */}

@@ -3,6 +3,8 @@ const router = express.Router();
 const auth = require('../config/auth');
 const User = require('../models/User');
 const { getVerificationEmailPreview } = require('../services/emailService');
+const { authMiddleware } = require('../middleware/authBetter');
+const { getCsrfToken } = require('../middleware/csrf');
 
 const EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED';
 
@@ -130,15 +132,26 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
-      return res.status(400).json({ 
-        error: 'Email et mot de passe requis' 
+      return res.status(400).json({
+        error: 'Email et mot de passe requis'
       });
     }
 
+    // Resolve username to email if the input is not an email address
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    let resolvedEmail = email;
+    if (!isEmail) {
+      const userByUsername = await User.findOne({ username: email }).select('email').lean();
+      if (!userByUsername) {
+        return res.status(401).json({ error: 'Identifiants incorrects', code: 'INVALID_CREDENTIALS' });
+      }
+      resolvedEmail = userByUsername.email;
+    }
+
     const result = await auth.api.signInEmail({
-      body: { email, password }
+      body: { email: resolvedEmail, password }
     });
 
     if (!result || !result.user) {
@@ -385,5 +398,7 @@ router.get('/verify-email', async (req, res) => {
     return res.status(normalized.status).json(normalized);
   }
 });
+
+router.get('/csrf-token', authMiddleware, getCsrfToken);
 
 module.exports = router;

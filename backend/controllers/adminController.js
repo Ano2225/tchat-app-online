@@ -3,6 +3,14 @@ const Message = require('../models/Message');
 const Report = require('../models/Report');
 const Channel = require('../models/Channel');
 const Alert = require('../models/Alert');
+const { ObjectId } = require('mongodb');
+
+function buildIdQuery(id) {
+  const str = String(id);
+  return /^[0-9a-f]{24}$/i.test(str)
+    ? { $or: [{ _id: str }, { _id: new ObjectId(str) }] }
+    : { _id: str };
+}
 
 class AdminController {
   // Statistiques du dashboard
@@ -203,7 +211,7 @@ class AdminController {
       const { userId } = req.params;
       const { isBlocked } = req.body;
 
-      await User.findByIdAndUpdate(userId, { isBlocked });
+      await User.collection.updateOne(buildIdQuery(userId), { $set: { isBlocked } });
       res.json({ message: 'Statut utilisateur mis à jour' });
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', error: error.message });
@@ -214,7 +222,7 @@ class AdminController {
   async deleteUser(req, res) {
     try {
       const { userId } = req.params;
-      await User.findByIdAndDelete(userId);
+      await User.collection.deleteOne(buildIdQuery(userId));
       res.json({ message: 'Utilisateur supprimé' });
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', error: error.message });
@@ -404,7 +412,8 @@ class AdminController {
 
       // Si action de blocage
       if (action === 'block') {
-        await User.findByIdAndUpdate(report.reportedUser, { isBlocked: true });
+        const reportedUserId = String(report.reportedUser?._id || report.reportedUser);
+        await User.collection.updateOne(buildIdQuery(reportedUserId), { $set: { isBlocked: true } });
         
         // Créer une alerte
         await Alert.create({

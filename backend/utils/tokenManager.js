@@ -118,9 +118,14 @@ class TokenManager {
     refreshToken.revokedAt = new Date();
     await refreshToken.save();
 
-    // Get user
+    // Get user — use collection.findOne to handle both 32-char string and 24-char ObjectId _ids
     const User = require('../models/User');
-    const user = await User.findById(refreshToken.userId);
+    const { ObjectId } = require('mongodb');
+    const uid = String(refreshToken.userId);
+    const idQuery = /^[0-9a-f]{24}$/i.test(uid)
+      ? { $or: [{ _id: uid }, { _id: new ObjectId(uid) }] }
+      : { _id: uid };
+    const user = await User.collection.findOne(idQuery);
 
     if (!user) {
       throw new Error('USER_NOT_FOUND');

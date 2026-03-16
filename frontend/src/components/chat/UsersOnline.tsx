@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Socket } from 'socket.io-client'
 import GenderAvatar from '@/components/ui/GenderAvatar'
 import { UserListSkeleton } from '@/components/ui/skeletons'
+import { ChevronRight, Users } from 'lucide-react'
 
 interface User {
   id: string
@@ -38,13 +39,11 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
     type UserPayloadItem = string | { username: string; userId?: string; avatarUrl?: string; sexe?: string }
     type UsersPayload = UserPayloadItem[] | { room: string; users: UserPayloadItem[] }
 
-    const normalizeUsers = (list: UserPayloadItem[], prefix: string): User[] =>
-      list.map((item, index) => {
-        if (typeof item === 'string') {
-          return { id: `${prefix}_${index}`, username: item, isOnline: true }
-        }
+    const normalize = (list: UserPayloadItem[], prefix: string): User[] =>
+      list.map((item, i) => {
+        if (typeof item === 'string') return { id: `${prefix}_${i}`, username: item, isOnline: true }
         return {
-          id: item.userId || item.username || `${prefix}_${index}`,
+          id: item.userId || item.username || `${prefix}_${i}`,
           userId: item.userId,
           username: item.username,
           avatarUrl: item.avatarUrl || undefined,
@@ -53,10 +52,10 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
         }
       })
 
-    const handleGlobalUsersUpdate = (usernames: UsersPayload) => {
+    const handleGlobalUsersUpdate = (payload: UsersPayload) => {
       if (!currentRoom) {
-        const list = Array.isArray(usernames) ? usernames : (usernames.users || [])
-        setUsers(normalizeUsers(list, 'user'))
+        const list = Array.isArray(payload) ? payload : (payload.users || [])
+        setUsers(normalize(list, 'user'))
         setLoading(false)
       }
     }
@@ -65,15 +64,13 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
       const payloadRoom = !Array.isArray(payload) ? payload.room : null
       if (!currentRoom || !payloadRoom || payloadRoom === currentRoom) {
         const list = Array.isArray(payload) ? payload : (payload.users || [])
-        setUsers(normalizeUsers(list, 'room_user'))
+        setUsers(normalize(list, 'room'))
         setLoading(false)
       }
     }
 
     const handlePresenceUpdate = ({ userId, isOnline }: { userId: string; username: string; isOnline: boolean }) => {
-      setUsers(prev => prev.map(u =>
-        u.userId === userId ? { ...u, isOnline } : u
-      ))
+      setUsers(prev => prev.map(u => u.userId === userId ? { ...u, isOnline } : u))
     }
 
     socket.on('update_user_list', handleGlobalUsersUpdate)
@@ -81,14 +78,9 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
     socket.on('presence_update', handlePresenceUpdate)
 
     const requestUsers = () => {
-      if (currentRoom && socket.connected) {
-        socket.emit('get_room_users', currentRoom)
-      }
+      if (currentRoom && socket.connected) socket.emit('get_room_users', currentRoom)
     }
-
-    const handleConnect = () => {
-      if (currentRoom) setTimeout(requestUsers, 1500)
-    }
+    const handleConnect = () => { if (currentRoom) setTimeout(requestUsers, 1500) }
 
     if (currentRoom) {
       socket.on('connect', handleConnect)
@@ -105,40 +97,64 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
     }
   }, [socket, currentRoom])
 
-  // Total unread across all conversations (for collapsed badge)
   const totalUnread = Object.values(unreadMap).reduce((sum, e) => sum + e.count, 0)
 
   return (
-    <div className={`h-full bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl overflow-hidden transition-all duration-300 shadow-lg flex flex-col ${
-      isCollapsed ? 'w-16' : 'w-full md:w-56'
-    }`}>
+    <div
+      className="h-full flex flex-col rounded-xl overflow-hidden transition-all duration-300"
+      style={{
+        background: 'var(--bg-panel)',
+        border: '1px solid var(--border-default)',
+        width: isCollapsed ? '52px' : '100%',
+      }}
+    >
       {/* Header */}
-      <div className="p-3 border-b border-gray-300 dark:border-white/20 flex items-center justify-between flex-shrink-0">
+      <div
+        className="px-3 py-3.5 flex items-center justify-between flex-shrink-0"
+        style={{ borderBottom: '1px solid var(--border-subtle)' }}
+      >
         {!isCollapsed && (
-          <div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-white">En ligne</h3>
-            <p className="text-xs text-gray-600 dark:text-gray-300">
-              {users.length} utilisateur{users.length > 1 ? 's' : ''}
-            </p>
+          <div className="flex items-center gap-2 min-w-0">
+            <Users className="w-4 h-4 flex-shrink-0" style={{ color: 'var(--accent)' }} />
+            <div className="min-w-0">
+              <h3
+                className="text-sm font-bold leading-tight"
+                style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}
+              >
+                En ligne
+              </h3>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {users.length} utilisateur{users.length > 1 ? 's' : ''}
+              </p>
+            </div>
           </div>
         )}
-        <div className="relative">
+        <div className="relative flex-shrink-0 ml-auto">
           <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            aria-label={isCollapsed ? 'Développer la liste' : 'Réduire la liste'}
+            onClick={() => setIsCollapsed(v => !v)}
+            aria-label={isCollapsed ? 'Développer' : 'Réduire'}
             aria-expanded={!isCollapsed}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-7 h-7 flex items-center justify-center rounded-lg transition-all focus:outline-none"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
+              (e.currentTarget as HTMLElement).style.background = 'var(--accent-dim)';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)';
+              (e.currentTarget as HTMLElement).style.background = 'transparent';
+            }}
           >
-            <svg
-              className={`w-4 h-4 text-gray-600 dark:text-gray-300 transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`}
-              fill="none" stroke="currentColor" viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+            <ChevronRight
+              className="w-4 h-4 transition-transform duration-200"
+              style={{ transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}
+            />
           </button>
           {isCollapsed && totalUnread > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">
+            <span
+              className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center text-[10px] font-bold text-white rounded-full"
+              style={{ background: 'var(--danger)', fontFamily: 'var(--font-ui)' }}
+            >
               {totalUnread > 9 ? '9+' : totalUnread}
             </span>
           )}
@@ -146,52 +162,85 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
       </div>
 
       {/* User list */}
-      <div className="p-2 space-y-1 flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
         {loading ? (
           !isCollapsed && <UserListSkeleton count={5} />
         ) : users.length === 0 ? (
           !isCollapsed && (
-            <p className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            <div className="py-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
               Aucun utilisateur en ligne
-            </p>
+            </div>
           )
         ) : (
-          users.map((u) => {
+          users.map(u => {
             const unread = u.userId ? unreadMap[u.userId] : undefined
             const canChat = !!u.userId && !!onOpenChat
+
             return (
               <div
                 key={u.id}
                 role="listitem"
-                aria-label={`${u.username} — ${u.isOnline ? 'en ligne' : 'hors ligne'}${unread ? `, ${unread.count} message(s) non lu(s)` : ''}`}
-                onClick={() => canChat && onOpenChat({ _id: u.userId!, username: u.username, avatarUrl: u.avatarUrl, sexe: u.sexe })}
-                className={`flex items-center space-x-2.5 p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-all duration-200 ${canChat ? 'cursor-pointer' : ''}`}
+                aria-label={`${u.username}${unread ? ` — ${unread.count} non lu(s)` : ''}`}
+                onClick={() =>
+                  canChat && onOpenChat({ _id: u.userId!, username: u.username, avatarUrl: u.avatarUrl, sexe: u.sexe })
+                }
+                className={`flex items-center gap-2.5 px-2 py-2 rounded-xl transition-all duration-200 ${canChat ? 'cursor-pointer' : ''}`}
+                onMouseEnter={e => {
+                  if (canChat) (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.background = 'transparent';
+                }}
               >
+                {/* Avatar + online dot */}
                 <div className="relative flex-shrink-0">
                   <GenderAvatar
                     username={u.username}
                     avatarUrl={u.avatarUrl}
                     sexe={u.sexe}
                     size="sm"
-                    className="w-7 h-7"
+                    className="w-7 h-7 rounded-lg"
                     clickable={false}
                   />
-                  <div
-                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-800 shadow-sm ${u.isOnline ? 'bg-green-500' : 'bg-gray-400'}`}
-                    aria-hidden="true"
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2"
+                    style={{
+                      background: u.isOnline ? 'var(--online)' : 'var(--text-muted)',
+                      borderColor: 'var(--bg-panel)',
+                    }}
                   />
                 </div>
+
+                {/* Name + unread (when expanded) */}
                 {!isCollapsed && (
-                  <div className="flex-1 min-w-0 flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  <div className="flex-1 min-w-0 flex items-center justify-between gap-1">
+                    <p
+                      className="text-sm font-medium truncate"
+                      style={{
+                        fontFamily: 'var(--font-ui)',
+                        color: unread ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        fontWeight: unread ? '600' : '500',
+                      }}
+                    >
                       {u.username}
                     </p>
                     {unread && unread.count > 0 && (
-                      <span className="ml-1 flex-shrink-0 bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-bold px-1">
+                      <span
+                        className="flex-shrink-0 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold text-white rounded-full px-1"
+                        style={{ background: 'var(--danger)', fontFamily: 'var(--font-ui)' }}
+                      >
                         {unread.count > 99 ? '99+' : unread.count}
                       </span>
                     )}
                   </div>
+                )}
+
+                {/* Unread dot when collapsed */}
+                {isCollapsed && unread && unread.count > 0 && (
+                  <span
+                    className="absolute top-0 right-0 w-2 h-2 rounded-full"
+                    style={{ background: 'var(--danger)' }}
+                  />
                 )}
               </div>
             )
@@ -199,15 +248,23 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
         )}
       </div>
 
-      {/* Footer count */}
+      {/* Footer */}
       {!isCollapsed && users.length > 0 && (
-        <div className="px-3 py-2 border-t border-gray-300 dark:border-white/20 bg-gray-100 dark:bg-white/5 flex-shrink-0">
-          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-            <span>{users.length} en ligne</span>
-            <div className="flex items-center space-x-1">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
-              <span>Live</span>
-            </div>
+        <div
+          className="px-3 py-2.5 flex items-center justify-between flex-shrink-0"
+          style={{ borderTop: '1px solid var(--border-subtle)' }}
+        >
+          <span className="text-xs" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-ui)' }}>
+            {users.length} en ligne
+          </span>
+          <div className="flex items-center gap-1.5">
+            <div
+              className="w-1.5 h-1.5 rounded-full animate-pulse-soft"
+              style={{ background: 'var(--online)' }}
+            />
+            <span className="text-xs" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-ui)' }}>
+              Live
+            </span>
           </div>
         </div>
       )}

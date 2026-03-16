@@ -98,24 +98,16 @@ class ChatService {
    * @returns {Promise<Message[]>} - A promise that resolves to an array of messages.
    * @throws {Error} - Throws an error if the API call fails.
    */
-  async getPrivateMessages(userId: string, recipientId: string): Promise<Message[]> {
-    try {
-      if (!userId || !recipientId) {
-        throw new Error('User ID and recipient ID are required');
-      }
-      
-      const response = await axiosInstance.get<Message[]>(`/messages/private/${userId}/${recipientId}`);
-      
-      if (!Array.isArray(response.data)) {
-        console.error('Private messages response is not an array:', response.data);
-        return [];
-      }
-      
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching private messages:', error);
-      throw new Error(`Failed to fetch messages: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  async getPrivateMessages(userId: string, recipientId: string): Promise<Message[] | { blocked: true; blockedByMe: boolean; blockedByThem: boolean }> {
+    if (!userId || !recipientId) {
+      throw new Error('User ID and recipient ID are required');
     }
+    const response = await axiosInstance.get<any>(`/messages/private/${userId}/${recipientId}`);
+    // Server returns { blocked: true, blockedByMe, blockedByThem } when relationship is blocked
+    if (response.data?.blocked === true) {
+      return response.data as { blocked: true; blockedByMe: boolean; blockedByThem: boolean };
+    }
+    return Array.isArray(response.data) ? response.data : [];
   }
 
   /**

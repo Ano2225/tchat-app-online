@@ -20,13 +20,13 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-csrf-token']
 };
 
 // Rate limiting global
 const globalRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // limite de 200 requêtes par IP
+  max: 1000, // limite de 1000 requêtes par IP
   message: {
     error: 'Trop de requêtes depuis cette IP, réessayez plus tard.'
   },
@@ -44,13 +44,14 @@ const authRateLimit = rateLimit({
   skipSuccessfulRequests: true,
 });
 
-// Rate limiting pour les messages
+// Rate limiting pour l'envoi de messages (POST uniquement)
 const messageRateLimit = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 20, // 20 messages par minute
+  max: 20, // 20 messages envoyés par minute
   message: {
     error: 'Trop de messages envoyés, ralentissez un peu.'
   },
+  skip: (req) => req.method !== 'POST',
 });
 
 // Configuration Helmet pour la sécurité

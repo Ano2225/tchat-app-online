@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import axiosInstance from '@/utils/axiosInstance'
 import { useAuthStore } from '@/store/authStore'
 import { ChannelListSkeleton } from '@/components/ui/skeletons'
-import { MessageCircle, Monitor, Gamepad2, Music, Dice6, CircleDot, Film, Megaphone } from 'lucide-react'
+import { MessageCircle, Monitor, Gamepad2, Music, Dice6, CircleDot, Film, Megaphone, Hash } from 'lucide-react'
 
 interface Channel {
   _id: string
@@ -25,72 +25,55 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
   const [roomCounts, setRoomCounts] = useState<Record<string, number>>({})
 
   useEffect(() => {
-    const fetchChannels = async () => {
-      try {
-        const response = await axiosInstance.get('/channels')
-        setChannels(response.data)
-      } catch (error) {
-        console.error('Erreur lors du chargement des canaux:', error)
-        setChannels([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchChannels()
-    // If socket available, request counts for default channels
-    // (will request again after channels are set)
+    axiosInstance.get('/channels')
+      .then(res => setChannels(res.data))
+      .catch(() => setChannels([]))
+      .finally(() => setLoading(false))
   }, [])
 
-  // Listen to socket updates for room user lists
   useEffect(() => {
     if (!socket) return
-
-    const handleRoomUsers = (payload: any) => {
-      // payload: { room: string, users: string[] }
+    const handleRoomUsers = (payload: { room?: string; roomName?: string; users?: unknown[] }) => {
       if (!payload) return
       const room = payload.room || payload.roomName || null
       const users = Array.isArray(payload.users) ? payload.users : []
-      if (room) {
-        setRoomCounts((prev) => ({ ...prev, [room]: users.length }))
-      }
+      if (room) setRoomCounts(prev => ({ ...prev, [room]: users.length }))
     }
-
     socket.on('update_room_user_list', handleRoomUsers)
-
-    return () => {
-      socket.off('update_room_user_list', handleRoomUsers)
-    }
+    return () => { socket.off('update_room_user_list', handleRoomUsers) }
   }, [socket])
 
-  const getChannelIcon = (name: string) => {
-    const iconComponents: { [key: string]: React.ComponentType<{ className?: string }> } = {
-      'General': MessageCircle,
-      'Tech': Monitor,
-      'Gaming': Gamepad2,
-      'Music': Music,
-      'Random': Dice6,
-      'Sport': CircleDot,
-      'Cinema': Film
-    }
-    return iconComponents[name] || Megaphone
+  const channelIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+    General: MessageCircle,
+    Tech: Monitor,
+    Gaming: Gamepad2,
+    Music: Music,
+    Random: Dice6,
+    Sport: CircleDot,
+    Cinema: Film,
   }
 
-  const getChannelDescription = (name: string) => {
-    const descriptions: { [key: string]: string } = {
-      'General': 'Discussion générale',
-      'Music': 'Musique',
-      'Sport': 'Sports',
-    }
-    return descriptions[name] || 'Canal de discussion'
+  const channelDescriptions: Record<string, string> = {
+    General: 'Discussion générale',
+    Music: 'Partage musical',
+    Sport: 'Actualité sportive',
+    Tech: 'Technologie',
+    Gaming: 'Jeux vidéo',
+    Random: 'Sujets libres',
+    Cinema: 'Films & séries',
   }
+
+  const getIcon = (name: string) => channelIcons[name] || Megaphone
 
   if (loading) {
     return (
-      <div className="w-full md:w-60 h-full bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl overflow-hidden shadow-lg">
-        <div className="p-3 border-b border-gray-300 dark:border-white/20">
-          <div className="skeleton h-6 w-24 mb-2"></div>
-          <div className="skeleton h-4 w-32"></div>
+      <div
+        className="w-full md:w-60 h-full rounded-xl overflow-hidden"
+        style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}
+      >
+        <div className="p-4" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+          <div className="skeleton h-5 w-20 mb-1" />
+          <div className="skeleton h-3.5 w-28" />
         </div>
         <ChannelListSkeleton count={5} />
       </div>
@@ -98,109 +81,207 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
   }
 
   return (
-    <div className="w-full md:w-60 h-full bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl overflow-hidden shadow-lg">
+    <div
+      className="w-full md:w-60 h-full flex flex-col rounded-xl overflow-hidden"
+      style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}
+    >
       {/* Header */}
-      <div className="p-3 border-b border-gray-300 dark:border-white/20">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Salons</h2>
-        <p className="text-xs text-gray-600 dark:text-gray-300">
-          {channels.length > 0 ? `${channels.length} salon${channels.length > 1 ? 's' : ''}` : 'Chargement...'}
+      <div className="px-4 py-3.5 flex-shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+        <h2
+          className="text-base font-bold"
+          style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}
+        >
+          Salons
+        </h2>
+        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+          {channels.length} disponible{channels.length > 1 ? 's' : ''}
         </p>
       </div>
 
-      {/* Liste des salons */}
-      <div className="p-2 space-y-1 flex-1 overflow-y-auto">
-        {/* Canal Game spécial - Visible pour tous mais accès restreint */}
+      {/* Channel list */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+
+        {/* Game channel */}
         <button
           onClick={() => {
             if (!user || user.isAnonymous) {
-              alert('Vous devez être inscrit pour accéder au canal Game. Créez un compte pour jouer !');
-              return;
+              alert('Vous devez être inscrit pour accéder au canal Game.')
+              return
             }
-            onJoinRoom('Game');
+            onJoinRoom('Game')
           }}
-          className={`w-full text-left p-2.5 rounded-lg transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-            currentRoom === 'Game'
-              ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md scale-[1.02]'
-              : (!user || user.isAnonymous)
-                ? 'hover:bg-gray-200 dark:hover:bg-gray-700/50 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-75'
-                : 'hover:bg-purple-100 dark:hover:bg-purple-900/20 text-gray-700 dark:text-gray-300 hover:scale-[1.01]'
-          }`}
-          aria-label="Join Game channel"
+          disabled={!user || !!user.isAnonymous}
+          className={`w-full text-left px-3 py-2.5 rounded-xl transition-all duration-200 group focus:outline-none focus:ring-2`}
+          style={{
+            background: currentRoom === 'Game' ? 'var(--accent)' : 'transparent',
+            color: currentRoom === 'Game' ? '#FFFFFF' : 'var(--text-secondary)',
+            boxShadow: 'none',
+          }}
+          onMouseEnter={e => {
+            if (currentRoom !== 'Game' && user && !user.isAnonymous) {
+              (e.currentTarget as HTMLElement).style.background = 'var(--accent-dim)';
+              (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
+            }
+          }}
+          onMouseLeave={e => {
+            if (currentRoom !== 'Game') {
+              (e.currentTarget as HTMLElement).style.background = 'transparent';
+              (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+            }
+          }}
+          aria-label="Salon Game"
           aria-current={currentRoom === 'Game' ? 'page' : undefined}
-          disabled={!user || user.isAnonymous}
         >
-          <div className="flex items-center space-x-3">
-            <Gamepad2 className="w-5 h-5" />
+          <div className="flex items-center gap-3">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{
+                background: currentRoom === 'Game' ? 'rgba(255,255,255,0.2)' : 'var(--bg-surface)',
+              }}
+            >
+              <Gamepad2 className="w-4 h-4" />
+            </div>
             <div className="flex-1 min-w-0">
-              <p className={`font-medium truncate ${
-                currentRoom === 'Game' ? 'text-white' : 'text-gray-900 dark:text-white'
-              }`}>
-                #Game
-              </p>
-              <p className={`text-xs truncate ${
-                currentRoom === 'Game' 
-                  ? 'text-white/80' 
-                  : (!user || user.isAnonymous)
-                    ? 'text-gray-400 dark:text-gray-500'
-                    : 'text-purple-600 dark:text-purple-400'
-              }`}>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="text-xs font-bold"
+                  style={{
+                    fontFamily: 'var(--font-ui)',
+                    color: currentRoom === 'Game' ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)',
+                  }}
+                >
+                  #
+                </span>
+                <p className="text-sm font-semibold truncate" style={{ fontFamily: 'var(--font-ui)' }}>
+                  Game
+                </p>
+              </div>
+              <p
+                className="text-xs truncate"
+                style={{
+                  color: currentRoom === 'Game'
+                    ? 'rgba(255,255,255,0.65)'
+                    : (!user || user.isAnonymous)
+                      ? 'var(--text-muted)'
+                      : 'var(--text-muted)',
+                }}
+              >
                 {(!user || user.isAnonymous) ? '🔒 Inscription requise' : 'Quiz en temps réel'}
               </p>
             </div>
-            {currentRoom === 'Game' && (
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            )}
+            {roomCounts['Game'] ? (
+              <span
+                className="text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0"
+                style={{
+                  background: currentRoom === 'Game' ? 'rgba(255,255,255,0.2)' : 'var(--bg-elevated)',
+                  color: currentRoom === 'Game' ? 'white' : 'var(--text-muted)',
+                  fontFamily: 'var(--font-ui)',
+                }}
+              >
+                {roomCounts['Game']}
+              </span>
+            ) : null}
           </div>
         </button>
-        
-        {/* Séparateur */}
-        <div className="border-t border-gray-300 dark:border-white/20 my-2"></div>
-        
 
-        
-        {/* Autres canaux */}
-        {channels.map((channel) => (
-          <button
-            key={channel._id}
-            onClick={() => onJoinRoom(channel.name)}
-            className={`w-full text-left p-2.5 rounded-lg transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-              currentRoom === channel.name
-                ? 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-md scale-[1.02]'
-                : 'hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 hover:scale-[1.01]'
-            }`}
-            aria-label={`Join ${channel.name} channel`}
-            aria-current={currentRoom === channel.name ? 'page' : undefined}
-          >
-            <div className="flex items-center space-x-3">
-              {React.createElement(getChannelIcon(channel.name), { className: "w-5 h-5" })}
-              <div className="flex-1 min-w-0">
-                <p className={`font-medium truncate ${
-                  currentRoom === channel.name ? 'text-white' : 'text-gray-900 dark:text-white'
-                }`}>
-                  #{channel.name}
-                </p>
-                <p className={`text-xs truncate ${
-                  currentRoom === channel.name 
-                    ? 'text-white/80' 
-                    : 'text-gray-500 dark:text-gray-400'
-                }`}>
-                  {getChannelDescription(channel.name)}
-                </p>
+        {/* Divider */}
+        <div className="h-px mx-2 my-1" style={{ background: 'var(--border-subtle)' }} />
+
+        {/* Regular channels */}
+        {channels.map(channel => {
+          const Icon = getIcon(channel.name)
+          const isActive = currentRoom === channel.name
+          const count = roomCounts[channel.name]
+
+          return (
+            <button
+              key={channel._id}
+              onClick={() => onJoinRoom(channel.name)}
+              className="w-full text-left px-3 py-2.5 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2"
+              style={{
+                background: isActive
+                  ? 'var(--accent-dim)'
+                  : 'transparent',
+                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                border: isActive ? '1px solid var(--accent)' : '1px solid transparent',
+              }}
+              onMouseEnter={e => {
+                if (!isActive) {
+                  (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)';
+                  (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)';
+                }
+              }}
+              onMouseLeave={e => {
+                if (!isActive) {
+                  (e.currentTarget as HTMLElement).style.background = 'transparent';
+                  (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+                }
+              }}
+              aria-label={`Rejoindre ${channel.name}`}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+                  style={{ background: isActive ? 'var(--accent-dim)' : 'var(--bg-surface)' }}
+                >
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1">
+                    <span
+                      className="text-xs font-bold"
+                      style={{
+                        fontFamily: 'var(--font-ui)',
+                        color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                      }}
+                    >
+                      #
+                    </span>
+                    <p
+                      className="text-sm font-semibold truncate"
+                      style={{ fontFamily: 'var(--font-ui)' }}
+                    >
+                      {channel.name}
+                    </p>
+                  </div>
+                  <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                    {channelDescriptions[channel.name] || 'Canal de discussion'}
+                  </p>
+                </div>
+                {count ? (
+                  <span
+                    className="text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0"
+                    style={{
+                      background: isActive ? 'var(--accent-dim)' : 'var(--bg-elevated)',
+                      color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                      fontFamily: 'var(--font-ui)',
+                    }}
+                  >
+                    {count}
+                  </span>
+                ) : null}
               </div>
-              {currentRoom === channel.name && (
-                <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-              )}
-            </div>
-          </button>
-        ))}
+            </button>
+          )
+        })}
       </div>
 
-      {/* Footer */}
-      <div className="p-3 border-t border-gray-300 dark:border-white/20">
-        <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-          <div className="w-2 h-2 bg-secondary-500 rounded-full animate-pulse"></div>
-          <span className="truncate">#{currentRoom}</span>
-        </div>
+      {/* Footer — current room indicator */}
+      <div
+        className="px-4 py-3 flex items-center gap-2 flex-shrink-0"
+        style={{ borderTop: '1px solid var(--border-subtle)' }}
+      >
+        <div
+          className="w-1.5 h-1.5 rounded-full animate-pulse-soft"
+          style={{ background: 'var(--online)' }}
+        />
+        <span
+          className="text-xs truncate"
+          style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-muted)' }}
+        >
+          #{currentRoom}
+        </span>
       </div>
     </div>
   )

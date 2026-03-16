@@ -1,56 +1,70 @@
 const Message = require("../models/Message");
 const User = require("../models/User");
+const { ObjectId } = require('mongodb');
+
+/**
+ * Build a MongoDB query for a user ID that handles both:
+ *  - 32-char better-auth string IDs  → { _id: id }
+ *  - 24-char legacy ObjectId IDs     → { $or: [{ _id: id }, { _id: ObjectId(id) }] }
+ */
+function buildIdQuery(id) {
+  const isObjectId = /^[0-9a-f]{24}$/i.test(id);
+  return isObjectId
+    ? { $or: [{ _id: id }, { _id: new ObjectId(id) }] }
+    : { _id: id };
+}
 
 /**
  * Resolve a sender ID to a display object.
- * Called with the RAW ID (always available via lean()) so we never lose it.
- *
- *  anon_<username>   → { username } — anonymous user, history preserved by username
- *  24-char hex       → "Ancien utilisateur" — message pre-migration (ObjectId era)
- *  anything else     → "Utilisateur supprimé" — registered user whose account was deleted
  */
 function fallbackSender(rawId, displayName = null) {
   const id = rawId ? String(rawId) : null;
-
-  // Priority: use saved username if available (covers deleted accounts gracefully)
   if (displayName) return { _id: id, username: displayName, avatarUrl: null, sexe: null };
-
   if (!id) return { _id: null, username: 'Utilisateur supprimé', avatarUrl: null, sexe: null };
-
-  // Anonymous user — extract username from stable ID "anon_<username>"
   if (id.startsWith('anon_')) {
     const username = id.slice(5) || 'Anonyme';
     return { _id: id, username, avatarUrl: null, sexe: null };
   }
-
-  // Legacy ObjectId or deleted account with no saved username
   return { _id: id, username: 'Utilisateur supprimé', avatarUrl: null, sexe: null };
 }
 
 /**
  * Manually populate sender for a list of lean message objects.
- * Using lean() preserves the raw sender ID so fallbackSender always has it,
- * unlike Mongoose .populate() which silently sets sender=null on lookup failure.
+ * Uses User.collection.find() to bypass Mongoose _id:false schema quirks.
+ * Handles both 32-char string IDs and legacy 24-char ObjectId IDs.
  */
 async function populateSenders(msgs) {
-  // Collect all non-anon sender IDs that need a DB lookup
-  const registeredIds = [...new Set(
+  const rawIds = [...new Set(
     msgs.map(m => m.sender).filter(id => id && !String(id).startsWith('anon_'))
   )];
+  if (!rawIds.length) {
+    return msgs.map(msg => ({
+      ...msg,
+      sender: fallbackSender(String(msg.sender ?? ''), msg.senderUsername || null)
+    }));
+  }
 
-  // Single query for all registered users
-  const users = registeredIds.length
-    ? await User.find({ _id: { $in: registeredIds } }).select('username avatarUrl sexe email').lean()
-    : [];
+  // Build a query that handles both string and ObjectId _ids
+  const orClauses = rawIds.flatMap(id => {
+    const str = String(id);
+    if (/^[0-9a-f]{24}$/i.test(str)) {
+      return [{ _id: str }, { _id: new ObjectId(str) }];
+    }
+    return [{ _id: str }];
+  });
+
+  const users = await User.collection
+    .find({ $or: orClauses }, { projection: { username: 1, avatarUrl: 1, sexe: 1, email: 1 } })
+    .toArray();
+
+  // Index by string representation of _id (covers both ObjectId and string stored values)
   const userMap = new Map(users.map(u => [String(u._id), u]));
 
   return msgs.map(msg => {
     const rawId = String(msg.sender ?? '');
     const found = rawId ? userMap.get(rawId) : null;
-    if (found) return { ...msg, sender: found };
-    // User not found in DB — use denormalized senderUsername saved at write time
-    const displayName = msg.senderUsername || null;
-    return { ...msg, sender: fallbackSender(rawId, displayName) };
+    if (found) return { ...msg, sender: { _id: String(found._id), username: found.username, avatarUrl: found.avatarUrl || null, sexe: found.sexe || null } };
+    return { ...msg, sender: fallbackSender(rawId, msg.senderUsername || null) };
   });
 }
 
@@ -89,10 +103,17 @@ class MessageController {
     }
 
     try {
-      const senderUser = await User.findById(sender).select('username').lean();
+      const senderUser = await User.collection.findOne(
+        buildIdQuery(sender),
+        { projection: { username: 1 } }
+      );
       const message = await Message.create({ content, sender, senderUsername: senderUser?.username || null, room });
-      await message.populate('sender', 'username email avatarUrl sexe');
-      res.status(201).json(message);
+      const payload = {
+        ...message.toObject(),
+        _id: message._id.toString(),
+        sender: { _id: sender, username: senderUser?.username || 'Utilisateur', avatarUrl: null, sexe: null }
+      };
+      res.status(201).json(payload);
     } catch (error) {
       console.error("Error while sending message:", error);
       res.status(500).json({ error: "Failed to send message." });
@@ -104,15 +125,17 @@ class MessageController {
     const { userId, recipientId } = req.params;
 
     try {
-      // Check blocking in both directions
+      // Check blocking in both directions using collection.findOne to handle mixed ID types
       const [u1, u2] = await Promise.all([
-        User.findById(userId).select('blockedUsers').lean(),
-        User.findById(recipientId).select('blockedUsers').lean(),
+        User.collection.findOne(buildIdQuery(userId), { projection: { blockedUsers: 1 } }),
+        User.collection.findOne(buildIdQuery(recipientId), { projection: { blockedUsers: 1 } }),
       ]);
-      const u1Blocked = u1?.blockedUsers || [];
-      const u2Blocked = u2?.blockedUsers || [];
-      if (u1Blocked.includes(recipientId) || u2Blocked.includes(userId)) {
-        return res.status(403).json({ error: 'Utilisateur bloqué', isBlocked: true });
+      const u1Blocked = (u1?.blockedUsers || []).map(String);
+      const u2Blocked = (u2?.blockedUsers || []).map(String);
+      const blockedByMe   = u1Blocked.includes(String(recipientId));
+      const blockedByThem = u2Blocked.includes(String(userId));
+      if (blockedByMe || blockedByThem) {
+        return res.status(200).json({ blocked: true, blockedByMe, blockedByThem, messages: [] });
       }
 
       const raw = await Message.find({
@@ -132,7 +155,7 @@ class MessageController {
     }
   }
 
-  // Send a private message
+  // Send a private message (REST fallback — frontend uses socket)
   async sendPrivateMessage(req, res, io) {
     const { content, recipient, media_url, media_type } = req.body;
     const sender = req.user?._id || req.user?.id;
@@ -146,10 +169,10 @@ class MessageController {
     }
 
     try {
-      // Check blocking before creating message
+      // Check blocking using collection.findOne to handle mixed ID types
       const [senderUser, recipientUser] = await Promise.all([
-        User.findById(sender).select('blockedUsers username').lean(),
-        User.findById(recipient).select('blockedUsers').lean(),
+        User.collection.findOne(buildIdQuery(sender), { projection: { blockedUsers: 1, username: 1 } }),
+        User.collection.findOne(buildIdQuery(recipient), { projection: { blockedUsers: 1 } }),
       ]);
       const sBlocked = senderUser?.blockedUsers || [];
       const rBlocked = recipientUser?.blockedUsers || [];
@@ -166,38 +189,45 @@ class MessageController {
         media_type,
       });
 
-      await message.populate('sender', 'username email avatarUrl sexe');
-
-      const getPrivateRoomId = (userId1, userId2) => {
-        return [userId1, userId2].sort().join('_');
+      // Build sender object manually — avoid populate() which fails with mixed ID types
+      const messagePayload = {
+        _id: message._id.toString(),
+        sender: {
+          _id: sender,
+          username: senderUser?.username || 'Utilisateur',
+          avatarUrl: null,
+          sexe: null,
+        },
+        recipient,
+        content: message.content,
+        media_url: message.media_url || null,
+        media_type: message.media_type || null,
+        createdAt: message.createdAt,
+        replyTo: message.replyTo || null,
       };
 
+      const getPrivateRoomId = (id1, id2) => [id1, id2].sort().join('_');
       const roomId = getPrivateRoomId(sender, recipient);
+      io.to(roomId).emit('receive_private_message', messagePayload);
 
-      io.to(roomId).emit('receive_private_message', message);
-      console.log(`📨 Nouveau message privé envoyé et émis vers la salle ${roomId}`);
-
-      res.status(201).json(message);
-      return message;
-
+      res.status(201).json(messagePayload);
     } catch (error) {
-      console.error("Erreur lors de l'envoi du message privé dans le contrôleur:", error);
+      console.error("Erreur lors de l'envoi du message privé:", error);
       res.status(500).json({ error: "Échec de l'envoi du message privé." });
-      throw error;
     }
   }
-
 
   async getUserConversations(req, res) {
     const { userId } = req.params;
 
     try {
-      // Get caller's blocked list to exclude those conversations
-      const callerUser = await User.findById(userId).select('blockedUsers').lean();
+      // Get caller's blocked list
+      const callerUser = await User.collection.findOne(
+        buildIdQuery(userId),
+        { projection: { blockedUsers: 1 } }
+      );
       const blockedSet = new Set(callerUser?.blockedUsers || []);
 
-      // Single aggregation: get last message + unread count per conversation partner
-      // sender/recipient are stored as strings (better-auth 32-char IDs), no ObjectId cast needed
       const aggregation = await Message.aggregate([
         {
           $match: {
@@ -234,20 +264,31 @@ class MessageController {
         }
       ]);
 
-      // Collect all unique user IDs needed (partner + lastMessage participants)
+      // Collect all unique user IDs needed
       const allIds = new Set();
       for (const entry of aggregation) {
         if (entry._id) allIds.add(String(entry._id));
         if (entry.lastMessage?.sender)    allIds.add(String(entry.lastMessage.sender));
         if (entry.lastMessage?.recipient) allIds.add(String(entry.lastMessage.recipient));
       }
-      // Only look up registered users (not anon_ IDs)
+
+      // Build a fake msgs array to reuse populateSenders logic
       const registeredIds = [...allIds].filter(id => !id.startsWith('anon_'));
-      const usersFound = registeredIds.length
-        ? await User.find({ _id: { $in: registeredIds } }).select('username avatarUrl sexe email').lean()
+      const orClauses = registeredIds.flatMap(id => {
+        if (/^[0-9a-f]{24}$/i.test(id)) return [{ _id: id }, { _id: new ObjectId(id) }];
+        return [{ _id: id }];
+      });
+      const usersFound = orClauses.length
+        ? await User.collection.find({ $or: orClauses }, { projection: { username: 1, avatarUrl: 1, sexe: 1 } }).toArray()
         : [];
       const userMap = new Map(usersFound.map(u => [String(u._id), u]));
-      const resolveUser = (rawId) => rawId ? (userMap.get(String(rawId)) || fallbackSender(String(rawId))) : null;
+      const resolveUser = (rawId) => {
+        if (!rawId) return null;
+        const str = String(rawId);
+        const found = userMap.get(str);
+        if (found) return { _id: String(found._id), username: found.username, avatarUrl: found.avatarUrl || null, sexe: found.sexe || null };
+        return fallbackSender(str);
+      };
 
       const conversations = aggregation
         .filter(entry => {
@@ -281,7 +322,6 @@ class MessageController {
         { sender: conversationId, recipient: userId, read: false },
         { $set: { read: true } }
       );
-
       res.status(200).json({ success: true });
     } catch (error) {
       console.error("Error while updating messages as read:", error);
@@ -300,27 +340,18 @@ class MessageController {
         return res.status(404).json({ error: "Message not found" });
       }
 
-      // Remove user from all existing reactions first (one reaction per user)
       message.reactions.forEach(reaction => {
         reaction.users = reaction.users.filter(id => id.toString() !== userId);
         reaction.count = reaction.users.length;
       });
-      // Remove empty reactions
       message.reactions = message.reactions.filter(r => r.count > 0);
 
       const existingReaction = message.reactions.find(r => r.emoji === emoji);
-      
       if (existingReaction) {
-        // Add user to this reaction
         existingReaction.users.push(userId);
         existingReaction.count = existingReaction.users.length;
       } else {
-        // Create new reaction
-        message.reactions.push({
-          emoji,
-          users: [userId],
-          count: 1
-        });
+        message.reactions.push({ emoji, users: [userId], count: 1 });
       }
 
       await message.save();

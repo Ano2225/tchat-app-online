@@ -9,6 +9,7 @@ import Toast from '../ui/Toast'
 import ThemeToggle from '../ui/ThemeToggle'
 import ProfileModal from '../profile/ProfileModal'
 import GenderAvatar from '@/components/ui/GenderAvatar'
+import { LogOut, Settings, MessageSquare, Shield } from 'lucide-react'
 
 interface ChatHeaderProps {
   users?: { id: string; username: string }
@@ -57,29 +58,24 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
     try {
       const response = await axiosInstance.get(`/messages/conversations/${user.id}`)
       setConversations(Array.isArray(response.data) ? response.data : [])
-    } catch (error) {
-      console.error('Erreur chargement conversations:', error)
+    } catch {
+      // silently fail
     } finally {
       setLoadingConvs(false)
     }
   }
 
-  // Load conversations when panel opens or unread count changes
   useEffect(() => {
     if (showMessages) fetchConversations()
   }, [showMessages, totalUnread])
 
-  // Refresh conversations on new private message
   useEffect(() => {
     if (!socket) return
-    const handler = () => {
-      if (showMessages) fetchConversations()
-    }
+    const handler = () => { if (showMessages) fetchConversations() }
     socket.on('new_private_message', handler)
     return () => { socket.off('new_private_message', handler) }
   }, [socket, showMessages])
 
-  // Close panel on outside click
   useEffect(() => {
     if (!showMessages) return
     const handleClick = (e: MouseEvent) => {
@@ -93,12 +89,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
 
   const handleOpenConversation = (conv: Conversation) => {
     if (!conv.user || !onOpenChat) return
-    onOpenChat({
-      _id: conv.user._id,
-      username: conv.user.username,
-      avatarUrl: conv.user.avatarUrl,
-      sexe: conv.user.sexe,
-    })
+    onOpenChat({ _id: conv.user._id, username: conv.user.username, avatarUrl: conv.user.avatarUrl, sexe: conv.user.sexe })
     setShowMessages(false)
   }
 
@@ -106,49 +97,76 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
     if (!iso) return ''
     const d = new Date(iso)
     const now = new Date()
-    const isToday = d.toDateString() === now.toDateString()
-    if (isToday) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    if (d.toDateString() === now.toDateString())
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' })
   }
 
   return (
     <>
-      <header className="sticky top-0 bg-white/80 dark:bg-white/10 backdrop-blur-xl border-b border-gray-200 dark:border-white/20 px-3 md:px-6 py-3 md:py-4 z-[200]">
-        <div className="flex items-center justify-between gap-2 md:gap-0">
-          {/* Logo */}
-          <div className="flex items-center space-x-2 md:space-x-4 min-w-0 flex-1">
-            <div className="relative w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <svg className="w-4 h-4 md:w-5 md:h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+      <header
+        className="sticky top-0 z-[200] px-3 md:px-6 py-3"
+        style={{
+          background: 'var(--bg-panel)',
+          borderBottom: '1px solid var(--border-default)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+        }}
+      >
+        <div className="flex items-center justify-between gap-3">
+
+          {/* ── Logo ── */}
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div
+              className="relative w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform hover:scale-105"
+              style={{
+                background: 'var(--accent)',
+                boxShadow: '0 2px 8px var(--accent-glow)',
+              }}
+            >
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
                 <circle cx="8" cy="12" r="1.5" />
                 <circle cx="12" cy="12" r="1.5" />
                 <circle cx="16" cy="12" r="1.5" />
-                <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 2.98.97 4.29L1 23l6.71-1.97C9.02 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z"/>
+                <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 2.98.97 4.29L1 23l6.71-1.97C9.02 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z" />
               </svg>
-              <div className="absolute inset-0 bg-gradient-to-tr from-white/20 to-transparent rounded-2xl" />
             </div>
             <div className="min-w-0 hidden sm:block">
-              <h1 className="text-lg md:text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-purple-400">BabiChat</h1>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 truncate">Espace de discussion</p>
+              <h1
+                className="text-xl font-bold leading-tight"
+                style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}
+              >
+                BabiChat
+              </h1>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Discussion en temps réel
+              </p>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center space-x-1.5 md:space-x-3 flex-shrink-0">
+          {/* ── Actions ── */}
+          <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
 
-            {/* Messages privés */}
+            {/* Private messages */}
             <div className="relative" ref={panelRef}>
               <button
                 onClick={() => setShowMessages(v => !v)}
-                className="p-1.5 md:p-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-lg md:rounded-xl transition-all duration-200 relative focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="relative flex items-center justify-center w-9 h-9 rounded-xl transition-all focus:outline-none"
+                style={{
+                  background: showMessages ? 'var(--accent-dim)' : 'var(--bg-surface)',
+                  border: `1px solid ${showMessages ? 'var(--accent)' : 'var(--border-default)'}`,
+                  color: showMessages ? 'var(--accent)' : 'var(--text-secondary)',
+                }}
                 title="Messages privés"
                 aria-label="Messages privés"
                 aria-expanded={showMessages}
               >
-                <svg className="w-4 h-4 md:w-5 md:h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
+                <MessageSquare className="w-4 h-4" />
                 {totalUnread > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center px-1 text-[10px] text-white font-bold">
+                  <span
+                    className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1"
+                    style={{ background: 'var(--danger)', fontFamily: 'var(--font-ui)' }}
+                  >
                     {totalUnread > 99 ? '99+' : totalUnread}
                   </span>
                 )}
@@ -156,11 +174,35 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
 
               {/* Conversations dropdown */}
               {showMessages && (
-                <div className="absolute top-full right-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-[300] overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                    <h3 className="font-semibold text-sm text-gray-900 dark:text-white">Messages privés</h3>
+                <div
+                  className="absolute top-full right-0 mt-2 w-80 rounded-2xl overflow-hidden animate-scale-in-origin"
+                  style={{
+                    background: 'var(--bg-panel)',
+                    border: '1px solid var(--border-default)',
+                    boxShadow: '0 16px 48px rgba(0,0,0,0.3)',
+                    zIndex: 300,
+                    transformOrigin: 'top right',
+                  }}
+                >
+                  <div
+                    className="flex items-center justify-between px-4 py-3"
+                    style={{ borderBottom: '1px solid var(--border-subtle)' }}
+                  >
+                    <h3
+                      className="font-semibold text-sm"
+                      style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}
+                    >
+                      Messages privés
+                    </h3>
                     {totalUnread > 0 && (
-                      <span className="text-xs bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-2 py-0.5 rounded-full font-medium">
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full font-medium"
+                        style={{
+                          background: 'rgba(248,113,113,0.12)',
+                          color: 'var(--danger)',
+                          fontFamily: 'var(--font-ui)',
+                        }}
+                      >
                         {totalUnread} non lu{totalUnread > 1 ? 's' : ''}
                       </span>
                     )}
@@ -169,21 +211,31 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                   <div className="max-h-72 overflow-y-auto">
                     {loadingConvs ? (
                       <div className="p-6 flex justify-center">
-                        <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                        <div
+                          className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
+                          style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }}
+                        />
                       </div>
                     ) : conversations.length === 0 ? (
-                      <div className="p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                      <div
+                        className="p-8 text-center text-sm"
+                        style={{ color: 'var(--text-muted)' }}
+                      >
                         Aucune conversation
                       </div>
                     ) : (
                       conversations.map((conv, index) => {
                         if (!conv.user) return null
                         const isFromMe = conv.lastMessage?.sender?._id === user?.id
+                        const hasUnread = conv.unreadCount > 0
                         return (
                           <div
                             key={conv.user._id || index}
                             onClick={() => handleOpenConversation(conv)}
-                            className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/60 cursor-pointer border-b border-gray-50 dark:border-gray-700/50 last:border-0 transition-colors"
+                            className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-all"
+                            style={{ borderBottom: '1px solid var(--border-subtle)' }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                           >
                             <div className="relative flex-shrink-0">
                               <GenderAvatar
@@ -191,27 +243,46 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                                 avatarUrl={conv.user.avatarUrl}
                                 sexe={conv.user.sexe}
                                 size="md"
-                                className="w-10 h-10"
+                                className="w-10 h-10 rounded-xl"
                                 clickable={false}
                               />
-                              {conv.unreadCount > 0 && (
-                                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center px-1 text-[10px] text-white font-bold">
+                              {hasUnread && (
+                                <span
+                                  className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full flex items-center justify-center px-1 text-[10px] font-bold text-white"
+                                  style={{ background: 'var(--danger)' }}
+                                >
                                   {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
                                 </span>
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-2">
-                                <p className={`text-sm font-medium truncate ${conv.unreadCount > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                                <p
+                                  className="text-sm font-medium truncate"
+                                  style={{
+                                    fontFamily: 'var(--font-ui)',
+                                    color: hasUnread ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                    fontWeight: hasUnread ? '600' : '500',
+                                  }}
+                                >
                                   {conv.user.username}
                                 </p>
-                                <span className="text-[10px] text-gray-400 flex-shrink-0">
+                                <span
+                                  className="text-[10px] flex-shrink-0"
+                                  style={{ color: 'var(--text-muted)' }}
+                                >
                                   {formatTime(conv.lastMessage?.createdAt)}
                                 </span>
                               </div>
-                              <p className={`text-xs truncate mt-0.5 ${conv.unreadCount > 0 ? 'text-gray-700 dark:text-gray-200 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
-                                {isFromMe && <span className="text-gray-400 mr-1">Vous:</span>}
-                                {conv.lastMessage?.content || 'Image'}
+                              <p
+                                className="text-xs truncate mt-0.5"
+                                style={{
+                                  color: hasUnread ? 'var(--text-secondary)' : 'var(--text-muted)',
+                                  fontWeight: hasUnread ? '500' : '400',
+                                }}
+                              >
+                                {isFromMe && <span style={{ color: 'var(--text-muted)' }}>Vous: </span>}
+                                {conv.lastMessage?.content || '📎 Image'}
                               </p>
                             </div>
                           </div>
@@ -221,34 +292,49 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                   </div>
 
                   {conversations.length > 0 && (
-                    <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 text-center">
-                      <span className="text-xs text-gray-400">{conversations.length} conversation{conversations.length > 1 ? 's' : ''}</span>
+                    <div
+                      className="px-4 py-2 text-center text-xs"
+                      style={{ borderTop: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}
+                    >
+                      {conversations.length} conversation{conversations.length > 1 ? 's' : ''}
                     </div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Profil */}
+            {/* Profile */}
             <button
               onClick={() => setShowProfile(true)}
-              className="flex items-center space-x-2 bg-gray-100 dark:bg-white/10 rounded-full px-2 md:px-4 py-1.5 md:py-2 border border-gray-200 dark:border-white/20 hover:bg-gray-200 dark:hover:bg-white/20 transition-all"
+              className="flex items-center gap-2 rounded-xl px-2 md:px-3 py-1.5 transition-all"
+              style={{
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+              }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'}
             >
               <GenderAvatar
                 username={user?.username || ''}
                 avatarUrl={user?.avatarUrl}
                 sexe={user?.sexe}
                 size="sm"
-                className="w-7 h-7 md:w-8 md:h-8"
+                className="w-7 h-7 md:w-8 md:h-8 rounded-lg"
                 clickable={false}
               />
               <div className="hidden sm:block text-left">
-                <p className="text-xs md:text-sm font-medium text-gray-900 dark:text-white leading-tight">
+                <p
+                  className="text-xs md:text-sm font-semibold leading-tight truncate max-w-[96px]"
+                  style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}
+                >
                   {users?.username || user?.username}
                 </p>
-                <div className="flex items-center space-x-1">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400">En ligne</span>
+                <div className="flex items-center gap-1">
+                  <div
+                    className="w-1.5 h-1.5 rounded-full animate-pulse-soft"
+                    style={{ background: 'var(--online)' }}
+                  />
+                  <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>En ligne</span>
                 </div>
               </div>
             </button>
@@ -257,35 +343,59 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
             {user?.role === 'admin' && (
               <button
                 onClick={() => router.push('/admin')}
-                className="p-1.5 md:p-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-lg md:rounded-xl transition-all"
+                className="w-9 h-9 flex items-center justify-center rounded-xl transition-all"
+                style={{
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                }}
                 title="Dashboard Admin"
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)';
+                  (e.currentTarget as HTMLElement).style.background = 'var(--accent-dim)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)';
+                  (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)';
+                }}
               >
-                <svg className="w-4 h-4 md:w-5 md:h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+                <Shield className="w-4 h-4" />
               </button>
             )}
 
-            {/* Thème */}
+            {/* Theme */}
             <ThemeToggle variant="inline" />
 
-            {/* Déconnexion */}
+            {/* Logout */}
             <button
               onClick={handleLogout}
-              className="p-1.5 md:p-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg md:rounded-xl transition-all group"
+              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all"
+              style={{
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+                color: 'var(--text-secondary)',
+              }}
               title="Se déconnecter"
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.color = 'var(--danger)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'var(--danger)';
+                (e.currentTarget as HTMLElement).style.background = 'rgba(248,113,113,0.08)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)';
+                (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)';
+              }}
             >
-              <svg className="w-4 h-4 md:w-5 md:h-5 text-red-500 group-hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>
       </header>
 
       {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
-
       {showToast && (
         <Toast message="Déconnexion réussie" type="success" onClose={() => setShowToast(false)} />
       )}

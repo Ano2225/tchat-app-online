@@ -224,9 +224,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
             disabled={!message.trim()}
             className={`p-2 md:p-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
               message.trim()
-                ? 'bg-gradient-to-r from-primary-500 to-secondary-500 hover:from-primary-600 hover:to-secondary-600 text-white shadow-md hover:shadow-lg focus:ring-primary-500'
+                ? 'text-white shadow-md hover:shadow-lg focus:ring-primary-500'
                 : 'bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-gray-500 cursor-not-allowed focus:ring-gray-400'
             }`}
+            style={message.trim() ? { background: 'var(--accent)' } : undefined}
             title={currentRoom === 'Game' ? 'Envoyer réponse/message' : 'Envoyer le message'}
             aria-label="Send message"
           >
