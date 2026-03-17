@@ -103,6 +103,13 @@ const handleChatMessage = async (socket, data, io) => {
 
   const responseTime = Date.now() - game.currentQuestion.startTime.getTime();
 
+  // Server-side deadline: reject answers submitted after question expired (+ 1s grace)
+  if (responseTime > QUESTION_DURATION + 1000) {
+    console.log(`[SECURITY] Late answer rejected from ${socket.username}, response time: ${responseTime}ms`);
+    socket.emit('answer_result', { userId: socket.userId, isCorrect: false, late: true, alreadyAnswered: false });
+    return false;
+  }
+
   const normalizeText = (text) => text.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
 
   // Support letter answers: A → options[0], B → options[1], etc.
@@ -394,10 +401,16 @@ module.exports = (io, socket) => {
         console.log(`[GAME] Sending current question to new player, time left: ${timeLeft}s`);
         
         if (timeLeft > 0) {
+          // Send full question data so late joiners have all fields
           socket.emit('new_question', {
             question: game.currentQuestion.question,
-            duration: timeLeft * 1000,
-            startTime: game.currentQuestion.startTime
+            options: game.currentQuestion.options || [],
+            duration: QUESTION_DURATION,
+            startTime: game.currentQuestion.startTime,
+            category: game.currentQuestion.category || 'Quiz',
+            categoryEmoji: game.currentQuestion.categoryEmoji || '❓',
+            difficulty: game.currentQuestion.difficulty || 'Moyen',
+            explanation: game.currentQuestion.explanation || ''
           });
         } else {
           console.log(`[GAME] Question expired, ending it`);
@@ -476,6 +489,21 @@ module.exports = (io, socket) => {
     socket.leave(`game_${channel}`);
   });
   
+  // Alias: frontend may emit 'submit_answer' instead of 'game_answer'
+  socket.on('submit_answer', async (data) => {
+    if (!validateAuthenticatedUser(socket)) return;
+    if (!checkRateLimit(socket.userId, 'answer')) {
+      socket.emit('game_error', { message: 'Trop de réponses envoyées. Ralentissez.' });
+      return;
+    }
+    const raw = data?.answer;
+    if (raw === undefined || raw === null || String(raw).length > 500) {
+      socket.emit('game_error', { message: 'Invalid answer format' });
+      return;
+    }
+    await handleChatMessage(socket, { room: 'Game', message: String(raw).trim() }, io);
+  });
+
   // Gérer les réponses du jeu
   socket.on('game_answer', async (data) => {
     // Validate authentication

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
 import axiosInstance from '@/utils/axiosInstance';
 import BlockedUsers from '@/components/settings/BlockedUsers';
@@ -143,12 +142,6 @@ const PasswordChangeSection: React.FC = () => {
           >
             {loading ? 'Modification...' : 'Modifier le mot de passe'}
           </button>
-          <div className="text-xs text-center text-gray-500 dark:text-gray-400">
-            Mot de passe oublié ?{' '}
-            <Link href="/forgot-password" className="text-blue-600 hover:underline">
-              Réinitialiser
-            </Link>
-          </div>
         </form>
       )}
     </div>

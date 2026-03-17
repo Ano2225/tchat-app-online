@@ -155,12 +155,41 @@ class AdminController {
   // Récupérer tous les signalements
   async getReports(req, res) {
     try {
-      const reports = await Report.find()
-        .populate('reportedBy', 'username')
-        .populate('reportedUser', 'username')
-        .sort({ createdAt: -1 });
+      const reports = await Report.find().sort({ createdAt: -1 }).lean();
 
-      res.json(reports);
+      // Collect all unique user IDs (reportedBy + reportedUser)
+      const ids = [...new Set(
+        reports.flatMap(r => [r.reportedBy, r.reportedUser]).filter(Boolean).map(String)
+      )];
+
+      // Build $or query that matches both String and ObjectId _id formats
+      const orClauses = ids.flatMap(id =>
+        /^[0-9a-f]{24}$/i.test(id)
+          ? [{ _id: id }, { _id: new ObjectId(id) }]
+          : [{ _id: id }]
+      );
+
+      const users = orClauses.length
+        ? await User.collection.find({ $or: orClauses }, { projection: { username: 1 } }).toArray()
+        : [];
+
+      const userMap = {};
+      for (const u of users) userMap[String(u._id)] = u.username;
+      console.log('[getReports] ids:', ids, '| users found:', users.map(u => ({ _id: String(u._id), username: u.username })), '| userMap:', userMap);
+
+      const populated = reports.map(r => ({
+        ...r,
+        reportedBy: {
+          _id: r.reportedBy,
+          username: userMap[String(r.reportedBy)] || r.reportedBy || '?',
+        },
+        reportedUser: {
+          _id: r.reportedUser,
+          username: userMap[String(r.reportedUser)] || r.reportedUser || '?',
+        },
+      }));
+
+      res.json(populated);
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }

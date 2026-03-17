@@ -69,7 +69,7 @@ const responseErrorInterceptor = (error: AxiosError) => {
     clearCsrfToken();
     useAuthStore.getState().logout();
     if (typeof window !== 'undefined') {
-      window.location.href = '/anonymous';
+      window.location.href = '/';
     }
   }
 

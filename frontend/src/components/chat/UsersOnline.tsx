@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { Socket } from 'socket.io-client'
 import GenderAvatar from '@/components/ui/GenderAvatar'
 import { UserListSkeleton } from '@/components/ui/skeletons'
-import { ChevronRight, Users } from 'lucide-react'
+import { ChevronRight, Users, X } from 'lucide-react'
 
 interface User {
   id: string
@@ -26,9 +26,10 @@ interface UsersOnlineProps {
   unreadMap?: Record<string, UnreadEntry>
   onOpenChat?: (user: { _id: string; username: string; avatarUrl?: string; sexe?: string }) => void
   onSelectAgent?: (agent: unknown) => void
+  onClose?: () => void
 }
 
-const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMap = {}, onOpenChat }) => {
+const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMap = {}, onOpenChat, onClose }) => {
   const [users, setUsers] = useState<User[]>([])
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -129,12 +130,24 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
             </div>
           </div>
         )}
-        <div className="relative flex-shrink-0 ml-auto">
+        <div className="relative flex-shrink-0 ml-auto flex items-center gap-1">
+          {/* Close button — mobile only */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="md:hidden w-8 h-8 flex items-center justify-center rounded-xl transition-all"
+              style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
+              aria-label="Fermer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+          {/* Collapse button — desktop only */}
           <button
             onClick={() => setIsCollapsed(v => !v)}
             aria-label={isCollapsed ? 'Développer' : 'Réduire'}
             aria-expanded={!isCollapsed}
-            className="w-7 h-7 flex items-center justify-center rounded-lg transition-all focus:outline-none"
+            className="hidden md:flex w-7 h-7 items-center justify-center rounded-lg transition-all focus:outline-none"
             style={{ color: 'var(--text-muted)' }}
             onMouseEnter={e => {
               (e.currentTarget as HTMLElement).style.color = 'var(--accent)';

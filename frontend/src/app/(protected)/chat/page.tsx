@@ -260,33 +260,40 @@ const ChatPage = () => {
         onOpenChat={handleOpenChatFromSidebar}
       />
       
-      {/* Mobile: Floating action buttons */}
-      <div className="md:hidden fixed bottom-20 left-4 z-30 flex flex-col gap-2">
+      {/* Mobile: Bottom action bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around px-4 py-2 safe-area-pb"
+        style={{ background: 'var(--bg-panel)', borderTop: '1px solid var(--border-default)' }}>
         <button
-          onClick={() => setShowChannels(!showChannels)}
-          className="w-12 h-12 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform" style={{ background: 'var(--accent)' }}
-          aria-label="Toggle channels"
+          onClick={() => { setShowChannels(v => !v); setShowUsers(false); }}
+          className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all"
+          style={{ color: showChannels ? 'var(--accent)' : 'var(--text-muted)', background: showChannels ? 'var(--accent-dim)' : 'transparent' }}
+          aria-label="Salons"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
+          <span className="text-[10px] font-medium">Salons</span>
         </button>
         <button
-          onClick={() => setShowUsers(!showUsers)}
-          className="w-12 h-12 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform" style={{ background: 'var(--accent)' }}
-          aria-label="Toggle users"
+          onClick={() => { setShowUsers(v => !v); setShowChannels(false); }}
+          className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all"
+          style={{ color: showUsers ? 'var(--accent)' : 'var(--text-muted)', background: showUsers ? 'var(--accent-dim)' : 'transparent' }}
+          aria-label="Utilisateurs"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
+          <span className="text-[10px] font-medium">En ligne</span>
         </button>
         {isGameRoom && (
           <button
             onClick={() => setShowGame(!showGame)}
-            className="w-12 h-12 text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform" style={{ background: 'var(--accent)' }}
-            aria-label="Toggle game panel"
+            className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all"
+            style={{ color: showGame ? 'var(--accent)' : 'var(--text-muted)', background: showGame ? 'var(--accent-dim)' : 'transparent' }}
+            aria-label="Quiz"
           >
-            🧠
+            <span className="text-xl leading-none">🧠</span>
+            <span className="text-[10px] font-medium">Quiz</span>
           </button>
         )}
       </div>
@@ -308,15 +315,20 @@ const ChatPage = () => {
         </div>
       )}
 
-      <div className="flex h-[calc(100vh-80px)] gap-2 p-2 relative">
+      <div className="flex h-[calc(100vh-80px)] md:h-[calc(100vh-80px)] gap-2 p-2 pb-16 md:pb-2 relative">
         {/* Channel Sidebar - Desktop always visible, Mobile overlay */}
         <div className={`
           md:flex-shrink-0 md:relative md:translate-x-0
           fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out
           ${showChannels ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}>
-          <div className="h-full md:h-auto md:mt-0 mt-20">
-            <ChatChannel onJoinRoom={handleJoinRoom} currentRoom={currentRoom} socket={socket} />
+          <div className="h-full md:h-auto">
+            <ChatChannel
+              onJoinRoom={handleJoinRoom}
+              currentRoom={currentRoom}
+              socket={socket}
+              onClose={() => setShowChannels(false)}
+            />
           </div>
         </div>
 
@@ -360,13 +372,14 @@ const ChatPage = () => {
           fixed inset-y-0 right-0 z-40 transform transition-transform duration-300 ease-in-out
           ${showUsers ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
         `}>
-          <div className="h-full md:h-auto md:mt-0 mt-20">
+          <div className="h-full md:h-auto">
             <ErrorBoundary>
               <UsersOnline
                 socket={socket}
                 currentRoom={currentRoom}
                 unreadMap={unreadMap}
                 onOpenChat={handleOpenChatFromSidebar}
+                onClose={() => setShowUsers(false)}
               />
             </ErrorBoundary>
           </div>

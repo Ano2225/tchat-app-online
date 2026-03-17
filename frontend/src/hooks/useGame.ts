@@ -55,20 +55,20 @@ export const useGame = (channel: string, socket?: Socket | null) => {
         console.log('[GAME] Game state received:', state);
         if (isGameChannel && state) {
           setGameState(state);
-          
+
           // Check if user already answered current question
           const userAnswered = state.currentQuestion?.answers?.some((a: any) => a.userId === user.id);
           if (userAnswered) {
             setHasAnswered(true);
           }
-          
-          // Handle timer for current question
-          if (state.currentQuestion && state.currentQuestion.startTime) {
+
+          // Handle timer using server startTime as source of truth
+          if (state.currentQuestion?.startTime) {
             const elapsed = Date.now() - new Date(state.currentQuestion.startTime).getTime();
-            const remaining = Math.max(0, Math.floor((15000 - elapsed) / 1000));
-            console.log('[GAME] Question in progress, remaining time:', remaining);
+            const remaining = Math.max(0, 15000 - elapsed);
+            console.log('[GAME] Question in progress, remaining ms:', remaining);
             if (remaining > 0) {
-              startTimer(remaining);
+              startTimer(state.currentQuestion.startTime, 15000);
             } else {
               console.log('[GAME] Question expired');
               setTimeLeft(0);
@@ -89,7 +89,7 @@ export const useGame = (channel: string, socket?: Socket | null) => {
         setAnswerResult(null);
         setWinner(null);
         setExplanation(null);
-        
+
         const questionData = {
           question: question.question || 'Question non disponible',
           options: question.options || [],
@@ -102,7 +102,8 @@ export const useGame = (channel: string, socket?: Socket | null) => {
         };
         console.log('[GAME] Setting question with options:', questionData);
         setQuestion(questionData);
-        startTimer(Math.floor(question.duration / 1000));
+        // Use server startTime for authoritative timer; fall back to now
+        startTimer(question.startTime ?? new Date(), question.duration || 15000);
       }
     };
 
@@ -184,36 +185,30 @@ export const useGame = (channel: string, socket?: Socket | null) => {
     };
   }, [socket, user?.id, isGameChannel]);
 
-  const startTimer = (duration: number) => {
-    console.log('[GAME] Starting timer with duration:', duration);
-    
+  // Server-authoritative timer: computes timeLeft from server startTime to avoid drift
+  const startTimer = (startTime: string | Date, totalDurationMs: number) => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
 
-    let time = Math.max(0, Math.floor(duration));
-    setTimeLeft(time);
-    
-    if (time <= 0) {
-      return;
-    }
+    const startMs = new Date(startTime).getTime();
+    const compute = () => Math.max(0, Math.ceil((totalDurationMs - (Date.now() - startMs)) / 1000));
+
+    const initial = compute();
+    console.log('[GAME] Starting server-authoritative timer, initial seconds:', initial);
+    setTimeLeft(initial);
+
+    if (initial <= 0) return;
 
     timerRef.current = setInterval(() => {
-      time -= 1;
-      console.log('[GAME] Timer tick:', time);
-      
-      if (time <= 0) {
-        console.log('[GAME] Timer finished');
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-          timerRef.current = null;
-        }
-        setTimeLeft(0);
-      } else {
-        setTimeLeft(time);
+      const remaining = compute();
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(timerRef.current!);
+        timerRef.current = null;
       }
-    }, 1000);
+    }, 300);
   };
 
   const submitAnswer = (answer: number) => {

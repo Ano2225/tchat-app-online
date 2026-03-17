@@ -54,7 +54,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
       await logout()
       setShowLogoutConfirm(false)
       setShowToast(true)
-      setTimeout(() => router.push('/login'), 1000)
+      setTimeout(() => router.push('/'), 1000)
     } finally {
       setLoggingOut(false)
     }

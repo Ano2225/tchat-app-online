@@ -109,7 +109,7 @@ export default function MusicPlayer() {
   };
 
   return (
-    <div style={{ position: 'fixed', bottom: '24px', left: '24px', zIndex: 200 }}>
+    <div className="hidden md:block" style={{ position: 'fixed', bottom: '24px', left: '24px', zIndex: 200 }}>
       <AnimatePresence mode="wait">
 
         {/* ── COLLAPSED pill ─────────────────────────────────────────────── */}

@@ -176,9 +176,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
       {showEmojiPicker && (
         <div
           ref={emojiPickerRef}
-          className="absolute bottom-full right-4 mb-2 z-10 transition-all duration-150 ease-out"
+          className="absolute bottom-full mb-2 z-10 transition-all duration-150 ease-out"
+          style={{ right: 0, maxWidth: 'min(350px, calc(100vw - 16px))' }}
         >
-          <EmojiPicker onEmojiClick={onEmojiClick} />
+          <EmojiPicker
+            onEmojiClick={onEmojiClick}
+            width={typeof window !== 'undefined' ? Math.min(350, window.innerWidth - 16) : 350}
+          />
         </div>
       )}
       

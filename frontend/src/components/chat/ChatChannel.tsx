@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import axiosInstance from '@/utils/axiosInstance'
 import { useAuthStore } from '@/store/authStore'
 import { ChannelListSkeleton } from '@/components/ui/skeletons'
-import { MessageCircle, Monitor, Gamepad2, Music, Dice6, CircleDot, Film, Megaphone, Hash } from 'lucide-react'
+import { MessageCircle, Monitor, Gamepad2, Music, Dice6, CircleDot, Film, Megaphone, X } from 'lucide-react'
 
 interface Channel {
   _id: string
@@ -16,9 +16,10 @@ interface ChatChannelProps {
   onJoinRoom: (roomName: string) => void
   currentRoom: string
   socket?: import('socket.io-client').Socket | null
+  onClose?: () => void
 }
 
-const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, socket }) => {
+const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, socket, onClose }) => {
   const [channels, setChannels] = useState<Channel[]>([])
   const [loading, setLoading] = useState(true)
   const user = useAuthStore((state) => state.user)
@@ -86,16 +87,28 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
       style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}
     >
       {/* Header */}
-      <div className="px-4 py-3.5 flex-shrink-0" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-        <h2
-          className="text-base font-bold"
-          style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}
-        >
-          Salons
-        </h2>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-          {channels.length} disponible{channels.length > 1 ? 's' : ''}
-        </p>
+      <div className="px-4 py-3.5 flex-shrink-0 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+        <div>
+          <h2
+            className="text-base font-bold"
+            style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}
+          >
+            Salons
+          </h2>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            {channels.length} disponible{channels.length > 1 ? 's' : ''}
+          </p>
+        </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="md:hidden w-8 h-8 flex items-center justify-center rounded-xl transition-all"
+            style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
+            aria-label="Fermer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Channel list */}
@@ -109,6 +122,7 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
               return
             }
             onJoinRoom('Game')
+            onClose?.()
           }}
           disabled={!user || !!user.isAnonymous}
           className={`w-full text-left px-3 py-2.5 rounded-xl transition-all duration-200 group focus:outline-none focus:ring-2`}
@@ -196,7 +210,7 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
           return (
             <button
               key={channel._id}
-              onClick={() => onJoinRoom(channel.name)}
+              onClick={() => { onJoinRoom(channel.name); onClose?.() }}
               className="w-full text-left px-3 py-2.5 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2"
               style={{
                 background: isActive
