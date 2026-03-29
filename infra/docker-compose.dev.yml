@@ -16,7 +16,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-babichat_dev}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-devpassword}
     ports:
-      - "127.0.0.1:27017:27017"
+      - "127.0.0.1:27018:27017"  # 27017 déjà pris en local → exposé sur 27018
     volumes:
       - mongo-data-dev:/data/db
       - mongo-config-dev:/data/configdb
@@ -59,8 +59,8 @@ services:
 
   backend:
     build:
-      context: ../backend
-      dockerfile: Dockerfile.dev
+      context: ../
+      dockerfile: backend/Dockerfile.dev
     container_name: babichat-backend-dev
     restart: unless-stopped
     env_file:
@@ -76,8 +76,8 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
-      # Mount source for hot-reload; anonymous volume preserves node_modules from image
-      - ../backend:/app
+      # Mount only backend source for hot-reload; node_modules preserved from image
+      - ../backend:/app/backend
       - /app/node_modules
     depends_on:
       mongo:

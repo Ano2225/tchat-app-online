@@ -1,19 +1,19 @@
-# Development image — hot-reload via nodemon, source mounted as volume
-# Usage: docker compose -f infra/docker-compose.dev.yml up --build
+# Development — hot-reload via nodemon
+# Build context must be the project ROOT (package.json lives there)
+# docker-compose.dev.yml: context: ../ dockerfile: backend/Dockerfile.dev
 
 FROM node:20-alpine
 WORKDIR /app
 
-# Install dumb-init for correct signal handling even in dev
 RUN apk add --no-cache dumb-init
 
-# Install ALL dependencies (includes nodemon)
+# package.json is at project root
 COPY package*.json ./
 RUN npm install
 
-# Source code is mounted as a volume at runtime — no COPY needed.
-# node_modules stays inside the container via an anonymous volume
-# so the host directory doesn't shadow the installed packages.
+# Source is mounted as a volume at runtime:
+#   - ../backend:/app/backend   (hot-reload)
+#   - /app/node_modules         (preserved from image)
 
 ENV NODE_ENV=development
 
