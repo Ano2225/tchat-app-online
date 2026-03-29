@@ -38,6 +38,7 @@ interface Message {
 const ChatPage = () => {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
   const logout = useAuthStore((state) => state.logout);
   const [currentRoom, setCurrentRoom] = useState('General');
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -72,7 +73,10 @@ const ChatPage = () => {
   useGame(currentRoom, socket);
 
   useEffect(() => {
-    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000');
+    const currentToken = useAuthStore.getState().token;
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000', {
+      auth: { token: currentToken },
+    });
     setSocket(newSocket);
 
     const handleConnect = () => {

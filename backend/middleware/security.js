@@ -26,7 +26,7 @@ const corsOptions = {
 // Rate limiting global
 const globalRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // limite de 1000 requêtes par IP
+  max: 200, // 200 requêtes par IP par fenêtre
   message: {
     error: 'Trop de requêtes depuis cette IP, réessayez plus tard.'
   },

@@ -1,6 +1,10 @@
 const crypto = require('crypto');
 
-const CSRF_SECRET = process.env.CSRF_SECRET || process.env.BETTER_AUTH_SECRET || 'change-me-in-production';
+const CSRF_SECRET = process.env.CSRF_SECRET || process.env.BETTER_AUTH_SECRET;
+if (!CSRF_SECRET) {
+  console.error('❌ CSRF_SECRET (or BETTER_AUTH_SECRET) must be set. Refusing to start without it.');
+  process.exit(1);
+}
 const TOKEN_TTL_MS = 3600000; // 1 hour
 
 /**

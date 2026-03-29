@@ -19,7 +19,7 @@
 'use strict';
 
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '..', '.env'), override: true });
+require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env'), override: true });
 
 const mongoose = require('mongoose');
 const crypto = require('crypto');

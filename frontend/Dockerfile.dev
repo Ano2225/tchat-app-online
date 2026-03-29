@@ -1,0 +1,19 @@
+# Development image — hot-reload via next dev, source mounted as volume
+# Usage: docker compose -f infra/docker-compose.dev.yml up --build
+
+FROM node:20-alpine
+WORKDIR /app
+
+# Install ALL dependencies
+COPY package*.json ./
+RUN npm install
+
+# Source code is mounted as a volume at runtime — no COPY needed.
+# node_modules stays inside the container via an anonymous volume.
+
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]

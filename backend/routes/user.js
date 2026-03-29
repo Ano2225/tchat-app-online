@@ -1,13 +1,13 @@
 const express = require('express');
-const User = require('../models/User');
 const { authMiddleware } = require('../middleware/authBetter');
+const { csrfProtection } = require('../middleware/csrf');
 const UserController = require('../controllers/userController');
 
 const router = express.Router();
 
-router.put('/', authMiddleware, UserController.updateUserInfo)
-router.get('/profile', authMiddleware, UserController.getCurrentUserProfile)
-router.put('/avatar', authMiddleware, UserController.updateUserAvatar)
-router.get('/:id', UserController.getUserById)
+router.put('/', authMiddleware, csrfProtection, UserController.updateUserInfo);
+router.get('/profile', authMiddleware, UserController.getCurrentUserProfile);
+router.put('/avatar', authMiddleware, csrfProtection, UserController.updateUserAvatar);
+router.get('/:id', authMiddleware, UserController.getUserById);
 
 module.exports = router;

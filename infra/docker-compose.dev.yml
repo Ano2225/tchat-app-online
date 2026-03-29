@@ -1,0 +1,168 @@
+# Development stack — hot-reload, relaxed secrets, source code mounted as volumes
+# Usage:
+#   cd infra && docker compose -f docker-compose.dev.yml up --build
+#
+# Prerequisites:
+#   cp .env.example .env   (from repo root)
+#   Fill in at minimum: BETTER_AUTH_SECRET, CSRF_SECRET, JWT_SECRET, FRONTEND_URL
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: babichat-mongo-dev
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: babichat
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-babichat_dev}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-devpassword}
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo-data-dev:/data/db
+      - mongo-config-dev:/data/configdb
+    networks:
+      - babichat-dev
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --username ${MONGO_ROOT_USER:-babichat_dev} --password ${MONGO_ROOT_PASSWORD:-devpassword} --authenticationDatabase admin localhost:27017/babichat --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: babichat-redis-dev
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-devredis}
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data-dev:/data
+    networks:
+      - babichat-dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-devredis}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: babichat-mailhog-dev
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1025:1025"   # SMTP
+      - "127.0.0.1:8025:8025"   # Web UI  →  http://localhost:8025
+    networks:
+      - babichat-dev
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile.dev
+    container_name: babichat-backend-dev
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: development
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER:-babichat_dev}:${MONGO_ROOT_PASSWORD:-devpassword}@mongo:27017/babichat?authSource=admin
+      REDIS_URL: redis://:${REDIS_PASSWORD:-devredis}@redis:6379
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      SMTP_SECURE: "false"
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      # Mount source for hot-reload; anonymous volume preserves node_modules from image
+      - ../backend:/app
+      - /app/node_modules
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - babichat-dev
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.dev
+    container_name: babichat-frontend-dev
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:8000}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api}
+      BACKEND_URL: http://backend:8000
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      # Mount source for hot-reload; anonymous volume preserves node_modules from image
+      - ../frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - babichat-dev
+
+  umami-db:
+    image: postgres:16-alpine
+    container_name: babichat-umami-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:-umamidev}
+    volumes:
+      - umami-db-data-dev:/var/lib/postgresql/data
+    networks:
+      - babichat-dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: babichat-umami-dev
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"   # UI → http://localhost:3001
+    environment:
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:-umamidev}@umami-db:5432/umami
+      DATABASE_TYPE: postgresql
+      APP_SECRET: ${UMAMI_APP_SECRET:-umamiappsecretdev}
+    depends_on:
+      umami-db:
+        condition: service_healthy
+    networks:
+      - babichat-dev
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/heartbeat || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  mongo-data-dev:
+    driver: local
+  mongo-config-dev:
+    driver: local
+  redis-data-dev:
+    driver: local
+  umami-db-data-dev:
+    driver: local
+
+networks:
+  babichat-dev:
+    driver: bridge

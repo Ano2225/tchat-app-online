@@ -6,8 +6,8 @@ const { ObjectId } = require('mongodb');
 const { getVerificationEmailPreview, sendMail } = require('../services/emailService');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { authMiddleware } = require('../middleware/authBetter');
-const { getCsrfToken } = require('../middleware/csrf');
+const { authMiddleware, sessionCache } = require('../middleware/authBetter');
+const { getCsrfToken, csrfProtection } = require('../middleware/csrf');
 
 const EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED';
 
@@ -205,8 +205,8 @@ const handleChangePassword = async (req, res) => {
 };
 
 // Route personnalisée pour le changement de mot de passe
-router.put('/change-password', handleChangePassword);
-router.post('/change-password', handleChangePassword);
+router.put('/change-password', authMiddleware, csrfProtection, handleChangePassword);
+router.post('/change-password', authMiddleware, csrfProtection, handleChangePassword);
 
 const handleSendVerificationEmail = async (req, res) => {
   try {
@@ -323,11 +323,13 @@ router.post('/anonymous', async (req, res) => {
 router.post('/logout', async (req, res) => {
   try {
     const sessionToken = req.headers.authorization?.replace('Bearer ', '');
-    
+
     if (sessionToken) {
       await auth.api.signOut({
         headers: { authorization: `Bearer ${sessionToken}` }
       });
+      // Clear from cache immediately so the token is invalid on next request
+      sessionCache.delete(sessionToken);
     }
 
     res.json({ success: true });
@@ -454,11 +456,11 @@ router.post('/request-password-reset', async (req, res) => {
       html: `<p>Bonjour <strong>${user.username}</strong>,</p><p>Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe (valide 1 heure) :</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>`
     });
 
-    // Dev: return token in response if email not delivered
-    const response = { success: true, message: 'Si cet email existe, un lien a été envoyé.' };
-    if (!result.delivered) response.resetToken = rawToken; // visible in dev console only
+    if (!result.delivered) {
+      console.warn(`[password-reset] Email delivery failed for ${user.email} — token not sent to client`);
+    }
 
-    return res.json(response);
+    return res.json({ success: true, message: 'Si cet email existe, un lien a été envoyé.' });
   } catch (error) {
     console.error('Erreur request-password-reset:', error);
     return res.status(500).json({ message: 'Erreur serveur' });

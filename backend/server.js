@@ -1,13 +1,18 @@
 const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '.env'), override: true });
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env'), override: true });
 
 // Fail fast on missing required environment variables
-const REQUIRED_ENV_VARS = ['MONGODB_URI'];
+const REQUIRED_ENV_VARS = [
+  'MONGODB_URI',
+  'BETTER_AUTH_SECRET',
+  'JWT_SECRET',
+];
 const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
 if (missingVars.length > 0) {
   console.error(`❌ Missing required environment variables: ${missingVars.join(', ')}`);
   process.exit(1);
 }
+// CSRF_SECRET fails inside csrf.js — checked there to keep concerns separated
 
 const express = require('express');
 const http = require('http');
@@ -128,12 +133,36 @@ class ChatServer {
   }
 
   initSocketEvents() {
+    const auth = require('./config/auth');
     const socketHandlers = require('./socket/socketHandlers');
 
-    this.io.on('connection', (socket) => {
-      socketHandlers(this.io, socket)
+    // Verify bearer token at handshake time.
+    // Both registered and anonymous users receive a session token from /api/auth/*,
+    // so all legitimate connections can pass a token.
+    this.io.use(async (socket, next) => {
+      const token = socket.handshake.auth?.token;
+      if (!token) {
+        return next(new Error('Socket authentication required'));
+      }
+      try {
+        const result = await auth.api.getSession({
+          headers: { authorization: `Bearer ${token}` }
+        });
+        if (!result?.user) {
+          return next(new Error('Invalid or expired session'));
+        }
+        // Attach verified identity — these values are trusted for the entire socket lifetime
+        socket.verifiedUserId  = String(result.user.id);
+        socket.verifiedUsername = result.user.username || result.user.name;
+        next();
+      } catch {
+        next(new Error('Socket authentication error'));
+      }
     });
 
+    this.io.on('connection', (socket) => {
+      socketHandlers(this.io, socket);
+    });
   }
 
   async start() {

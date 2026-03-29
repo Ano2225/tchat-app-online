@@ -1,6 +1,6 @@
 const path = require('path');
 const mongoose = require('mongoose');
-require('dotenv').config({ path: path.resolve(__dirname, '..', '.env'), override: true });
+require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '.env'), override: true });
 
 const connectDB = async () => {
   try {

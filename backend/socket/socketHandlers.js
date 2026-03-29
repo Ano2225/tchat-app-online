@@ -240,71 +240,66 @@ module.exports = (io, socket) => {
     try {
       currentUsername = username;
 
-      const user = await User.findOne({ username }).lean();
+      // socket.verifiedUserId / socket.verifiedUsername are set by the io.use() middleware
+      // in server.js and are guaranteed to match a valid session — never trust client-supplied
+      // IDs for authorization. We use verifiedUserId as the authoritative identity.
+      const verifiedId = socket.verifiedUserId;
 
-      if (user) {
-        // Registered user
-        if (user.isBlocked && !user.isAnonymous) {
-          socket.emit('user_blocked', { message: 'Votre compte a été bloqué.' });
-          socket.disconnect();
-          return;
-        }
-
-        currentUserId  = user._id.toString();
-        socket.userId  = currentUserId;
-        socket.username = username;
-        socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null };
-
-        // Evict old sessions for this account
-        if (connectedUsers.has(username)) {
-          connectedUsers.get(username).forEach(oldId => {
-            const old = io.sockets.sockets.get(oldId);
-            if (old && old.id !== socket.id) {
-              old.emit('session_replaced', { message: 'Session remplacée par une nouvelle connexion.' });
-              old.disconnect(true);
-            }
-          });
-          connectedUsers.delete(username);
-        }
-
-        userIdToUsername.set(currentUserId, username);
-
-        // Fire-and-forget — don't block the socket event
-        const _uid = String(user._id);
-        User.collection.updateOne(
-          /^[0-9a-f]{24}$/i.test(_uid) ? { $or: [{ _id: _uid }, { _id: new ObjectId(_uid) }] } : { _id: _uid },
-          { $set: { isOnline: true, lastSeen: new Date() } }
-        ).catch(() => {});
-
-      } else {
-        // Anonymous user
-        if (connectedUsers.has(username)) {
-          socket.emit('username_taken', { message: `"${username}" est déjà utilisé.` });
-          socket.disconnect();
-          return;
-        }
-
-        const reserved = await User.findOne({ username }).select('_id').lean();
-        if (reserved) {
-          socket.emit('username_reserved', { message: `"${username}" appartient à un compte enregistré.` });
-          socket.disconnect();
-          return;
-        }
-
-        // Use username as stable ID so message history persists across reconnects
-        currentUserId   = `anon_${username}`;
-        socket.userId   = currentUserId;
-        socket.username = username;
-        socket.userMeta = { avatarUrl: null, sexe: null };
+      // Reject if the claimed username doesn't match the verified session
+      if (socket.verifiedUsername && username !== socket.verifiedUsername) {
+        socket.emit('auth_error', { message: 'Nom d\'utilisateur non autorisé.' });
+        socket.disconnect();
+        return;
       }
 
-      connectedUsers.set(username, new Set([socket.id]));
-      // Personal room — enables direct delivery of private messages & notifications
+      // Fetch user record for blocking check and metadata — use verified ID, not username
+      const isObjId = /^[0-9a-f]{24}$/i.test(verifiedId);
+      const user = await User.collection.findOne(
+        isObjId ? { $or: [{ _id: verifiedId }, { _id: new ObjectId(verifiedId) }] } : { _id: verifiedId },
+        { projection: { username: 1, avatarUrl: 1, sexe: 1, isBlocked: 1, isAnonymous: 1 } }
+      );
+
+      if (!user) {
+        socket.emit('auth_error', { message: 'Utilisateur introuvable.' });
+        socket.disconnect();
+        return;
+      }
+
+      if (user.isBlocked && !user.isAnonymous) {
+        socket.emit('user_blocked', { message: 'Votre compte a été bloqué.' });
+        socket.disconnect();
+        return;
+      }
+
+      currentUserId   = verifiedId;
+      socket.userId   = verifiedId;
+      socket.username = user.username || username;
+      socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null };
+
+      // Evict duplicate sessions for this account
+      if (connectedUsers.has(socket.username)) {
+        connectedUsers.get(socket.username).forEach(oldId => {
+          const old = io.sockets.sockets.get(oldId);
+          if (old && old.id !== socket.id) {
+            old.emit('session_replaced', { message: 'Session remplacée par une nouvelle connexion.' });
+            old.disconnect(true);
+          }
+        });
+        connectedUsers.delete(socket.username);
+      }
+
+      userIdToUsername.set(currentUserId, socket.username);
+
+      User.collection.updateOne(
+        isObjId ? { $or: [{ _id: verifiedId }, { _id: new ObjectId(verifiedId) }] } : { _id: verifiedId },
+        { $set: { isOnline: true, lastSeen: new Date() } }
+      ).catch(() => {});
+
+      connectedUsers.set(socket.username, new Set([socket.id]));
       if (currentUserId) socket.join(currentUserId);
       _scheduleUserList();
       if (socket.currentRoom) _scheduleRoomList(socket.currentRoom);
-      // Broadcast presence to all clients
-      io.emit('presence_update', { userId: currentUserId, username, isOnline: true });
+      io.emit('presence_update', { userId: currentUserId, username: socket.username, isOnline: true });
 
     } catch (err) {
       console.error('user_connected error:', err);

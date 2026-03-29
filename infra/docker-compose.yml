@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     environment:
       MONGO_INITDB_DATABASE: babichat
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?MONGO_ROOT_USER is required}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
     # Bind to localhost only — do not expose to host network in production
     ports:
       - "127.0.0.1:27017:27017"
@@ -14,7 +16,7 @@ services:
     networks:
       - babichat-network
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/babichat --quiet
+      test: echo 'db.runCommand("ping").ok' | mongosh --username ${MONGO_ROOT_USER} --password ${MONGO_ROOT_PASSWORD} --authenticationDatabase admin localhost:27017/babichat --quiet
       interval: 10s
       timeout: 5s
       retries: 5
@@ -24,7 +26,7 @@ services:
     image: redis:7-alpine
     container_name: babichat-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-changeme_redis_password}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     ports:
       - "127.0.0.1:6379:6379"
     volumes:
@@ -32,26 +34,10 @@ services:
     networks:
       - babichat-network
     healthcheck:
-      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-changeme_redis_password}", "ping"]
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
-
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
-    container_name: babichat-mailhog
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:1025:1025"  # SMTP
-      - "127.0.0.1:8025:8025"  # Web UI
-    networks:
-      - babichat-network
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8025"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
       start_period: 10s
 
   backend:
@@ -63,11 +49,10 @@ services:
     env_file:
       - ../.env
     environment:
-      MONGODB_URI: mongodb://mongo:27017/babichat
-      REDIS_URL: redis://:${REDIS_PASSWORD:-changeme_redis_password}@redis:6379
-      SMTP_HOST: mailhog
-      SMTP_PORT: 1025
-      SMTP_SECURE: "false"
+      # These two override .env to point at internal Docker service names
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongo:27017/babichat?authSource=admin
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      # SMTP comes from .env — use your real provider (SendGrid, SES, Mailgun…)
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -84,6 +69,33 @@ services:
       retries: 5
       start_period: 30s
 
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: babichat-frontend
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      BACKEND_URL: http://backend:8000
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - babichat-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   umami-db:
     image: postgres:16-alpine
     container_name: babichat-umami-db
@@ -91,7 +103,7 @@ services:
     environment:
       POSTGRES_DB: umami
       POSTGRES_USER: umami
-      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:-umami_secret_password}
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:?UMAMI_DB_PASSWORD is required}
     volumes:
       - umami-db-data:/var/lib/postgresql/data
     networks:
@@ -110,9 +122,9 @@ services:
     ports:
       - "127.0.0.1:3001:3000"
     environment:
-      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:-umami_secret_password}@umami-db:5432/umami
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD}@umami-db:5432/umami
       DATABASE_TYPE: postgresql
-      APP_SECRET: ${UMAMI_APP_SECRET:-change_this_to_a_random_secret_string}
+      APP_SECRET: ${UMAMI_APP_SECRET:?UMAMI_APP_SECRET is required}
     depends_on:
       umami-db:
         condition: service_healthy

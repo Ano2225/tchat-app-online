@@ -14,9 +14,15 @@ class UserController {
     try {
       const { username, age, sexe, ville, avatarUrl, bgColor } = req.body;
 
+      if (avatarUrl !== undefined && avatarUrl !== null && avatarUrl !== '') {
+        if (!/^https:\/\/res\.cloudinary\.com\//i.test(avatarUrl)) {
+          return res.status(400).json({ message: 'URL avatar invalide. Seules les URLs Cloudinary sont acceptées.' });
+        }
+      }
+
       const updateData = { username, age, ville };
       if (sexe !== undefined) updateData.sexe = sexe;
-      if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+      if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl || null;
       if (bgColor) updateData.bgColor = bgColor;
 
       const result = await User.collection.findOneAndUpdate(
@@ -57,9 +63,10 @@ class UserController {
   async getUserById(req, res) {
     try {
       const { id } = req.params;
+      // Inclusion projection: only expose fields the UI actually needs
       const user = await User.collection.findOne(
         buildIdQuery(id),
-        { projection: { password: 0, email: 0, createdAt: 0, updatedAt: 0 } }
+        { projection: { username: 1, avatarUrl: 1, sexe: 1, isOnline: 1, isAnonymous: 1 } }
       );
 
       if (!user) {
@@ -76,6 +83,10 @@ class UserController {
   async updateUserAvatar(req, res) {
     try {
       const { avatarUrl } = req.body;
+
+      if (avatarUrl && !/^https:\/\/res\.cloudinary\.com\//i.test(avatarUrl)) {
+        return res.status(400).json({ message: 'URL avatar invalide. Seules les URLs Cloudinary sont acceptées.' });
+      }
 
       const result = await User.collection.findOneAndUpdate(
         buildIdQuery(req.user.id),

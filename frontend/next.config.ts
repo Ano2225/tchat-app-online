@@ -5,10 +5,10 @@ const nextConfig: import('next').NextConfig = {
   output: 'standalone',
 
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   images: {
     domains: ['res.cloudinary.com'],
@@ -18,12 +18,6 @@ const nextConfig: import('next').NextConfig = {
         hostname: 'res.cloudinary.com',
       },
     ],
-  },
-  webpack: (config, { dev }) => {
-    if (!dev) {
-      config.devtool = 'source-map';
-    }
-    return config;
   },
   async rewrites() {
     return [

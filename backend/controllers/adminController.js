@@ -68,16 +68,26 @@ class AdminController {
     }
   }
 
-  // Récupérer tous les messages
+  // Récupérer les messages avec pagination par curseur
   async getAllMessages(req, res) {
     try {
-      const messages = await Message.find()
+      const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+      const before = req.query.before; // ISO date string or ObjectId — cursor for next page
+
+      const filter = before ? { createdAt: { $lt: new Date(before) } } : {};
+
+      const messages = await Message.find(filter)
         .populate('sender', 'username isAnonymous')
         .populate('recipient', 'username')
         .sort({ createdAt: -1 })
-        .limit(1000);
+        .limit(limit)
+        .lean();
 
-      res.json(messages);
+      const nextCursor = messages.length === limit
+        ? messages[messages.length - 1].createdAt.toISOString()
+        : null;
+
+      res.json({ messages, nextCursor });
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }
@@ -175,7 +185,6 @@ class AdminController {
 
       const userMap = {};
       for (const u of users) userMap[String(u._id)] = u.username;
-      console.log('[getReports] ids:', ids, '| users found:', users.map(u => ({ _id: String(u._id), username: u.username })), '| userMap:', userMap);
 
       const populated = reports.map(r => ({
         ...r,

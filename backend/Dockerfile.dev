@@ -1,0 +1,23 @@
+# Development image — hot-reload via nodemon, source mounted as volume
+# Usage: docker compose -f infra/docker-compose.dev.yml up --build
+
+FROM node:20-alpine
+WORKDIR /app
+
+# Install dumb-init for correct signal handling even in dev
+RUN apk add --no-cache dumb-init
+
+# Install ALL dependencies (includes nodemon)
+COPY package*.json ./
+RUN npm install
+
+# Source code is mounted as a volume at runtime — no COPY needed.
+# node_modules stays inside the container via an anonymous volume
+# so the host directory doesn't shadow the installed packages.
+
+ENV NODE_ENV=development
+
+EXPOSE 8000
+
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["npm", "run", "dev"]
