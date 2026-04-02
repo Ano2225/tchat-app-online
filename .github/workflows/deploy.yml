@@ -80,10 +80,6 @@ jobs:
           tags: |
             ${{ env.FRONTEND_IMAGE }}:latest
             ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-          # Bake NEXT_PUBLIC vars into the image at build time
-          build-args: |
-            NEXT_PUBLIC_SOCKET_URL=${{ secrets.NEXT_PUBLIC_SOCKET_URL }}
-            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

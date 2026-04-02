@@ -13,8 +13,9 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # NEXT_PUBLIC_* vars must be available at build time (baked into the bundle)
-ARG NEXT_PUBLIC_SOCKET_URL
-ARG NEXT_PUBLIC_API_URL
+# Default to production domain — override via --build-arg if needed
+ARG NEXT_PUBLIC_SOCKET_URL=https://babichat.tech
+ARG NEXT_PUBLIC_API_URL=https://babichat.tech/api
 ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
