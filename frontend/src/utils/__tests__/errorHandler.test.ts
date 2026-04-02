@@ -2,7 +2,7 @@
  * Tests for Error Handler Utility
  */
 
-// @ts-ignore
+// @ts-expect-error — vitest not installed, test file only
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   extractErrorInfo,
