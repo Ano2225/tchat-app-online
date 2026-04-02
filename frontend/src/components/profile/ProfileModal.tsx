@@ -46,12 +46,13 @@ const PasswordChangeSection: React.FC = () => {
       setMessage({type: 'success', text: 'Mot de passe modifié avec succès'});
       setPasswords({currentPassword: '', newPassword: '', confirmPassword: ''});
       setShowPasswordForm(false);
-    } catch (error: any) {
-      const errorCode = error?.response?.data?.code;
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { code?: string; message?: string } } };
+      const errorCode = e?.response?.data?.code;
       if (errorCode === 'INVALID_PASSWORD') {
         setMessage({type: 'error', text: 'Mot de passe actuel incorrect'});
       } else {
-        setMessage({type: 'error', text: error.response?.data?.message || 'Erreur lors du changement'});
+        setMessage({type: 'error', text: e.response?.data?.message || 'Erreur lors du changement'});
       }
     } finally {
       setLoading(false);
@@ -367,7 +368,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
                 {!isEditing ? (
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <span className="text-gray-500 dark:text-gray-400">Nom d'utilisateur</span>
+                      <span className="text-gray-500 dark:text-gray-400">Nom d&apos;utilisateur</span>
                       <p className="font-medium text-gray-900 dark:text-white">{user?.username}</p>
                     </div>
                     <div>
@@ -395,7 +396,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
                 ) : (
                   <div className="space-y-3 text-sm">
                     <div>
-                      <label className="block text-gray-500 dark:text-gray-400 mb-1">Nom d'utilisateur</label>
+                      <label className="block text-gray-500 dark:text-gray-400 mb-1">Nom d&apos;utilisateur</label>
                       <input
                         type="text"
                         value={editForm.username}

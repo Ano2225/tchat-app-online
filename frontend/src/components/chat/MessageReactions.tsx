@@ -21,7 +21,6 @@ const MessageReactions: React.FC<MessageReactionsProps> = ({
   reactions,
   onAddReaction,
   isOwn = false,
-  senderId
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [hoveredReaction, setHoveredReaction] = useState<string | null>(null);
@@ -45,13 +44,6 @@ const MessageReactions: React.FC<MessageReactionsProps> = ({
     if (!user?.id || !reaction.users) return false;
     return reaction.users.some(u => u.id === user.id);
   };
-
-  const getUserCurrentReaction = () => {
-    if (!user?.id || !reactions) return null;
-    return reactions.find(reaction => reaction.users && reaction.users.some(u => u.id === user.id));
-  };
-
-
 
   const formatUsersList = (users: { id: string; username: string }[]) => {
     if (!users || users.length === 0) return '';
@@ -110,8 +102,6 @@ const MessageReactions: React.FC<MessageReactionsProps> = ({
               <div className={`${styles.emojiPicker} ${isOwn ? styles.isOwn : styles.isNotOwn}`}>
                 <div className={styles.emojiGrid}>
                   {commonEmojis.map((emoji) => {
-                    const currentReaction = getUserCurrentReaction();
-                    const isCurrentReaction = currentReaction?.emoji === emoji;
                     const existingReaction = reactions?.find(r => r.emoji === emoji);
                     const hasThisReaction = hasUserReacted(existingReaction || { emoji, users: [], count: 0 });
                     

@@ -38,7 +38,6 @@ interface Message {
 const ChatPage = () => {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const token = useAuthStore((state) => state.token);
   const logout = useAuthStore((state) => state.logout);
   const [currentRoom, setCurrentRoom] = useState('General');
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -314,7 +313,7 @@ const ChatPage = () => {
             >
               ×
             </button>
-            <GamePanel channel={currentRoom} socket={socket} />
+            <GamePanel channel={currentRoom} socket={socket ?? undefined} />
           </div>
         </div>
       )}
@@ -365,7 +364,7 @@ const ChatPage = () => {
           
           {currentRoom === 'Game' && (
             <div className="hidden lg:flex w-80 flex-col rounded-xl overflow-y-auto p-3 gap-3" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}>
-              <GamePanel channel={currentRoom} socket={socket} />
+              <GamePanel channel={currentRoom} socket={socket ?? undefined} />
             </div>
           )}
         </div>

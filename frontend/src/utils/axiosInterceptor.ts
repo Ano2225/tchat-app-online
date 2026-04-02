@@ -4,6 +4,7 @@
 
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { isAuthError } from './errorHandler';
+import { useAuthStore } from '@/store/authStore';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -38,10 +39,8 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 // Request interceptor - Add auth token (read from Zustand store, not directly from localStorage)
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Lazy import to avoid circular dependency; falls back gracefully if store unavailable
     let token: string | null = null;
     try {
-      const { useAuthStore } = require('@/store/authStore');
       token = useAuthStore.getState().token;
     } catch {
       // store not available in SSR context
@@ -92,7 +91,6 @@ axiosInstance.interceptors.response.use(
       // Read refresh token from Zustand store, not directly from localStorage
       let refreshToken: string | null = null;
       try {
-        const { useAuthStore } = require('@/store/authStore');
         refreshToken = useAuthStore.getState().session?.token ?? null;
       } catch {
         // store not available
@@ -112,7 +110,6 @@ axiosInstance.interceptors.response.use(
 
         // Update token in Zustand store
         try {
-          const { useAuthStore } = require('@/store/authStore');
           const state = useAuthStore.getState();
           if (state.session) {
             useAuthStore.setState({ token: accessToken, session: { ...state.session, token: accessToken } });
@@ -145,7 +142,6 @@ axiosInstance.interceptors.response.use(
  */
 function handleLogout() {
   try {
-    const { useAuthStore } = require('@/store/authStore');
     useAuthStore.getState().logout();
   } catch {
     // store not available in SSR

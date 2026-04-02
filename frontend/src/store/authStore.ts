@@ -95,7 +95,7 @@ export const useAuthStore = create<AuthState>()(
 
           set({ isLoading: false })
           return { success: false, error: result.error || result.message, code: result.code }
-        } catch (error) {
+        } catch {
           set({ isLoading: false })
           return { success: false, error: 'Erreur de connexion' }
         }
@@ -125,7 +125,7 @@ export const useAuthStore = create<AuthState>()(
 
           set({ isLoading: false })
           return { success: false, error: result.error || result.message, code: result.code }
-        } catch (error) {
+        } catch {
           set({ isLoading: false })
           return { success: false, error: 'Erreur de connexion' }
         }
@@ -155,7 +155,7 @@ export const useAuthStore = create<AuthState>()(
 
           set({ isLoading: false })
           return { success: false, error: result.error || result.message }
-        } catch (error) {
+        } catch {
           set({ isLoading: false })
           return { success: false, error: 'Erreur de connexion' }
         }

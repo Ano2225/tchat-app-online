@@ -7,7 +7,6 @@ import UserSelectedModal from '../UserSelected/UserSelectedModal';
 import MessageReactions from './MessageReactions';
 import GameMessage from '../Game/GameMessage';
 import { ChatSkeleton } from '@/components/ui/skeletons';
-import toast from 'react-hot-toast';
 import GenderAvatar from '@/components/ui/GenderAvatar';
 import { MessageCircle } from 'lucide-react';
 

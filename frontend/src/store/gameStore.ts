@@ -30,7 +30,7 @@ interface GameState {
   error: string | null;
   isLoading: boolean;
 
-  setGameState: (state: { isActive: boolean; currentQuestion?: any; leaderboard: Player[] }) => void;
+  setGameState: (state: { isActive: boolean; currentQuestion?: Partial<Question> & { startTime?: string | number | Date; answers?: unknown[] }; leaderboard: Player[] }) => void;
   setQuestion: (question: Question | null) => void;
   setTimeLeft: (time: number) => void;
   setHasAnswered: (answered: boolean) => void;
@@ -59,12 +59,15 @@ export const useGameStore = create<GameState>((set) => ({
 
   setGameState: (state) => {
     try {
-      const gameState: any = {
+      type GameDataState = Pick<GameState, 'isActive' | 'leaderboard' | 'hasAnswered' | 'winner' | 'explanation' | 'currentQuestion' | 'timeLeft'>;
+      const gameState: GameDataState = {
         isActive: state.isActive,
         leaderboard: state.leaderboard || [],
         hasAnswered: false,
         winner: null,
-        explanation: null
+        explanation: null,
+        currentQuestion: null,
+        timeLeft: 0,
       };
       
       if (state.currentQuestion) {

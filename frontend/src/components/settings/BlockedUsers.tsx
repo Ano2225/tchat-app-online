@@ -25,9 +25,10 @@ const BlockedUsers: React.FC = () => {
       console.log('✅ Utilisateurs bloqués récupérés:', users);
       setBlockedUsers(users);
       setError(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Erreur lors du chargement des utilisateurs bloqués:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Erreur lors du chargement';
+      const e = error as { response?: { data?: { message?: string } }; message?: string };
+      const errorMessage = e.response?.data?.message || e.message || 'Erreur lors du chargement';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -40,8 +41,9 @@ const BlockedUsers: React.FC = () => {
       await reportService.unblockUser(userId);
       setBlockedUsers(prev => prev.filter(user => user._id !== userId));
       toast.success(`${username} a été débloqué`);
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Erreur lors du déblocage';
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
+      const errorMessage = e.response?.data?.message || 'Erreur lors du déblocage';
       toast.error(errorMessage);
     }
   };

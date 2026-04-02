@@ -188,8 +188,9 @@ const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
                   await axiosInstance.post(`/reports/block/${profile._id}`);
                   toast.success(`${profile.username} bloqué`);
                   handleClose();
-                } catch (e: any) {
-                  toast.error(e.response?.data?.message || 'Erreur');
+                } catch (e: unknown) {
+                  const err = e as { response?: { data?: { message?: string } } };
+                  toast.error(err.response?.data?.message || 'Erreur');
                 } finally {
                   setBlocking(false);
                 }

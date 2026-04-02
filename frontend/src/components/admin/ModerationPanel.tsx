@@ -70,23 +70,6 @@ const ModerationPanel: React.FC = () => {
     }
   };
 
-  const handleBulkAction = async (messageIds: string[], action: 'approve' | 'reject' | 'delete') => {
-    if (!confirm(`Êtes-vous sûr de vouloir ${action} ces ${messageIds.length} message(s) ?`)) {
-      return;
-    }
-
-    try {
-      await Promise.all(
-        messageIds.map(id => 
-          axiosInstance.post(`/admin/moderate-message/${id}`, { action })
-        )
-      );
-      fetchModerationData();
-    } catch (error) {
-      console.error('Erreur lors de l\'action groupée:', error);
-    }
-  };
-
   const getSeverityColor = (reportCount: number) => {
     if (reportCount >= 5) return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
     if (reportCount >= 3) return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
@@ -119,7 +102,7 @@ const ModerationPanel: React.FC = () => {
             <p className="text-2xl font-bold text-green-600 dark:text-green-400">
               {stats?.resolvedToday || 0}
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Résolus aujourd'hui</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Résolus aujourd&apos;hui</p>
           </div>
         </Card>
         

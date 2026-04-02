@@ -73,26 +73,13 @@ class AuthService {
     return response.data;
   }
 
-  async logout() {
-    const refreshToken = localStorage.getItem('refreshToken');
-
-    if (refreshToken) {
-      try {
-        await axiosInstance.post('/token/revoke', { refreshToken });
-      } catch (error) {
-        console.error('Error revoking token:', error);
-      }
-    }
-
-    localStorage.removeItem('refreshToken');
-  }
-
   async anonymousLogin(data: AnonymousData) {
     try {
       const response = await axiosInstance.post('/auth/anonymous', data);
       return response.data;
-    } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || 'Erreur de connexion anonyme';
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } }; message?: string };
+      const message = e?.response?.data?.message || e?.message || 'Erreur de connexion anonyme';
       throw new Error(message);
     }
   }
@@ -110,12 +97,13 @@ class AuthService {
     if (!data.email?.trim()) {
       throw new Error('Email requis');
     }
-    
+
     try {
       const response = await axiosInstance.post('/auth/request-password-reset', data);
       return response.data;
-    } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || 'Erreur de réinitialisation';
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } }; message?: string };
+      const message = e?.response?.data?.message || e?.message || 'Erreur de réinitialisation';
       throw new Error(message);
     }
   }
@@ -124,8 +112,9 @@ class AuthService {
     try {
       const response = await axiosInstance.post('/auth/reset-password', data);
       return response.data;
-    } catch (error: any) {
-      const message = error?.response?.data?.message || error?.message || 'Erreur de réinitialisation';
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } }; message?: string };
+      const message = e?.response?.data?.message || e?.message || 'Erreur de réinitialisation';
       throw new Error(message);
     }
   }
@@ -140,4 +129,5 @@ class AuthService {
   }
 }
 
-export default new AuthService();
+const authService = new AuthService();
+export default authService;

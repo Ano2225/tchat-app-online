@@ -120,7 +120,7 @@ export default function RegisterPage() {
       } else {
         toast.error(result.error || 'Erreur lors de l\'inscription')
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       const { handleError } = await import('@/utils/errorHandler')
       handleError(err, 'Erreur lors de l\'inscription')
     } finally {
@@ -203,7 +203,7 @@ export default function RegisterPage() {
               <>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                    Nom d'utilisateur <span className="text-red-500">*</span>
+                    Nom d&apos;utilisateur <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -421,7 +421,7 @@ export default function RegisterPage() {
             </div>
             <div className="space-y-2">
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                Déjà un compte?{' '}
+                Déjà un compte ?{' '}
                 <Link href="/login" className="text-purple-600 hover:text-purple-700 font-medium">Se connecter</Link>
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -433,7 +433,7 @@ export default function RegisterPage() {
 
         <div className="text-center mt-8">
           <Link href="/" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white text-sm">
-            ← Retour à l'accueil
+            ← Retour à l&apos;accueil
           </Link>
         </div>
       </div>

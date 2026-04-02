@@ -47,8 +47,9 @@ function ResetPasswordForm() {
       setDone(true);
       toast.success('Mot de passe réinitialisé !');
       setTimeout(() => router.push('/login'), 2500);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Token invalide ou expiré');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e?.response?.data?.message || 'Token invalide ou expiré');
     } finally {
       setLoading(false);
     }

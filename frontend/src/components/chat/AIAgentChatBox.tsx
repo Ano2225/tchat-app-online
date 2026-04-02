@@ -32,11 +32,11 @@ interface Message {
 
 interface AIAgentChatBoxProps {
   agent: AIAgent
-  socket: any
+  socket: unknown
   onClose: () => void
 }
 
-const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose }) => {
+const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, onClose }) => {
   const user = useAuthStore((state) => state.user)
   const token = useAuthStore((state) => state.token)
   const [messages, setMessages] = useState<Message[]>([])
@@ -78,7 +78,7 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose 
   useEffect(() => {
     if (!emojiPrefetched.current) {
       emojiPrefetched.current = true
-      const idleCallback = (window as any).requestIdleCallback
+      const idleCallback = (window as Window & { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback
       if (typeof idleCallback === 'function') {
         idleCallback(() => import('emoji-picker-react'))
       } else {
@@ -305,7 +305,7 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, socket, onClose 
                   <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                   <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
-                <span className="text-xs text-white/70">En train d'écrire...</span>
+                <span className="text-xs text-white/70">En train d&apos;écrire...</span>
               </div>
             </div>
           </div>

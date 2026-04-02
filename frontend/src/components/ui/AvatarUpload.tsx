@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import axiosInstance from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/authStore';
-import { Camera, Trash2, Rocket } from 'lucide-react';
+import { Camera, Trash2 } from 'lucide-react';
 
 interface AvatarUploadProps {
   onAvatarUpdate: (avatarUrl: string | null) => void;
@@ -57,9 +57,10 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({ onAvatarUpdate, className =
 
       onAvatarUpdate(avatarUrl);
       toast.success('Avatar mis à jour !');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('❌ Erreur upload:', error);
-      toast.error(error.response?.data?.message || 'Erreur lors de l\'upload');
+      const e = error as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message || 'Erreur lors de l\'upload');
     } finally {
       setUploading(false);
     }
@@ -75,7 +76,7 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({ onAvatarUpdate, className =
       
       onAvatarUpdate(null);
       toast.success('Avatar supprimé');
-    } catch (error) {
+    } catch {
       toast.error('Erreur lors de la suppression');
     }
   };

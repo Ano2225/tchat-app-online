@@ -22,8 +22,9 @@ export default function ForgotPasswordPage() {
       const { data } = await axiosInstance.post('/auth/request-password-reset', { email });
       setSent(true);
       if (data.resetToken) setDevToken(data.resetToken); // dev only
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Erreur lors de l\'envoi');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e?.response?.data?.message || 'Erreur lors de l\'envoi');
     } finally {
       setLoading(false);
     }

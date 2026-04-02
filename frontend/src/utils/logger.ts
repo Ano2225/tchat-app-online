@@ -1,6 +1,6 @@
 // Secure logging utility to prevent log injection
 class Logger {
-  private static sanitize(message: any): string {
+  private static sanitize(message: string | number | boolean | object | null | undefined): string {
     try {
       if (typeof message === 'string') {
         return message
@@ -14,25 +14,25 @@ class Logger {
     }
   }
 
-  static info(message: any, context?: string): void {
+  static info(message: string | number | boolean | object | null | undefined, context?: string): void {
     const sanitized = this.sanitize(message);
     const contextStr = context ? `[${this.sanitize(context)}]` : '';
     console.log(`INFO ${contextStr}: ${sanitized}`);
   }
 
-  static error(message: any, context?: string): void {
+  static error(message: string | number | boolean | object | null | undefined, context?: string): void {
     const sanitized = this.sanitize(message);
     const contextStr = context ? `[${this.sanitize(context)}]` : '';
     console.error(`ERROR ${contextStr}: ${sanitized}`);
   }
 
-  static warn(message: any, context?: string): void {
+  static warn(message: string | number | boolean | object | null | undefined, context?: string): void {
     const sanitized = this.sanitize(message);
     const contextStr = context ? `[${this.sanitize(context)}]` : '';
     console.warn(`WARN ${contextStr}: ${sanitized}`);
   }
 
-  static debug(message: any, context?: string): void {
+  static debug(message: string | number | boolean | object | null | undefined, context?: string): void {
     if (process.env.NODE_ENV === 'development') {
       const sanitized = this.sanitize(message);
       const contextStr = context ? `[${this.sanitize(context)}]` : '';

@@ -9,7 +9,7 @@ import Toast from '../ui/Toast'
 import ThemeToggle from '../ui/ThemeToggle'
 import ProfileModal from '../profile/ProfileModal'
 import GenderAvatar from '@/components/ui/GenderAvatar'
-import { LogOut, Settings, MessageSquare, Shield } from 'lucide-react'
+import { LogOut, MessageSquare, Shield } from 'lucide-react'
 
 interface ChatHeaderProps {
   users?: { id: string; username: string }

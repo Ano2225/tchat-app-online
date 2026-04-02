@@ -9,7 +9,7 @@ interface UseOptimizedSocketOptions {
   autoConnect?: boolean
   reconnectionAttempts?: number
   reconnectionDelay?: number
-  router?: any
+  router?: { push: (path: string) => void }
 }
 
 export const useOptimizedSocket = (options: UseOptimizedSocketOptions = {}) => {
@@ -22,7 +22,6 @@ export const useOptimizedSocket = (options: UseOptimizedSocketOptions = {}) => {
   } = options
   
   const logout = useAuthStore((state) => state.logout)
-  const token  = useAuthStore((state) => state.token)
 
   const socketRef = useRef<Socket | null>(null)
   const reconnectionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -63,7 +62,7 @@ export const useOptimizedSocket = (options: UseOptimizedSocketOptions = {}) => {
     }
   }, [])
 
-  const emit = useCallback((event: string, data?: any) => {
+  const emit = useCallback((event: string, data?: unknown) => {
     try {
       if (socketRef.current?.connected) {
         socketRef.current.emit(event, data)
@@ -73,13 +72,13 @@ export const useOptimizedSocket = (options: UseOptimizedSocketOptions = {}) => {
     }
   }, [])
 
-  const on = useCallback((event: string, callback: (...args: any[]) => void) => {
+  const on = useCallback((event: string, callback: (...args: unknown[]) => void) => {
     if (socketRef.current) {
       socketRef.current.on(event, callback)
     }
   }, [])
 
-  const off = useCallback((event: string, callback?: (...args: any[]) => void) => {
+  const off = useCallback((event: string, callback?: (...args: unknown[]) => void) => {
     if (socketRef.current) {
       socketRef.current.off(event, callback)
     }

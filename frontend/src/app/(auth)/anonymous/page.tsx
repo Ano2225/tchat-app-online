@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/authStore'
-import axiosInstance from '@/utils/axiosInstance'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import { handleError } from '@/utils/errorHandler'
 import { User, Theater, Calendar, Info } from 'lucide-react'
@@ -18,8 +17,6 @@ export default function AnonymousPage() {
   })
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const login = useAuthStore((state) => state.login)
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({
@@ -67,7 +64,7 @@ export default function AnonymousPage() {
       } else {
         toast.error(result.error || 'Erreur de connexion')
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       handleError(err)
     } finally {
       setLoading(false)
@@ -220,7 +217,7 @@ export default function AnonymousPage() {
 
         <div className="text-center mt-8">
           <Link href="/" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white text-sm">
-            ← Retour à l'accueil
+            ← Retour à l&apos;accueil
           </Link>
         </div>
       </div>

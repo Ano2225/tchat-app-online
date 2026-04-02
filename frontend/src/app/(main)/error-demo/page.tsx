@@ -5,9 +5,7 @@ import ErrorAlert from '@/components/ui/ErrorAlert'
 import FormField from '@/components/ui/FormField'
 import LoadingButton from '@/components/ui/LoadingButton'
 import { useLoadingState } from '@/hooks/useLoadingState'
-import { handleError } from '@/utils/errorHandler'
-import { Mail, Lock, User, AlertCircle } from 'lucide-react'
-import axios from 'axios'
+import { Mail, Lock, User } from 'lucide-react'
 
 export default function ErrorDemoPage() {
   const [formData, setFormData] = useState({
@@ -119,7 +117,7 @@ export default function ErrorDemoPage() {
             🚨 Démonstration de Gestion des Erreurs
           </h1>
           <p className="text-gray-600 dark:text-gray-300 mb-8">
-            Testez les différents types d'erreurs et leur affichage
+            Testez les différents types d&apos;erreurs et leur affichage
           </p>
 
           {/* Error Alerts */}
@@ -267,7 +265,7 @@ export default function ErrorDemoPage() {
           {errorInfo && (
             <div className="mt-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-xl">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                Informations de l'erreur:
+                Informations de l&apos;erreur:
               </h3>
               <pre className="text-xs text-gray-700 dark:text-gray-300 overflow-auto">
                 {JSON.stringify(errorInfo, null, 2)}

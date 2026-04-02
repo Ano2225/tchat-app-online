@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { MoreVertical, Reply, Heart, Copy, Trash2, Edit3 } from 'lucide-react'
+import { MoreVertical, Reply, Copy, Trash2, Edit3 } from 'lucide-react'
 import GenderAvatar from '@/components/ui/GenderAvatar'
 import AICharacterAvatar from './AICharacterAvatar'
 import MessageReactions from './MessageReactions'
@@ -46,8 +46,6 @@ const MessageBubble = ({ message, onReply, onEdit, onDelete, onReact }: MessageB
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content)
   }
-
-  const reactions = ['❤️', '👍', '😂', '😮', '😢', '😡']
 
   return (
     <motion.div

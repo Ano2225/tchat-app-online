@@ -3,12 +3,13 @@
 import { useGameStore } from '@/store/gameStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useCallback } from 'react';
+import type { Socket } from 'socket.io-client';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 
 interface GamePanelProps {
   channel: string;
-  socket?: any;
+  socket?: Socket & { userId?: string };
 }
 
 // ─── Leaderboard ──────────────────────────────────────────────────────────────
@@ -56,7 +57,7 @@ function Leaderboard({
 
       {leaderboard.length === 0 ? (
         <div style={{ textAlign: 'center' as const, padding: '16px 0', color: 'var(--text-muted)', fontFamily: 'var(--font-body)', fontSize: '13px' }}>
-          Aucun joueur pour l'instant
+          Aucun joueur pour l&apos;instant
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '4px' }}>

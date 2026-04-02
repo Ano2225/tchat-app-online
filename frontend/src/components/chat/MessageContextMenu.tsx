@@ -5,6 +5,7 @@ import UserSelectedModal from '../UserSelected/UserSelectedModal';
 import axiosInstance from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
 import styles from './MessageContextMenu.module.css';
+import type { Socket } from 'socket.io-client';
 
 interface Message {
   _id: string;
@@ -21,7 +22,7 @@ interface MessageContextMenuProps {
   onReply: (message: Message) => void;
   onClose: () => void;
   position: { x: number; y: number };
-  socket: any;
+  socket: Socket | null;
   isOwnMessage?: boolean;
 }
 
@@ -50,8 +51,9 @@ const MessageContextMenu: React.FC<MessageContextMenuProps> = ({
     try {
       await axiosInstance.post(`/reports/block/${message.sender._id}`);
       toast.success(`${message.sender.username} a été bloqué`);
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Erreur lors du blocage';
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
+      const errorMessage = e.response?.data?.message || 'Erreur lors du blocage';
       toast.error(errorMessage);
     }
     onClose();

@@ -3,14 +3,12 @@
 import { useState, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import axios from 'axios'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/authStore'
 import { useLoadingState } from '@/hooks/useLoadingState'
-import LoadingButton from '@/components/ui/LoadingButton'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import ErrorAlert from '@/components/ui/ErrorAlert'
-import { handleError, isRateLimitError } from '@/utils/errorHandler'
+import { isRateLimitError } from '@/utils/errorHandler'
 import { MessageCircle, User, Lock, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
@@ -27,7 +25,6 @@ export default function LoginPage() {
   const [sendingVerification, setSendingVerification] = useState(false)
   const { loading, error, errorInfo, withLoading, reset } = useLoadingState()
   const router = useRouter()
-  const login = useAuthStore((state) => state.login)
 
   const getLoginErrorMessage = (code?: string, fallback?: string) => {
     switch (code) {
@@ -146,9 +143,9 @@ export default function LoginPage() {
           setFormError(getLoginErrorMessage(loginResult.code, loginResult.error))
           return null
         }
-      } catch (err: any) {
-        const errorMessage = err?.message || ''
-        
+      } catch (err: unknown) {
+        const errorMessage = (err as Error)?.message || ''
+
         if (
           errorMessage.includes('Identifiants') ||
           errorMessage.includes('invalide') ||
@@ -168,7 +165,7 @@ export default function LoginPage() {
       const fallbackName = formData.username.trim()
       const displayName =
         result.user?.username ||
-        (result.user as any)?.name ||
+        (result.user as { name?: string })?.name ||
         fallbackName ||
         '!'
       toast.success(`Bienvenue ${displayName} !`, {
@@ -209,8 +206,8 @@ export default function LoginPage() {
 
       setVerificationLink(data?.verificationUrl || null)
       toast.success('Email de verification envoye. Consultez votre boite mail.')
-    } catch (err: any) {
-      toast.error(err?.message || 'Erreur lors de l\'envoi de l\'email')
+    } catch (err: unknown) {
+      toast.error((err as Error)?.message || 'Erreur lors de l\'envoi de l\'email')
     } finally {
       setSendingVerification(false)
     }
@@ -306,7 +303,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                Nom d'utilisateur ou Email
+                Nom d&apos;utilisateur ou Email
                 <span className="text-red-500 ml-1">*</span>
               </label>
               <div className="relative">
@@ -407,9 +404,9 @@ export default function LoginPage() {
                 </Link>
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
-                Pas encore de compte?{' '}
+                Pas encore de compte ?{' '}
                 <Link href="/register" className="text-blue-600 hover:text-blue-700 font-medium">
-                  S'inscrire
+                  S&apos;inscrire
                 </Link>
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -423,7 +420,7 @@ export default function LoginPage() {
 
         <div className="text-center mt-8">
           <Link href="/" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white text-sm">
-            ← Retour à l'accueil
+            ← Retour à l&apos;accueil
           </Link>
         </div>
       </div>

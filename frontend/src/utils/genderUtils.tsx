@@ -1,5 +1,4 @@
 import React from 'react';
-import { User, UserCheck, Heart } from 'lucide-react';
 
 export const getGenderColor = (sexe: string): string => {
   switch (sexe) {
@@ -12,7 +11,7 @@ export const getGenderColor = (sexe: string): string => {
   }
 };
 
-export const getGenderIconSVG = (sexe: string, size: string = 'md'): JSX.Element => {
+export const getGenderIconSVG = (sexe: string, size: string = 'md'): React.JSX.Element => {
   const iconSizes = {
     sm: 'w-3 h-3',
     md: 'w-4 h-4', 
@@ -43,7 +42,7 @@ export const getGenderIconSVG = (sexe: string, size: string = 'md'): JSX.Element
   }
 };
 
-export const getGenderIcon = (sexe: string, size?: string): JSX.Element => {
+export const getGenderIcon = (sexe: string, size?: string): React.JSX.Element => {
   return getGenderIconSVG(sexe, size);
 };
 

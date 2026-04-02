@@ -36,14 +36,18 @@ export interface Recipient {
 }
 
 class ChatService {
-  private mapConversationData(data: any[]): Conversation[] {
-    return data.map((conv) => ({
-      id: conv.user?._id || '',
-      user: conv.user?.username || 'Unknown User',
-      lastMessage: conv.lastMessage?.content || 'No messages',
-      hasNewMessages: conv.hasNewMessages ?? false,
-      unreadCount: conv.unreadCount ?? 0,
-    }));
+  private mapConversationData(data: Record<string, unknown>[]): Conversation[] {
+    return data.map((conv) => {
+      const user = conv.user as { _id?: string; username?: string } | undefined;
+      const lastMsg = conv.lastMessage as { content?: string } | undefined;
+      return {
+        id: user?._id || '',
+        user: user?.username || 'Unknown User',
+        lastMessage: lastMsg?.content || 'No messages',
+        hasNewMessages: (conv.hasNewMessages as boolean) ?? false,
+        unreadCount: (conv.unreadCount as number) ?? 0,
+      };
+    });
   }
 
   /**
@@ -102,10 +106,12 @@ class ChatService {
     if (!userId || !recipientId) {
       throw new Error('User ID and recipient ID are required');
     }
-    const response = await axiosInstance.get<any>(`/messages/private/${userId}/${recipientId}`);
+    type PrivateMessagesResponse = Message[] | { blocked: true; blockedByMe: boolean; blockedByThem: boolean };
+    const response = await axiosInstance.get<PrivateMessagesResponse>(`/messages/private/${userId}/${recipientId}`);
     // Server returns { blocked: true, blockedByMe, blockedByThem } when relationship is blocked
-    if (response.data?.blocked === true) {
-      return response.data as { blocked: true; blockedByMe: boolean; blockedByThem: boolean };
+    const data = response.data as { blocked?: boolean; blockedByMe?: boolean; blockedByThem?: boolean } | Message[];
+    if (!Array.isArray(data) && data?.blocked === true) {
+      return data as { blocked: true; blockedByMe: boolean; blockedByThem: boolean };
     }
     return Array.isArray(response.data) ? response.data : [];
   }
@@ -125,7 +131,7 @@ class ChatService {
         throw new Error('Content, sender ID, and recipient ID are required');
       }
       
-      const socket = (window as any)?.socket;
+      const socket = (window as Window & { socket?: { connected: boolean; emit: (event: string, data: unknown) => void } })?.socket;
       
       if (!socket) {
         throw new Error('Socket connection not available');
