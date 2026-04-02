@@ -75,6 +75,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
 
   useEffect(() => {
     if (showMessages) fetchConversations()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showMessages, totalUnread])
 
   useEffect(() => {
@@ -82,6 +83,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
     const handler = () => { if (showMessages) fetchConversations() }
     socket.on('new_private_message', handler)
     return () => { socket.off('new_private_message', handler) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, showMessages])
 
   useEffect(() => {

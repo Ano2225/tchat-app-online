@@ -42,6 +42,7 @@ const ModerationPanel: React.FC = () => {
 
   useEffect(() => {
     fetchModerationData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
   const fetchModerationData = async () => {

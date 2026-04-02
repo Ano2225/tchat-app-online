@@ -106,6 +106,7 @@ const ChatPage = () => {
     };
   // We intentionally do not include `currentRoom` here to avoid recreating the socket when the room changes.
   // `user` is used only to pick the username to send on first connect; updates to username are handled elsewhere.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -214,6 +215,7 @@ const ChatPage = () => {
       socket.off('session_replaced', handleSessionReplaced);
       socket.off('new_private_message', handleNewPrivateMessage);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, currentRoom]);
   // Note: we emit `user_connected` on socket 'connect' and gate joins until registration.
   // If the user's username changes after initial connect (e.g., logs in), inform the server

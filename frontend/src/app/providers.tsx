@@ -64,6 +64,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     if (!hasHydrated) return;
     handleNavigation();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasHydrated, token, isAnonymous, pathname, router]);
 
   // M7: Cross-tab logout sync — if another tab clears auth storage, log out this tab too

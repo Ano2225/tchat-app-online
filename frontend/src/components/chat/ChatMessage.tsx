@@ -99,6 +99,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     if (!currentRoom) return;
     loadMessages(currentRoom);
     if (!isGameChannel) setGameMessages([]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRoom, socket]);
 
   useEffect(() => {

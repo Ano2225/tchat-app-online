@@ -55,6 +55,7 @@ const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
       .catch(e => { if (!cancelled) setError(e?.response?.data?.message || 'Profil introuvable'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   if (showChat && profile) return <PrivateChatBox recipient={profile} socket={socket} onClose={onClose} />;

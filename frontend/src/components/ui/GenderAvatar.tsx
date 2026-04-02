@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { getGenderColor, getGenderIcon, getGenderBorderColor } from '@/utils/genderUtils';
 
 interface GenderAvatarProps {
@@ -36,10 +37,11 @@ const GenderAvatar: React.FC<GenderAvatarProps> = ({
     >
       {avatarUrl && /^https?:\/\//.test(avatarUrl) ? (
         <div className="relative w-full h-full">
-          <img
+          <Image
             src={avatarUrl}
             alt={username}
-            className="w-full h-full object-cover"
+            fill
+            className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/20 rounded-full"></div>
           <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center text-xs font-bold border border-gray-200 dark:border-gray-600 shadow-sm ${

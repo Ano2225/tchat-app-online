@@ -13,7 +13,6 @@ import { reportService } from '@/services/reportService';
 import toast from 'react-hot-toast';
 import { ShieldBan, ShieldCheck, Smile, Paperclip, Send, X } from 'lucide-react';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
   ssr: false,
   loading: () => (
@@ -536,6 +535,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                     >
                       {message.media_url && /^https?:\/\//.test(message.media_url) && (
                         <div className="mb-1.5 -mx-0.5">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={message.media_url}
                             alt="Image"

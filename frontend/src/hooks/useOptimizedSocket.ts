@@ -186,6 +186,7 @@ export const useOptimizedSocket = (options: UseOptimizedSocketOptions = {}) => {
         console.error('Socket disconnect error:', error)
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connect, disconnect, autoConnect])
 
   return {

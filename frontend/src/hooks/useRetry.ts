@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useMemo } from 'react'
 import { extractErrorInfo } from '@/utils/errorHandler'
 
 interface RetryOptions {
@@ -39,7 +39,8 @@ export const useRetry = <T = unknown>(options: RetryOptions = {}): UseRetryRetur
   const [attempt, setAttempt] = useState(0)
   const abortControllerRef = useRef<AbortController | null>(null)
 
-  const opts = { ...DEFAULT_OPTIONS, ...options }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const opts = useMemo(() => ({ ...DEFAULT_OPTIONS, ...options }), [JSON.stringify(options)])
 
   const reset = useCallback(() => {
     setIsRetrying(false)

@@ -100,6 +100,7 @@ const MessageBubble = ({ message, onReply, onEdit, onDelete, onReact }: MessageB
           }`}
         >
           {message.type === 'image' ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={message.content}
               alt="Image partagée"
