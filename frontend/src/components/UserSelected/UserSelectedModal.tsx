@@ -111,14 +111,15 @@ const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
             <X className="w-3.5 h-3.5" />
           </button>
 
-          <GenderAvatar
-            username={profile.username}
-            avatarUrl={profile.avatarUrl}
-            sexe={profile.sexe}
-            size="lg"
-            className="w-20 h-20 mx-auto mb-3 ring-2 ring-offset-2"
-            style={{ '--tw-ring-color': 'var(--accent-glow)', '--tw-ring-offset-color': 'var(--bg-elevated)' } as React.CSSProperties}
-          />
+          <div style={{ '--tw-ring-color': 'var(--accent-glow)', '--tw-ring-offset-color': 'var(--bg-elevated)' } as React.CSSProperties}>
+            <GenderAvatar
+              username={profile.username}
+              avatarUrl={profile.avatarUrl}
+              sexe={profile.sexe}
+              size="lg"
+              className="w-20 h-20 mx-auto mb-3 ring-2 ring-offset-2"
+            />
+          </div>
 
           <h3 className="font-bold text-lg leading-tight mb-1" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
             {profile.username}

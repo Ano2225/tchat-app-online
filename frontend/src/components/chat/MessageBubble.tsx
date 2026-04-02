@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { MoreVertical, Reply, Copy, Trash2, Edit3 } from 'lucide-react'
 import GenderAvatar from '@/components/ui/GenderAvatar'
-import AICharacterAvatar from './AICharacterAvatar'
 import MessageReactions from './MessageReactions'
 import { formatTime } from '@/utils/utils'
 import { Menu, Transition } from '@headlessui/react'
@@ -59,20 +58,12 @@ const MessageBubble = ({ message, onReply, onEdit, onDelete, onReact }: MessageB
       onMouseLeave={() => setShowActions(false)}
     >
       {!message.isOwn && (
-        message.isAI ? (
-          <AICharacterAvatar 
-            character={message.sender.avatarUrl || message.sender.avatar}
-            name={message.sender.username}
-            size="md"
-          />
-        ) : (
-          <GenderAvatar 
-            username={message.sender.username} 
-            avatarUrl={message.sender.avatarUrl || message.sender.avatar} 
-            size="md" 
-            className="w-10 h-10"
-          />
-        )
+        <GenderAvatar
+          username={message.sender.username}
+          avatarUrl={message.sender.avatarUrl || message.sender.avatar}
+          size="md"
+          className="w-10 h-10"
+        />
       )}
 
       <div className={`flex-1 max-w-2xl ${message.isOwn ? 'flex flex-col items-end' : ''}`}>

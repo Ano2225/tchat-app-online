@@ -2,6 +2,7 @@
  * Tests for Error Handler Utility
  */
 
+// @ts-ignore
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   extractErrorInfo,

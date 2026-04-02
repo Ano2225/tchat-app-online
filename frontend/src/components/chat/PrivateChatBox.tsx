@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
-import type { EmojiClickData } from 'emoji-picker-react';
+import type { EmojiClickData, Theme } from 'emoji-picker-react';
 import { useAuthStore } from '@/store/authStore';
 import { Socket } from 'socket.io-client';
 import chatService from '@/services/chatServices';
@@ -13,6 +13,7 @@ import { reportService } from '@/services/reportService';
 import toast from 'react-hot-toast';
 import { ShieldBan, ShieldCheck, Smile, Paperclip, Send, X } from 'lucide-react';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
   ssr: false,
   loading: () => (
@@ -347,7 +348,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
               setNewMessage(prev => prev + emojiObject.emoji);
               setShowEmojiPicker(false);
             }}
-            theme={isDark ? ('dark' as Parameters<typeof EmojiPicker>[0] extends { theme?: infer T } ? T : never) : ('light' as Parameters<typeof EmojiPicker>[0] extends { theme?: infer T } ? T : never)}
+            theme={(isDark ? 'dark' : 'light') as Theme}
           />
         </div>,
         document.body
@@ -406,8 +407,10 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                     toast.success(`${recipient.username} débloqué`);
                     if (user?.id) {
                       const fetched = await chatService.getPrivateMessages(user.id, recipient._id);
-                      setMessages(fetched);
-                      scrollToBottom('auto');
+                      if (!('blocked' in fetched && fetched.blocked)) {
+                        setMessages(fetched as Message[]);
+                        scrollToBottom('auto');
+                      }
                     }
                   } else {
                     await reportService.blockUser(recipient._id);

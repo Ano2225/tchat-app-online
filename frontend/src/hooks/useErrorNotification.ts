@@ -21,7 +21,7 @@ export const useErrorNotification = () => {
       title = 'Erreur de connexion'
     } else if (errorInfo.code === 'TIMEOUT_ERROR') {
       title = 'Délai d\'attente dépassé'
-    } else if (errorInfo.statusCode >= 500) {
+    } else if ((errorInfo.statusCode ?? 0) >= 500) {
       title = 'Erreur serveur'
     }
 

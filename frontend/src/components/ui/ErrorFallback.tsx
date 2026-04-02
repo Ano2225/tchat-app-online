@@ -65,8 +65,8 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
               <LoadingButton
                 onClick={resetError}
                 className="w-full"
-                icon={<RefreshCw className="w-4 h-4" />}
               >
+                <RefreshCw className="w-4 h-4 mr-2" />
                 Réessayer
               </LoadingButton>
             )}

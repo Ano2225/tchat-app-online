@@ -29,7 +29,7 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
     return (
       errorInfo.code === 'NETWORK_ERROR' ||
       errorInfo.code === 'TIMEOUT_ERROR' ||
-      (errorInfo.statusCode >= 500 && errorInfo.statusCode < 600)
+      ((errorInfo.statusCode ?? 0) >= 500 && (errorInfo.statusCode ?? 0) < 600)
     )
   }
 }
