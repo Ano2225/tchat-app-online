@@ -260,11 +260,19 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
       {showScrollButton && typeof document !== 'undefined' && createPortal(
         <button
           onClick={scrollToBottomSmooth}
-          className="w-10 h-10 md:w-12 md:h-12 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center focus:outline-none"
-          style={{ position: 'fixed', bottom: '96px', right: '32px', zIndex: 9000, background: 'var(--accent)' }}
+          className="w-10 h-10 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center focus:outline-none hover:scale-105 active:scale-95"
+          style={{
+            position: 'fixed',
+            bottom: '80px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9000,
+            background: 'var(--accent)',
+            boxShadow: '0 4px 16px var(--accent-glow)',
+          }}
           aria-label="Scroll to bottom"
         >
-          <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
           </svg>
         </button>,

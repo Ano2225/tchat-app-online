@@ -128,68 +128,81 @@ export default function RegisterPage() {
     }
   }
 
-  const inputClass = (field: string, extra = '') =>
-    `w-full bg-gray-50 dark:bg-white/10 border ${
-      fieldErrors[field]
-        ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
-        : 'border-gray-300 dark:border-white/20 focus:ring-purple-500'
-    } rounded-xl py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${extra}`
+  const inputStyle = (field: string) => ({
+    background: 'var(--bg-surface)',
+    border: `1px solid ${fieldErrors[field] ? 'var(--danger)' : 'var(--border-default)'}`,
+    color: 'var(--text-primary)',
+  })
 
-  const iconClass = (field: string) =>
-    `w-4 h-4 ${fieldErrors[field] ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`
+  const iconStyle = (field: string) => ({
+    color: fieldErrors[field] ? 'var(--danger)' : 'var(--text-muted)',
+  })
 
   const FieldError = ({ field }: { field: string }) =>
     fieldErrors[field] ? (
-      <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+      <p className="mt-1 text-xs flex items-center gap-1" style={{ color: 'var(--danger)' }}>
         <span>⚠️</span>{fieldErrors[field]}
       </p>
     ) : null
 
+  const labelClass = 'block text-sm font-medium mb-2'
+
   return (
-    <div className="min-h-screen bg-purple-50 dark:bg-gray-950 flex items-center justify-center p-4">
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: 'var(--bg-base)' }}
+    >
       <header className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-end">
         <ThemeToggle variant="inline" />
       </header>
 
-      <div className="absolute inset-0">
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-15 animate-pulse"></div>
-        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-purple-700 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse delay-1000"></div>
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full filter blur-3xl opacity-20 animate-pulse" style={{ background: 'var(--accent)' }} />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 rounded-full filter blur-3xl opacity-10 animate-pulse" style={{ background: 'var(--accent)', animationDelay: '1s' }} />
       </div>
 
       <div className="relative w-full max-w-md">
-        <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-3xl p-8 shadow-2xl">
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/30">
-              <Sparkles className="w-8 h-8 text-white" />
+        <div
+          className="rounded-3xl p-6 sm:p-8"
+          style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-xl)' }}
+        >
+          <div className="text-center mb-6">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: 'var(--accent)', boxShadow: '0 8px 24px var(--accent-glow)' }}
+            >
+              <Sparkles className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Rejoignez BabiChat</h1>
-            <p className="text-gray-600 dark:text-gray-300">Étape {currentStep} sur {totalSteps}</p>
+            <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
+              Rejoignez BabiChat
+            </h1>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Étape {currentStep} sur {totalSteps}</p>
 
-            <div className="mt-3">
+            <div className="mt-2">
               {currentStep === 1 && (
-                <div className="flex items-center justify-center gap-2">
-                  <Rocket className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Commençons par les bases !</p>
+                <div className="flex items-center justify-center gap-1.5">
+                  <Rocket className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
+                  <p className="text-xs font-medium" style={{ color: 'var(--accent)' }}>Commençons par les bases !</p>
                 </div>
               )}
               {currentStep === 2 && (
-                <div className="flex items-center justify-center gap-2">
-                  <Lock className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Sécurisez votre compte</p>
+                <div className="flex items-center justify-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
+                  <p className="text-xs font-medium" style={{ color: 'var(--accent)' }}>Sécurisez votre compte</p>
                 </div>
               )}
               {currentStep === 3 && (
-                <div className="flex items-center justify-center gap-2">
-                  <PartyPopper className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  <p className="text-sm text-purple-600 dark:text-purple-400 font-medium">Dernière étape, vous y êtes presque !</p>
+                <div className="flex items-center justify-center gap-1.5">
+                  <PartyPopper className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
+                  <p className="text-xs font-medium" style={{ color: 'var(--accent)' }}>Dernière étape, vous y êtes presque !</p>
                 </div>
               )}
             </div>
 
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-4">
+            <div className="w-full rounded-full h-1.5 mt-3" style={{ background: 'var(--bg-elevated)' }}>
               <div
-                className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${(currentStep / totalSteps) * 100}%` }}
+                className="h-1.5 rounded-full transition-all duration-300"
+                style={{ width: `${(currentStep / totalSteps) * 100}%`, background: 'var(--accent)' }}
               />
             </div>
           </div>
@@ -202,8 +215,8 @@ export default function RegisterPage() {
             {currentStep === 1 && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                    Nom d&apos;utilisateur <span className="text-red-500">*</span>
+                  <label className={labelClass} style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}>
+                    Nom d&apos;utilisateur <span style={{ color: 'var(--danger)' }}>*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -212,19 +225,20 @@ export default function RegisterPage() {
                       value={formData.username}
                       onChange={handleChange}
                       placeholder="Choisissez un pseudo"
-                      className={inputClass('username', 'pl-10')}
+                      className="w-full rounded-xl pl-10 py-3 text-sm focus:outline-none transition-all"
+                      style={inputStyle('username')}
                       aria-invalid={!!fieldErrors.username}
                     />
-                    <div className="absolute inset-y-0 left-3 flex items-center">
-                      <User className={iconClass('username')} />
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                      <User className="w-4 h-4" style={iconStyle('username')} />
                     </div>
                   </div>
                   <FieldError field="username" />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                    Email <span className="text-red-500">*</span>
+                  <label className={labelClass} style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}>
+                    Email <span style={{ color: 'var(--danger)' }}>*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -233,11 +247,12 @@ export default function RegisterPage() {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="votre@email.com"
-                      className={inputClass('email', 'pl-10')}
+                      className="w-full rounded-xl pl-10 py-3 text-sm focus:outline-none transition-all"
+                      style={inputStyle('email')}
                       aria-invalid={!!fieldErrors.email}
                     />
-                    <div className="absolute inset-y-0 left-3 flex items-center">
-                      <Mail className={iconClass('email')} />
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                      <Mail className="w-4 h-4" style={iconStyle('email')} />
                     </div>
                   </div>
                   <FieldError field="email" />
@@ -249,8 +264,8 @@ export default function RegisterPage() {
             {currentStep === 2 && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                    Mot de passe <span className="text-red-500">*</span>
+                  <label className={labelClass} style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}>
+                    Mot de passe <span style={{ color: 'var(--danger)' }}>*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -259,16 +274,18 @@ export default function RegisterPage() {
                       value={formData.password}
                       onChange={handleChange}
                       placeholder="Au moins 6 caractères"
-                      className={inputClass('password', 'pl-10 pr-12')}
+                      className="w-full rounded-xl pl-10 pr-12 py-3 text-sm focus:outline-none transition-all"
+                      style={inputStyle('password')}
                       aria-invalid={!!fieldErrors.password}
                     />
-                    <div className="absolute inset-y-0 left-3 flex items-center">
-                      <Lock className={iconClass('password')} />
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                      <Lock className="w-4 h-4" style={iconStyle('password')} />
                     </div>
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-3 flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                      className="absolute inset-y-0 right-3 flex items-center transition-colors"
+                      style={{ color: 'var(--text-muted)' }}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -277,8 +294,8 @@ export default function RegisterPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                    Confirmer le mot de passe <span className="text-red-500">*</span>
+                  <label className={labelClass} style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}>
+                    Confirmer le mot de passe <span style={{ color: 'var(--danger)' }}>*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -287,16 +304,18 @@ export default function RegisterPage() {
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       placeholder="Répétez votre mot de passe"
-                      className={inputClass('confirmPassword', 'pl-10 pr-12')}
+                      className="w-full rounded-xl pl-10 pr-12 py-3 text-sm focus:outline-none transition-all"
+                      style={inputStyle('confirmPassword')}
                       aria-invalid={!!fieldErrors.confirmPassword}
                     />
-                    <div className="absolute inset-y-0 left-3 flex items-center">
-                      <Lock className={iconClass('confirmPassword')} />
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                      <Lock className="w-4 h-4" style={iconStyle('confirmPassword')} />
                     </div>
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute inset-y-0 right-3 flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                      className="absolute inset-y-0 right-3 flex items-center transition-colors"
+                      style={{ color: 'var(--text-muted)' }}
                     >
                       {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -309,10 +328,10 @@ export default function RegisterPage() {
             {/* ── Étape 3 ── */}
             {currentStep === 3 && (
               <>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                      Âge <span className="text-red-500">*</span>
+                    <label className={labelClass} style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}>
+                      Âge <span style={{ color: 'var(--danger)' }}>*</span>
                     </label>
                     <div className="relative">
                       <input
@@ -321,41 +340,42 @@ export default function RegisterPage() {
                         value={formData.age}
                         onChange={handleChange}
                         placeholder="25"
-                        className={inputClass('age', 'pl-10')}
+                        className="w-full rounded-xl pl-10 py-3 text-sm focus:outline-none transition-all"
+                        style={inputStyle('age')}
                         min="13"
                         max="25"
                         aria-invalid={!!fieldErrors.age}
                       />
-                      <div className="absolute inset-y-0 left-3 flex items-center">
-                        <Calendar className={iconClass('age')} />
+                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                        <Calendar className="w-4 h-4" style={iconStyle('age')} />
                       </div>
                     </div>
                     <FieldError field="age" />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                      Sexe <span className="text-red-500">*</span>
+                    <label className={labelClass} style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}>
+                      Sexe <span style={{ color: 'var(--danger)' }}>*</span>
                     </label>
                     <div className="relative">
                       <select
                         name="sexe"
                         value={formData.sexe}
                         onChange={handleChange}
-                        className={inputClass('sexe', 'pl-10 pr-10 cursor-pointer')}
-                        style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', backgroundImage: 'none' }}
+                        className="w-full rounded-xl pl-10 pr-10 py-3 text-sm focus:outline-none transition-all cursor-pointer"
+                        style={{ ...inputStyle('sexe'), appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none' }}
                         aria-invalid={!!fieldErrors.sexe}
                       >
-                        <option value="">Sélectionnez</option>
+                        <option value="">Choisir</option>
                         <option value="homme">Homme</option>
                         <option value="femme">Femme</option>
                         <option value="autre">Autre</option>
                       </select>
                       <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        <User className={iconClass('sexe')} />
+                        <User className="w-4 h-4" style={iconStyle('sexe')} />
                       </div>
                       <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                        <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        <ChevronDown className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
                       </div>
                     </div>
                     <FieldError field="sexe" />
@@ -363,8 +383,8 @@ export default function RegisterPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                    Ville <span className="text-red-500">*</span>
+                  <label className={labelClass} style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}>
+                    Ville <span style={{ color: 'var(--danger)' }}>*</span>
                   </label>
                   <div className="relative">
                     <input
@@ -373,11 +393,12 @@ export default function RegisterPage() {
                       value={formData.ville}
                       onChange={handleChange}
                       placeholder="Treichville, Abidjan"
-                      className={inputClass('ville', 'pl-10')}
+                      className="w-full rounded-xl pl-10 py-3 text-sm focus:outline-none transition-all"
+                      style={inputStyle('ville')}
                       aria-invalid={!!fieldErrors.ville}
                     />
-                    <div className="absolute inset-y-0 left-3 flex items-center">
-                      <MapPin className={iconClass('ville')} />
+                    <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                      <MapPin className="w-4 h-4" style={iconStyle('ville')} />
                     </div>
                   </div>
                   <FieldError field="ville" />
@@ -385,12 +406,13 @@ export default function RegisterPage() {
               </>
             )}
 
-            <div className="flex gap-4 mt-6">
+            <div className="flex gap-3 mt-5">
               {currentStep > 1 && (
                 <button
                   type="button"
                   onClick={handlePrevious}
-                  className="flex-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-semibold py-3 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
+                  className="flex-1 font-semibold py-3 rounded-xl transition-all hover:opacity-80"
+                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', fontFamily: 'var(--font-ui)' }}
                 >
                   Précédent
                 </button>
@@ -398,41 +420,39 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-purple-500/20 flex items-center justify-center"
+                className="flex-1 text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98]"
+                style={{ background: 'var(--accent)', boxShadow: '0 4px 16px var(--accent-glow)', fontFamily: 'var(--font-ui)' }}
               >
                 {loading ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                    Inscription...
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Inscription…
                   </>
                 ) : currentStep === totalSteps ? 'Créer mon compte' : 'Suivant'}
               </button>
             </div>
           </form>
 
-          <div className="mt-8 text-center space-y-4">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-white/20"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="px-2 bg-white dark:bg-transparent text-gray-500 dark:text-gray-400 text-sm">Ou</span>
-              </div>
+          <div className="mt-6 text-center space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Ou</span>
+              <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
             </div>
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600 dark:text-gray-300">
+            <div className="space-y-1.5 text-sm" style={{ color: 'var(--text-muted)' }}>
+              <p>
                 Déjà un compte ?{' '}
-                <Link href="/login" className="text-purple-600 hover:text-purple-700 font-medium">Se connecter</Link>
+                <Link href="/login" className="font-medium hover:underline" style={{ color: 'var(--accent)' }}>Se connecter</Link>
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                <Link href="/anonymous" className="text-purple-600 hover:text-purple-700 font-medium">Continuer en mode anonyme</Link>
+              <p>
+                <Link href="/anonymous" className="font-medium hover:underline" style={{ color: 'var(--accent)' }}>Continuer en mode anonyme</Link>
               </p>
             </div>
           </div>
         </div>
 
-        <div className="text-center mt-8">
-          <Link href="/" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white text-sm">
+        <div className="text-center mt-6">
+          <Link href="/" className="text-sm transition-colors hover:underline" style={{ color: 'var(--text-muted)' }}>
             ← Retour à l&apos;accueil
           </Link>
         </div>

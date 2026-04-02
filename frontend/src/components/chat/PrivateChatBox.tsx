@@ -57,6 +57,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [pickerPos, setPickerPos] = useState<{ bottom: number; right: number; width: number } | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [isBlocked, setIsBlocked] = useState(false);
   const [blockedByMe, setBlockedByMe] = useState(false);
@@ -262,6 +263,19 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
     }, 50);
   };
 
+  const handleFileSelect = (file: File) => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleFileClear = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!newMessage.trim() && !selectedFile) || !user?.id || !socket) return;
@@ -309,6 +323,8 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
 
       setNewMessage('');
       setSelectedFile(null);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
       setShowEmojiPicker(false);
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
@@ -326,7 +342,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
 
   return (
     // Mobile: full-screen between header and tab bar. Desktop: compact corner popup.
-    <div className="fixed z-50 flex flex-col inset-x-2 top-[5rem] bottom-[4.5rem] md:inset-auto md:bottom-4 md:right-4 md:w-[340px]">
+    <div className="fixed z-50 flex flex-col inset-x-0 top-20 bottom-16 md:inset-auto md:bottom-4 md:right-4 md:w-[360px]">
 
       {/* Emoji Picker portal */}
       {showEmojiPicker && pickerPos && typeof document !== 'undefined' && createPortal(
@@ -355,7 +371,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
 
       {/* Chat panel */}
       <div
-        className="flex flex-col rounded-2xl overflow-hidden animate-chat-in h-full md:h-[460px]"
+        className="flex flex-col overflow-hidden animate-chat-in h-full md:h-[520px] md:rounded-2xl"
         style={{
           background: 'var(--bg-panel)',
           border: '1px solid var(--border-default)',
@@ -364,7 +380,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       >
         {/* Header */}
         <div
-          className="flex items-center gap-2.5 px-3 py-2.5 flex-shrink-0"
+          className="flex items-center gap-3 px-3 py-3 flex-shrink-0"
           style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-subtle)' }}
         >
           <div className="relative flex-shrink-0">
@@ -373,11 +389,11 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
               avatarUrl={recipient.avatarUrl}
               sexe={recipient.sexe}
               size="sm"
-              className="w-8 h-8 rounded-xl"
+              className="w-10 h-10 rounded-xl"
               clickable={false}
             />
             <span
-              className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2"
+              className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
               style={{
                 background: isRecipientOnline ? 'var(--online)' : 'var(--text-muted)',
                 borderColor: 'var(--bg-elevated)',
@@ -389,12 +405,12 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
             <p className="text-sm font-semibold truncate leading-tight" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
               {recipient.username}
             </p>
-            <p className="text-[11px] leading-tight" style={{ color: isRecipientOnline ? 'var(--online)' : 'var(--text-muted)' }}>
+            <p className="text-xs leading-tight mt-0.5" style={{ color: isRecipientOnline ? 'var(--online)' : 'var(--text-muted)' }}>
               {isRecipientOnline ? '● En ligne' : '○ Hors ligne'}
             </p>
           </div>
 
-          <div className="flex items-center gap-0.5 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={async () => {
                 setBlockLoading(true);
@@ -426,7 +442,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
               }}
               disabled={blockLoading || (isBlocked && !blockedByMe)}
               title={blockedByMe ? 'Débloquer' : isBlocked ? 'Bloqué par cet utilisateur' : 'Bloquer'}
-              className="w-7 h-7 flex items-center justify-center rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               style={{ color: 'var(--text-muted)' }}
               onMouseEnter={e => {
                 if (isBlocked && !blockedByMe) return;
@@ -438,11 +454,11 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                 (e.currentTarget as HTMLElement).style.background = 'transparent';
               }}
             >
-              {blockedByMe ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldBan className="w-3.5 h-3.5" />}
+              {blockedByMe ? <ShieldCheck className="w-4 h-4" /> : <ShieldBan className="w-4 h-4" />}
             </button>
             <button
               onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center rounded-lg transition-all"
+              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all"
               style={{ color: 'var(--text-muted)' }}
               onMouseEnter={e => {
                 (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)';
@@ -453,7 +469,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                 (e.currentTarget as HTMLElement).style.background = 'transparent';
               }}
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -474,25 +490,28 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         )}
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-3 py-2.5 space-y-0.5" style={{ background: 'var(--bg-base)' }}>
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5" style={{ background: 'var(--bg-base)' }}>
           {messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
               <div
-                className="w-10 h-10 rounded-2xl flex items-center justify-center"
+                className="w-12 h-12 rounded-2xl flex items-center justify-center"
                 style={{ background: isBlocked ? 'rgba(248,113,113,0.1)' : 'var(--accent-dim)' }}
               >
                 {isBlocked
-                  ? <ShieldBan className="w-5 h-5" style={{ color: 'var(--danger)' }} />
-                  : <svg className="w-5 h-5" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  ? <ShieldBan className="w-6 h-6" style={{ color: 'var(--danger)' }} />
+                  : <svg className="w-6 h-6" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
                 }
               </div>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                 {isBlocked
-                  ? (blockedByMe ? 'Débloquez pour reprendre la conversation.' : 'Impossible d\'envoyer des messages.')
-                  : `Démarrez la conversation avec ${recipient.username}`}
+                  ? (blockedByMe ? `Vous avez bloqué ${recipient.username}` : `${recipient.username} vous a bloqué`)
+                  : `Dites bonjour à ${recipient.username} 👋`}
               </p>
+              {!isBlocked && (
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Vos messages sont privés</p>
+              )}
             </div>
           ) : (
             messages.map((message, index) => {
@@ -504,46 +523,73 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
               const nextMsg = messages[index + 1];
               const isLastInGroup = !nextMsg || nextMsg.sender?._id !== senderIdStr;
 
+              /* Image-only message: no padding wrapper */
+              const isImageOnly = !!message.media_url && !message.content;
+
               return (
                 <div
                   key={message._id}
-                  className={`flex items-end gap-1.5 ${isOwn ? 'justify-end animate-msg-right' : 'justify-start animate-msg-left'}`}
-                  style={{ marginBottom: isLastInGroup ? '6px' : '1px' }}
+                  className={`flex items-end gap-2 ${isOwn ? 'justify-end animate-msg-right' : 'justify-start animate-msg-left'}`}
+                  style={{ marginBottom: isLastInGroup ? '8px' : '2px' }}
                 >
                   {!isOwn && (
-                    <div className="w-5 h-5 flex-shrink-0 self-end mb-0.5">
+                    <div className="w-6 h-6 flex-shrink-0 self-end mb-0.5">
                       {showAvatar ? (
                         <GenderAvatar
                           username={message.sender.username}
                           avatarUrl={message.sender.avatarUrl}
                           size="sm"
-                          className="w-5 h-5 rounded-md"
+                          className="w-6 h-6 rounded-lg"
                           clickable={false}
                         />
-                      ) : <div className="w-5 h-5" />}
+                      ) : <div className="w-6 h-6" />}
                     </div>
                   )}
 
-                  <div className={`flex flex-col gap-0.5 max-w-[80%] ${isOwn ? 'items-end' : 'items-start'}`}>
+                  <div className={`flex flex-col gap-0.5 max-w-[72%] ${isOwn ? 'items-end' : 'items-start'}`}>
+                    {/* Bubble */}
                     <div
-                      className={`px-2.5 py-1.5 text-sm leading-relaxed ${isOptimistic ? 'opacity-60' : ''}`}
+                      className={`text-sm leading-relaxed ${isOptimistic ? 'opacity-60' : ''} ${isImageOnly ? '' : 'px-3 py-2'}`}
                       style={
                         isOwn
-                          ? { background: 'var(--accent)', color: '#fff', borderRadius: isLastInGroup ? '16px 16px 4px 16px' : '16px 16px 4px 16px' }
-                          : { background: 'var(--msg-other-bg)', color: 'var(--msg-other-text)', border: '1px solid var(--msg-other-border)', borderRadius: isLastInGroup ? '16px 16px 16px 4px' : '4px 16px 16px 16px' }
+                          ? {
+                              background: isImageOnly ? 'transparent' : 'var(--accent)',
+                              color: '#fff',
+                              borderRadius: isOwn
+                                ? (isLastInGroup ? '18px 18px 4px 18px' : '18px 18px 4px 18px')
+                                : (isLastInGroup ? '18px 18px 18px 4px' : '4px 18px 18px 18px'),
+                            }
+                          : {
+                              background: isImageOnly ? 'transparent' : 'var(--msg-other-bg)',
+                              color: 'var(--msg-other-text)',
+                              border: isImageOnly ? 'none' : '1px solid var(--msg-other-border)',
+                              borderRadius: isLastInGroup ? '18px 18px 18px 4px' : '4px 18px 18px 18px',
+                            }
                       }
                     >
+                      {/* Image */}
                       {message.media_url && /^https?:\/\//.test(message.media_url) && (
-                        <div className="mb-1.5 -mx-0.5">
+                        <div className={message.content ? 'mb-2' : ''}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={message.media_url}
                             alt="Image"
-                            className="max-w-full h-auto rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
-                            onClick={() => { if (/^https?:\/\//.test(message.media_url!)) window.open(message.media_url, '_blank', 'noopener,noreferrer'); }}
+                            className="block rounded-2xl cursor-pointer hover:opacity-90 transition-opacity"
+                            style={{
+                              maxWidth: '220px',
+                              maxHeight: '200px',
+                              width: 'auto',
+                              height: 'auto',
+                              objectFit: 'cover',
+                            }}
+                            onClick={() => {
+                              if (/^https?:\/\//.test(message.media_url!))
+                                window.open(message.media_url, '_blank', 'noopener,noreferrer');
+                            }}
                           />
                         </div>
                       )}
+                      {/* Text */}
                       {message.content && (
                         <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                           {message.content}
@@ -551,16 +597,19 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                       )}
                     </div>
 
+                    {/* Meta */}
                     {isLastInGroup && (
                       <div
-                        className={`flex items-center gap-1 px-1 text-[10px] ${isOwn ? 'flex-row-reverse' : ''}`}
+                        className={`flex items-center gap-1 px-0.5 text-[10px] ${isOwn ? 'flex-row-reverse' : ''}`}
                         style={{ color: 'var(--text-muted)' }}
                       >
                         <span>{formatTime(message.createdAt)}</span>
                         {isOwn && (
                           isOptimistic
-                            ? <span>···</span>
-                            : <span style={{ color: message.read ? 'var(--accent)' : 'var(--text-muted)' }}>{message.read ? '✓✓' : '✓'}</span>
+                            ? <span style={{ color: 'var(--text-muted)' }}>···</span>
+                            : <span style={{ color: message.read ? 'var(--accent)' : 'var(--text-muted)' }}>
+                                {message.read ? '✓✓' : '✓'}
+                              </span>
                         )}
                       </div>
                     )}
@@ -574,35 +623,46 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
 
         {/* Input */}
         <div
-          className={`flex-shrink-0 px-2.5 py-2 ${isBlocked ? 'opacity-40 pointer-events-none select-none' : ''}`}
+          className={`flex-shrink-0 px-3 py-2 ${isBlocked ? 'opacity-40 pointer-events-none select-none' : ''}`}
           title={isBlocked && !blockedByMe ? `${recipient.username} vous a bloqué` : undefined}
           style={{ background: 'var(--bg-panel)', borderTop: '1px solid var(--border-subtle)' }}
         >
-          {selectedFile && (
-            <div
-              className="mb-1.5 flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs"
-              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-secondary)' }}
-            >
-              <Paperclip className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--accent)' }} />
-              <span className="flex-1 truncate">{selectedFile.name}</span>
-              <button type="button" onClick={() => setSelectedFile(null)} style={{ color: 'var(--danger)' }}>
+          {/* Image preview */}
+          {selectedFile && previewUrl && (
+            <div className="mb-2 relative inline-block animate-fade-in">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewUrl}
+                alt="Aperçu"
+                className="block rounded-xl"
+                style={{ maxWidth: '120px', maxHeight: '100px', objectFit: 'cover', border: '2px solid var(--border-default)' }}
+              />
+              <button
+                type="button"
+                onClick={handleFileClear}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center shadow-md"
+                style={{ background: 'var(--danger)', color: 'white' }}
+              >
                 <X className="w-3 h-3" />
               </button>
             </div>
           )}
 
-          <form onSubmit={handleSendMessage} className="flex items-end gap-1.5">
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && setSelectedFile(e.target.files[0])} className="hidden" />
+          <form onSubmit={handleSendMessage} className="flex items-end gap-2">
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])} className="hidden" />
 
-            {/* Pill input row */}
+            {/* Input pill */}
             <div
-              className="flex-1 flex items-end rounded-2xl px-2 py-1 gap-1 transition-all"
-              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)' }}
+              className="flex-1 flex items-end gap-1 px-2 py-1.5 rounded-full transition-all"
+              style={{
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-default)',
+              }}
             >
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-lg transition-all self-end mb-0.5"
+                className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-full transition-colors self-end mb-0.5"
                 title="Joindre une image"
                 style={{ color: 'var(--text-muted)' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent)'; }}
@@ -615,7 +675,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                 ref={textareaRef}
                 value={newMessage}
                 onChange={(e) => { if (e.target.value.length <= 500) setNewMessage(e.target.value); }}
-                placeholder={`Message…`}
+                placeholder="Message…"
                 rows={1}
                 maxLength={500}
                 className="flex-1 bg-transparent text-sm focus:outline-none resize-none"
@@ -627,10 +687,11 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                   overflowX: 'hidden',
                   wordBreak: 'break-word',
                   overflowWrap: 'break-word',
-                  minHeight: '28px',
-                  maxHeight: '100px',
+                  minHeight: '24px',
+                  maxHeight: '80px',
                   paddingTop: '3px',
                   paddingBottom: '3px',
+                  alignSelf: 'center',
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -653,7 +714,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                   setShowEmojiPicker(v => !v);
                 }}
                 ref={emojiButtonRef}
-                className="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-lg transition-all self-end mb-0.5"
+                className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-full transition-colors self-end mb-0.5"
                 title="Emoji"
                 aria-expanded={showEmojiPicker}
                 style={{ color: showEmojiPicker ? 'var(--accent)' : 'var(--text-muted)' }}
@@ -664,16 +725,22 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
               </button>
             </div>
 
+            {/* Send button — same height as pill, circular */}
             <button
               type="submit"
               disabled={(!newMessage.trim() && !selectedFile) || uploading}
-              className="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-xl transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:scale-100"
-              style={{ background: 'var(--accent)' }}
+              className="flex-shrink-0 flex items-center justify-center rounded-full transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:scale-100 self-end"
+              style={{
+                width: '36px',
+                height: '36px',
+                background: (newMessage.trim() || selectedFile) ? 'var(--accent)' : 'var(--bg-elevated)',
+                boxShadow: (newMessage.trim() || selectedFile) ? '0 2px 8px var(--accent-glow)' : 'none',
+              }}
               title="Envoyer"
             >
               {uploading
-                ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                : <Send className="w-3.5 h-3.5 text-white" />
+                ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                : <Send className="w-3.5 h-3.5" style={{ color: (newMessage.trim() || selectedFile) ? 'white' : 'var(--text-muted)' }} />
               }
             </button>
           </form>

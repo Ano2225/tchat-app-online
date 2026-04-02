@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { Socket } from 'socket.io-client'
@@ -45,7 +46,9 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
   const [showProfile, setShowProfile] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [btnRect, setBtnRect] = useState<DOMRect | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const msgBtnRef = useRef<HTMLButtonElement>(null)
 
   const handleLogout = async () => {
     setLoggingOut(true)
@@ -89,7 +92,11 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
   useEffect(() => {
     if (!showMessages) return
     const handleClick = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      // Close if clicking outside both the panel and the trigger button
+      if (
+        panelRef.current && !panelRef.current.contains(e.target as Node) &&
+        msgBtnRef.current && !msgBtnRef.current.contains(e.target as Node)
+      ) {
         setShowMessages(false)
       }
     }
@@ -115,7 +122,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
   return (
     <>
       <header
-        className="sticky top-0 z-[200] px-3 md:px-6 py-3"
+        className="sticky top-0 z-[200] h-20 px-3 md:px-6 flex items-center"
         style={{
           background: 'var(--bg-panel)',
           borderBottom: '1px solid var(--border-default)',
@@ -123,7 +130,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
           WebkitBackdropFilter: 'blur(20px)',
         }}
       >
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 w-full">
 
           {/* ── Logo ── */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -158,9 +165,13 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
           <div className="flex items-center gap-1.5 md:gap-2 flex-shrink-0">
 
             {/* Private messages */}
-            <div className="relative" ref={panelRef}>
+            <div className="relative">
               <button
-                onClick={() => setShowMessages(v => !v)}
+                ref={msgBtnRef}
+                onClick={() => {
+                  if (msgBtnRef.current) setBtnRect(msgBtnRef.current.getBoundingClientRect())
+                  setShowMessages(v => !v)
+                }}
                 className="relative flex items-center justify-center w-9 h-9 rounded-xl transition-all focus:outline-none"
                 style={{
                   background: showMessages ? 'var(--accent-dim)' : 'var(--bg-surface)',
@@ -182,20 +193,47 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                 )}
               </button>
 
-              {/* Conversations dropdown */}
-              {showMessages && (
-                <div
-                  className="absolute top-full right-0 mt-2 w-80 rounded-2xl overflow-hidden animate-scale-in-origin"
-                  style={{
-                    background: 'var(--bg-panel)',
-                    border: '1px solid var(--border-default)',
-                    boxShadow: '0 16px 48px rgba(0,0,0,0.3)',
-                    zIndex: 300,
-                    transformOrigin: 'top right',
-                  }}
-                >
+              {/* Portal: backdrop + panel — rendered in document.body to escape backdrop-filter stacking context */}
+              {showMessages && typeof document !== 'undefined' && createPortal(
+                <>
+                  {/* Backdrop (mobile + desktop) */}
                   <div
-                    className="flex items-center justify-between px-4 py-3"
+                    className="fixed inset-0"
+                    style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 9998 }}
+                    onClick={() => setShowMessages(false)}
+                  />
+
+                  {/* Panel */}
+                  <div
+                    ref={panelRef}
+                    className={[
+                      /* mobile: full-width bottom sheet */
+                      'fixed bottom-0 left-0 right-0 rounded-t-2xl overflow-hidden',
+                      'max-h-[80vh] flex flex-col',
+                      /* desktop: positioned dropdown below button */
+                      'md:bottom-auto md:left-auto md:right-auto md:rounded-2xl md:max-h-none md:flex-none md:block md:w-80',
+                      'animate-slide-up md:animate-scale-in',
+                    ].join(' ')}
+                    style={{
+                      background: 'var(--bg-panel)',
+                      border: '1px solid var(--border-default)',
+                      boxShadow: '0 -8px 40px rgba(0,0,0,0.3)',
+                      zIndex: 9999,
+                      // Desktop: position below the button using measured rect
+                      ...(btnRect && typeof window !== 'undefined' && window.innerWidth >= 768 ? {
+                        top: btnRect.bottom + 8,
+                        right: window.innerWidth - btnRect.right,
+                      } : {}),
+                    }}
+                  >
+                  {/* Handle pill — mobile only */}
+                  <div className="md:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+                    <div className="w-10 h-1 rounded-full" style={{ background: 'var(--border-strong)' }} />
+                  </div>
+
+                  {/* Header */}
+                  <div
+                    className="flex items-center justify-between px-4 py-3 flex-shrink-0"
                     style={{ borderBottom: '1px solid var(--border-subtle)' }}
                   >
                     <h3
@@ -204,21 +242,35 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                     >
                       Messages privés
                     </h3>
-                    {totalUnread > 0 && (
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full font-medium"
-                        style={{
-                          background: 'rgba(248,113,113,0.12)',
-                          color: 'var(--danger)',
-                          fontFamily: 'var(--font-ui)',
-                        }}
+                    <div className="flex items-center gap-2">
+                      {totalUnread > 0 && (
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full font-medium"
+                          style={{
+                            background: 'rgba(248,113,113,0.12)',
+                            color: 'var(--danger)',
+                            fontFamily: 'var(--font-ui)',
+                          }}
+                        >
+                          {totalUnread} non lu{totalUnread > 1 ? 's' : ''}
+                        </span>
+                      )}
+                      {/* Close — mobile only */}
+                      <button
+                        onClick={() => setShowMessages(false)}
+                        className="md:hidden w-7 h-7 flex items-center justify-center rounded-lg"
+                        style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}
+                        aria-label="Fermer"
                       >
-                        {totalUnread} non lu{totalUnread > 1 ? 's' : ''}
-                      </span>
-                    )}
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="max-h-72 overflow-y-auto">
+                  {/* List */}
+                  <div className="overflow-y-auto" style={{ maxHeight: 'min(288px, 55vh)' }}>
                     {loadingConvs ? (
                       <div className="p-6 flex justify-center">
                         <div
@@ -227,10 +279,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                         />
                       </div>
                     ) : conversations.length === 0 ? (
-                      <div
-                        className="p-8 text-center text-sm"
-                        style={{ color: 'var(--text-muted)' }}
-                      >
+                      <div className="p-10 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
                         Aucune conversation
                       </div>
                     ) : (
@@ -242,7 +291,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                           <div
                             key={conv.user._id || index}
                             onClick={() => handleOpenConversation(conv)}
-                            className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-all"
+                            className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-all active:opacity-70"
                             style={{ borderBottom: '1px solid var(--border-subtle)' }}
                             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'}
                             onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
@@ -277,10 +326,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                                 >
                                   {conv.user.username}
                                 </p>
-                                <span
-                                  className="text-[10px] flex-shrink-0"
-                                  style={{ color: 'var(--text-muted)' }}
-                                >
+                                <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
                                   {formatTime(conv.lastMessage?.createdAt)}
                                 </span>
                               </div>
@@ -291,7 +337,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                                   fontWeight: hasUnread ? '500' : '400',
                                 }}
                               >
-                                {isFromMe && <span style={{ color: 'var(--text-muted)' }}>Vous: </span>}
+                                {isFromMe && <span style={{ color: 'var(--text-muted)' }}>Vous : </span>}
                                 {conv.lastMessage?.content || '📎 Image'}
                               </p>
                             </div>
@@ -303,13 +349,15 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
 
                   {conversations.length > 0 && (
                     <div
-                      className="px-4 py-2 text-center text-xs"
-                      style={{ borderTop: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}
+                      className="px-4 py-2.5 text-center text-xs flex-shrink-0 pb-safe"
+                      style={{ borderTop: '1px solid var(--border-subtle)', color: 'var(--text-muted)', paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}
                     >
                       {conversations.length} conversation{conversations.length > 1 ? 's' : ''}
                     </div>
                   )}
-                </div>
+                  </div>
+                </>,
+                document.body
               )}
             </div>
 

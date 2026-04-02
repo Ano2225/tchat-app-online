@@ -222,36 +222,56 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-blue-50 dark:bg-gray-950 flex items-center justify-center p-4">
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: 'var(--bg-base)' }}
+    >
       {/* Header avec ThemeToggle */}
       <header className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-end">
         <ThemeToggle variant="inline" />
       </header>
-      
-      {/* Background Effects */}
-      <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-15 animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse delay-1000"></div>
+
+      {/* Background glow */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div
+          className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full filter blur-3xl opacity-20 animate-pulse"
+          style={{ background: 'var(--accent)' }}
+        />
+        <div
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full filter blur-3xl opacity-10 animate-pulse"
+          style={{ background: 'var(--accent)', animationDelay: '1s' }}
+        />
       </div>
 
       <div className="relative w-full max-w-md">
-        <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-3xl p-8 shadow-2xl">
+        <div
+          className="rounded-3xl p-6 sm:p-8"
+          style={{
+            background: 'var(--bg-panel)',
+            border: '1px solid var(--border-default)',
+            boxShadow: 'var(--shadow-xl)',
+          }}
+        >
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/30">
-              <MessageCircle className="w-8 h-8 text-white" />
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: 'var(--accent)', boxShadow: '0 8px 24px var(--accent-glow)' }}
+            >
+              <MessageCircle className="w-7 h-7 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Bon retour!</h1>
-            <p className="text-gray-600 dark:text-gray-300">Connectez-vous à votre compte</p>
+            <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
+              Bon retour !
+            </h1>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Connectez-vous à votre compte</p>
           </div>
 
-          {/* Error Alert - Ne pas afficher pour les erreurs d'identifiants invalides (gérées par fieldErrors) */}
           {formError && (
             <ErrorAlert
               message={formError}
               severity="error"
               onClose={() => setFormError(null)}
               onRetry={handleRetry}
-              className="mb-6"
+              className="mb-5"
             />
           )}
 
@@ -263,19 +283,17 @@ export default function LoginPage() {
               onClose={() => setVerificationNotice(null)}
               onRetry={sendingVerification ? undefined : handleResendVerification}
               retryText={sendingVerification ? 'Envoi en cours...' : 'Renvoyer l\'email'}
-              className="mb-6"
+              className="mb-5"
             />
           )}
 
           {verificationLink && (
-            <div className="mb-6 rounded-xl border border-blue-200 dark:border-blue-700/60 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-sm text-blue-800 dark:text-blue-200">
+            <div
+              className="mb-5 rounded-xl px-4 py-3 text-sm"
+              style={{ background: 'var(--accent-dim)', border: '1px solid var(--accent)', color: 'var(--accent-text)' }}
+            >
               <div className="font-semibold mb-1">Lien de verification</div>
-              <a
-                href={verificationLink}
-                target="_blank"
-                rel="noreferrer"
-                className="break-all text-blue-700 dark:text-blue-300 underline"
-              >
+              <a href={verificationLink} target="_blank" rel="noreferrer" className="break-all underline">
                 Ouvrir le lien
               </a>
             </div>
@@ -296,15 +314,18 @@ export default function LoginPage() {
               }
               onClose={handleRetry}
               onRetry={errorInfo?.code !== 'BRUTE_FORCE_DETECTED' ? handleRetry : undefined}
-              className="mb-6"
+              className="mb-5"
             />
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}
+              >
                 Nom d&apos;utilisateur ou Email
-                <span className="text-red-500 ml-1">*</span>
+                <span className="ml-1" style={{ color: 'var(--danger)' }}>*</span>
               </label>
               <div className="relative">
                 <input
@@ -313,30 +334,34 @@ export default function LoginPage() {
                   value={formData.username}
                   onChange={handleChange}
                   placeholder="Votre nom d'utilisateur ou email"
-                  className={`w-full bg-gray-50 dark:bg-white/10 border ${
-                    fieldErrors.username
-                      ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
-                      : 'border-gray-300 dark:border-white/20 focus:ring-blue-500'
-                  } rounded-xl pl-10 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 transition-all`}
+                  className="w-full rounded-xl pl-10 py-3 text-sm focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    background: 'var(--bg-surface)',
+                    border: `1px solid ${fieldErrors.username ? 'var(--danger)' : 'var(--border-default)'}`,
+                    color: 'var(--text-primary)',
+                    outlineColor: fieldErrors.username ? 'var(--danger)' : 'var(--accent)',
+                  }}
                   disabled={loading}
                   aria-invalid={!!fieldErrors.username}
                 />
-                <div className="absolute inset-y-0 left-3 flex items-center">
-                  <User className={`w-4 h-4 ${fieldErrors.username ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`} />
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <User className="w-4 h-4" style={{ color: fieldErrors.username ? 'var(--danger)' : 'var(--text-muted)' }} />
                 </div>
               </div>
               {fieldErrors.username && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-                  <span>⚠️</span>
-                  {fieldErrors.username}
+                <p className="mt-1 text-xs flex items-center gap-1" style={{ color: 'var(--danger)' }}>
+                  <span>⚠️</span>{fieldErrors.username}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}
+              >
                 Mot de passe
-                <span className="text-red-500 ml-1">*</span>
+                <span className="ml-1" style={{ color: 'var(--danger)' }}>*</span>
               </label>
               <div className="relative">
                 <input
@@ -345,30 +370,31 @@ export default function LoginPage() {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Votre mot de passe"
-                  className={`w-full bg-gray-50 dark:bg-white/10 border ${
-                    fieldErrors.password
-                      ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
-                      : 'border-gray-300 dark:border-white/20 focus:ring-blue-500'
-                  } rounded-xl pl-10 pr-12 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 transition-all`}
+                  className="w-full rounded-xl pl-10 pr-12 py-3 text-sm focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    background: 'var(--bg-surface)',
+                    border: `1px solid ${fieldErrors.password ? 'var(--danger)' : 'var(--border-default)'}`,
+                    color: 'var(--text-primary)',
+                  }}
                   disabled={loading}
                   aria-invalid={!!fieldErrors.password}
                 />
-                <div className="absolute inset-y-0 left-3 flex items-center">
-                  <Lock className={`w-4 h-4 ${fieldErrors.password ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`} />
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                  <Lock className="w-4 h-4" style={{ color: fieldErrors.password ? 'var(--danger)' : 'var(--text-muted)' }} />
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-3 flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                  className="absolute inset-y-0 right-3 flex items-center transition-colors"
+                  style={{ color: 'var(--text-muted)' }}
                   disabled={loading}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               {fieldErrors.password && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-                  <span>⚠️</span>
-                  {fieldErrors.password}
+                <p className="mt-1 text-xs flex items-center gap-1" style={{ color: 'var(--danger)' }}>
+                  <span>⚠️</span>{fieldErrors.password}
                 </p>
               )}
             </div>
@@ -376,41 +402,39 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-blue-500/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center justify-center"
+              className="w-full text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98]"
+              style={{ background: 'var(--accent)', boxShadow: '0 4px 16px var(--accent-glow)', fontFamily: 'var(--font-ui)' }}
             >
               {loading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                  Connexion...
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Connexion…
                 </>
               ) : 'Se connecter'}
             </button>
           </form>
 
-          <div className="mt-8 text-center space-y-4">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-white/20"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="px-2 bg-white dark:bg-transparent text-gray-500 dark:text-gray-400 text-sm">Ou</span>
-              </div>
+          <div className="mt-6 text-center space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
+              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Ou</span>
+              <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
             </div>
 
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                <Link href="/forgot-password" className="text-orange-500 hover:text-orange-600 font-medium">
-                  Mot de passe oublié?
+            <div className="space-y-1.5 text-sm" style={{ color: 'var(--text-muted)' }}>
+              <p>
+                <Link href="/forgot-password" className="font-medium hover:underline" style={{ color: 'var(--amber)' }}>
+                  Mot de passe oublié ?
                 </Link>
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
+              <p>
                 Pas encore de compte ?{' '}
-                <Link href="/register" className="text-blue-600 hover:text-blue-700 font-medium">
+                <Link href="/register" className="font-medium hover:underline" style={{ color: 'var(--accent)' }}>
                   S&apos;inscrire
                 </Link>
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                <Link href="/anonymous" className="text-blue-600 hover:text-blue-700 font-medium">
+              <p>
+                <Link href="/anonymous" className="font-medium hover:underline" style={{ color: 'var(--accent)' }}>
                   Continuer en mode anonyme
                 </Link>
               </p>
@@ -418,8 +442,8 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="text-center mt-8">
-          <Link href="/" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white text-sm">
+        <div className="text-center mt-6">
+          <Link href="/" className="text-sm transition-colors hover:underline" style={{ color: 'var(--text-muted)' }}>
             ← Retour à l&apos;accueil
           </Link>
         </div>

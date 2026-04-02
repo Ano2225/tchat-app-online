@@ -324,7 +324,7 @@ const ChatPage = () => {
         {/* Channel Sidebar - Desktop always visible, Mobile overlay */}
         <div className={`
           md:flex-shrink-0 md:relative md:translate-x-0
-          fixed inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out
+          fixed top-20 bottom-0 left-0 z-40 transform transition-transform duration-300 ease-in-out
           ${showChannels ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}>
           <div className="h-full md:h-auto">
@@ -374,7 +374,7 @@ const ChatPage = () => {
         {/* Users Sidebar - Desktop always visible, Mobile overlay */}
         <div className={`
           md:flex-shrink-0 md:relative md:translate-x-0
-          fixed inset-y-0 right-0 z-40 transform transition-transform duration-300 ease-in-out
+          fixed top-20 bottom-0 right-0 w-full sm:w-72 md:w-auto z-40 transform transition-transform duration-300 ease-in-out
           ${showUsers ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
         `}>
           <div className="h-full md:h-auto">
