@@ -48,7 +48,10 @@ services:
       start_period: 10s
 
   backend:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:?GITHUB_REPOSITORY_OWNER is required}/babichat-backend:latest
+    image: babichat-backend:latest
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
     container_name: babichat-backend
     restart: unless-stopped
     env_file: ../.env
@@ -73,7 +76,13 @@ services:
       start_period: 30s
 
   frontend:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/babichat-frontend:latest
+    image: babichat-frontend:latest
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SOCKET_URL: https://babichat.tech
+        NEXT_PUBLIC_API_URL: https://babichat.tech/api
     container_name: babichat-frontend
     restart: unless-stopped
     env_file: ../.env
