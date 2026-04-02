@@ -1,8 +1,10 @@
+name: babichat
+
 # Production — uses pre-built images from GitHub Container Registry
 # Images are built by CI (.github/workflows/deploy.yml)
 #
 # Usage:
-#   docker compose -f infra/docker-compose.prod.yml up -d
+#   docker compose --env-file ../.env -f infra/docker-compose.prod.yml up -d
 #
 # Required env vars in /opt/babichat/.env — see .env.example
 
@@ -90,14 +92,14 @@ services:
       NODE_ENV: production
       BACKEND_URL: http://backend:8000
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:3000:8000"
     depends_on:
       backend:
         condition: service_healthy
     networks:
       - babichat-network
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
       timeout: 10s
       retries: 3
