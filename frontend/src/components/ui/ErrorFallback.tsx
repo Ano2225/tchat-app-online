@@ -51,7 +51,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
           {process.env.NODE_ENV === 'development' && error && (
             <details className="mb-6 text-left">
               <summary className="cursor-pointer text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                Détails de l'erreur
+                Détails de l&apos;erreur
               </summary>
               <pre className="mt-2 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs text-gray-700 dark:text-gray-300 overflow-auto max-h-40">
                 {error.stack || error.message}
@@ -77,7 +77,7 @@ const ErrorFallback: React.FC<ErrorFallbackProps> = ({
                 className="w-full px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center gap-2"
               >
                 <Home className="w-4 h-4" />
-                Retour à l'accueil
+                Retour à l&apos;accueil
               </button>
             )}
 

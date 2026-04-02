@@ -3,10 +3,9 @@
 import { useState, useCallback } from 'react'
 import { useRetry } from './useRetry'
 import { useErrorNotification } from './useErrorNotification'
-import { extractErrorInfo } from '@/utils/errorHandler'
 
 interface AsyncActionOptions {
-  onSuccess?: (data: any) => void
+  onSuccess?: (data: unknown) => void
   onError?: (error: unknown) => void
   successMessage?: string
   errorMessage?: string

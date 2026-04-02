@@ -32,8 +32,8 @@ const ReportModal: React.FC<ReportModalProps> = ({ targetUserId, onClose, userna
       await reportService.reportUser(targetUserId, reason, description);
       toast.success('Signalement envoyé avec succès');
       onClose();
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Erreur lors du signalement';
+    } catch (error) {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors du signalement';
       toast.error(errorMessage);
     } finally {
       setLoading(false);

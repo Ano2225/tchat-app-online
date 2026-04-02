@@ -3,6 +3,57 @@ import { useGameStore } from '@/store/gameStore';
 import { useAuthStore } from '@/store/authStore';
 import { Socket } from 'socket.io-client';
 
+interface GameAnswer {
+  userId: string;
+}
+
+interface GameQuestion {
+  startTime?: string | Date;
+  answers?: GameAnswer[];
+  question?: string;
+  options?: string[];
+  explanation?: string;
+  category?: string;
+  categoryEmoji?: string;
+  difficulty?: string;
+  source?: string;
+}
+
+interface GameStatePayload {
+  isActive: boolean;
+  currentQuestion?: GameQuestion;
+  leaderboard: { userId: string; username: string; score: number }[];
+}
+
+interface NewQuestion {
+  question?: string;
+  options?: string[];
+  duration?: number;
+  explanation?: string;
+  category?: string;
+  categoryEmoji?: string;
+  difficulty?: string;
+  source?: string;
+  startTime?: string | Date;
+}
+
+interface AnswerResult {
+  userId: string;
+  isCorrect: boolean;
+  alreadyAnswered?: boolean;
+}
+
+interface WinnerData {
+  winner: string | null;
+  correctAnswer?: string;
+}
+
+interface QuestionEndedData {
+  leaderboard?: { userId: string; username: string; score: number }[];
+  correctAnswer?: string | null;
+  explanation?: string | null;
+}
+
 export const useGame = (channel: string, socket?: Socket | null) => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const joinedRef = useRef<boolean>(false);
@@ -50,14 +101,14 @@ export const useGame = (channel: string, socket?: Socket | null) => {
       socket.emit('join_game_channel', channel);
     }
 
-    const handleGameState = (state: any) => {
+    const handleGameState = (state: GameStatePayload) => {
       try {
         console.log('[GAME] Game state received:', state);
         if (isGameChannel && state) {
           setGameState(state);
 
           // Check if user already answered current question
-          const userAnswered = state.currentQuestion?.answers?.some((a: any) => a.userId === user.id);
+          const userAnswered = state.currentQuestion?.answers?.some((a: GameAnswer) => a.userId === user.id);
           if (userAnswered) {
             setHasAnswered(true);
           }
@@ -80,7 +131,7 @@ export const useGame = (channel: string, socket?: Socket | null) => {
       }
     };
 
-    const handleNewQuestion = (question: any) => {
+    const handleNewQuestion = (question: NewQuestion) => {
       console.log('[GAME] New question received:', question);
       if (isGameChannel && question.duration) {
         // Clear previous state and loading
@@ -107,7 +158,7 @@ export const useGame = (channel: string, socket?: Socket | null) => {
       }
     };
 
-    const handleAnswerResult = (result: any) => {
+    const handleAnswerResult = (result: AnswerResult) => {
       try {
         if (result && result.userId === user.id) {
           if (!result.alreadyAnswered) {
@@ -120,7 +171,7 @@ export const useGame = (channel: string, socket?: Socket | null) => {
       }
     };
 
-    const handleWinnerAnnounced = (data: any) => {
+    const handleWinnerAnnounced = (data: WinnerData) => {
       console.log('[GAME] Winner announced:', data);
       // Stop the frontend countdown immediately
       if (timerRef.current) {
@@ -132,7 +183,7 @@ export const useGame = (channel: string, socket?: Socket | null) => {
       setExplanation(data.correctAnswer ? `Réponse correcte: ${data.correctAnswer}` : null);
     };
 
-    const handleQuestionEnded = (data: any) => {
+    const handleQuestionEnded = (data: QuestionEndedData) => {
       updateLeaderboard(data.leaderboard || []);
       setCorrectAnswer(data.correctAnswer || null);
       setExplanation(data.explanation || null);
@@ -183,7 +234,8 @@ export const useGame = (channel: string, socket?: Socket | null) => {
       socket.off('winner_announced', handleWinnerAnnounced);
       socket.off('question_ended', handleQuestionEnded);
     };
-  }, [socket, user?.id, isGameChannel]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socket, user?.id, isGameChannel, channel, resetGame, setGameState, setHasAnswered, setTimeLeft, setLoading, setAnswerResult, setWinner, setExplanation, setQuestion, updateLeaderboard, setCorrectAnswer]);
 
   // Server-authoritative timer: computes timeLeft from server startTime to avoid drift
   const startTimer = (startTime: string | Date, totalDurationMs: number) => {

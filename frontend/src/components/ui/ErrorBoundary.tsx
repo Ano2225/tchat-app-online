@@ -1,6 +1,6 @@
 'use client'
 
-import { Component, ReactNode } from 'react'
+import React, { Component, ReactNode } from 'react'
 import Button from './Button'
 
 interface Props {
@@ -22,7 +22,7 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error }
   }
 
-  componentDidCatch(error: Error, errorInfo: any) {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo)
   }
 
@@ -37,10 +37,10 @@ class ErrorBoundary extends Component<Props, State> {
               </svg>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Oups ! Une erreur s'est produite
+              Oups ! Une erreur s&apos;est produite
             </h2>
             <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Quelque chose s'est mal passé. Veuillez rafraîchir la page.
+              Quelque chose s&apos;est mal passé. Veuillez rafraîchir la page.
             </p>
             <Button onClick={() => window.location.reload()}>
               Rafraîchir la page
@@ -48,7 +48,7 @@ class ErrorBoundary extends Component<Props, State> {
             {this.state.error && process.env.NODE_ENV === 'development' && (
               <details className="mt-4 text-left">
                 <summary className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200">
-                  Détails de l'erreur
+                  Détails de l&apos;erreur
                 </summary>
                 <pre className="mt-2 text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded-lg overflow-auto text-red-600 dark:text-red-400 max-h-40">
                   {this.state.error.toString()}

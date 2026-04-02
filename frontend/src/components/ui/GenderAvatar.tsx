@@ -1,15 +1,6 @@
 import React from 'react';
 import { getGenderColor, getGenderIcon, getGenderBorderColor } from '@/utils/genderUtils';
 
-const getInitials = (name: string): string => {
-  return name
-    .split(' ')
-    .map(word => word.charAt(0))
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
-};
-
 interface GenderAvatarProps {
   username: string;
   avatarUrl?: string;
@@ -33,18 +24,6 @@ const GenderAvatar: React.FC<GenderAvatarProps> = ({
     sm: 'w-6 h-6',
     md: 'w-8 h-8',
     lg: 'w-12 h-12'
-  };
-
-  const iconSizes = {
-    sm: 'text-xs',
-    md: 'text-xs',
-    lg: 'text-sm'
-  };
-
-  const textSizes = {
-    sm: 'text-xs',
-    md: 'text-sm',
-    lg: 'text-base'
   };
 
   const Component = clickable ? 'button' : 'div';

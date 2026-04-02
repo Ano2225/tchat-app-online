@@ -33,6 +33,13 @@ const ErrorAlert: React.FC<ErrorAlertProps> = ({
 }) => {
   const [isVisible, setIsVisible] = React.useState(true)
 
+  const handleClose = React.useCallback(() => {
+    setIsVisible(false)
+    setTimeout(() => {
+      onClose?.()
+    }, 300)
+  }, [onClose])
+
   React.useEffect(() => {
     if (autoClose && duration > 0) {
       const timer = setTimeout(() => {
@@ -40,14 +47,7 @@ const ErrorAlert: React.FC<ErrorAlertProps> = ({
       }, duration)
       return () => clearTimeout(timer)
     }
-  }, [autoClose, duration])
-
-  const handleClose = () => {
-    setIsVisible(false)
-    setTimeout(() => {
-      onClose?.()
-    }, 300)
-  }
+  }, [autoClose, duration, handleClose])
 
   const config = {
     error: {
