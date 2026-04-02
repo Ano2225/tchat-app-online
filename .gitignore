@@ -48,3 +48,6 @@ skills.lock.json
 .Trashes
 ehthumbs.db
 Thumbs.db
+# Claude Code agent skills (local only)
+.agent
+.agents
