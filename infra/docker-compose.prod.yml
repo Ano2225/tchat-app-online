@@ -50,7 +50,7 @@ services:
       start_period: 10s
 
   backend:
-    image: ghcr.io/TON_USERNAME_GITHUB/babichat-backend:latest
+    image: ghcr.io/ano2225/babichat-backend:latest
     build:
       context: ..
       dockerfile: backend/Dockerfile
@@ -78,7 +78,7 @@ services:
       start_period: 30s
 
   frontend:
-    image: ghcr.io/TON_USERNAME_GITHUB/babichat-frontend:latest
+    image: ghcr.io/ano2225/babichat-frontend:latest
     build:
       context: ../frontend
       dockerfile: Dockerfile
