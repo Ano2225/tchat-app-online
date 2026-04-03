@@ -50,7 +50,7 @@ services:
       start_period: 10s
 
   backend:
-    image: babichat-backend:latest
+    image: ghcr.io/TON_USERNAME_GITHUB/babichat-backend:latest
     build:
       context: ..
       dockerfile: backend/Dockerfile
@@ -78,7 +78,7 @@ services:
       start_period: 30s
 
   frontend:
-    image: babichat-frontend:latest
+    image: ghcr.io/TON_USERNAME_GITHUB/babichat-frontend:latest
     build:
       context: ../frontend
       dockerfile: Dockerfile
@@ -104,7 +104,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
   umami-db:
     image: postgres:16-alpine
     container_name: babichat-umami-db

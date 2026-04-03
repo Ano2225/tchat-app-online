@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI/CD Babichat
 
 on:
   push:
@@ -12,14 +12,16 @@ env:
   FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/babichat-frontend
 
 jobs:
-  # ── 1. Lint & type-check ──────────────────────────────────────────────────
   checks:
     name: Lint & Type-check
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
@@ -34,32 +36,31 @@ jobs:
       - name: TypeScript check
         run: cd frontend && npx tsc --noEmit
 
-  # ── 2. Build & push Docker images ────────────────────────────────────────
   build:
     name: Build & Push Images
     runs-on: ubuntu-latest
     needs: checks
-    # Only build on push to main, not on PRs
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
       packages: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
+      - name: Setup Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Build & push backend
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: backend/Dockerfile
@@ -67,12 +68,11 @@ jobs:
           tags: |
             ${{ env.BACKEND_IMAGE }}:latest
             ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-          # Layer cache across runs — dramatically speeds up rebuilds
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Build & push frontend
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: frontend
           file: frontend/Dockerfile
@@ -80,41 +80,41 @@ jobs:
           tags: |
             ${{ env.FRONTEND_IMAGE }}:latest
             ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_SOCKET_URL=https://babichat.tech
+            NEXT_PUBLIC_API_URL=https://babichat.tech/api
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── 3. Deploy to VPS ──────────────────────────────────────────────────────
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
     needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
-      - uses: actions/checkout@v4
-
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
+
             cd /opt/babichat
 
-            # Pull latest code (nginx config, compose files, etc.)
             git pull origin main
 
-            # Log in to GitHub Container Registry
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
 
-            # Pull new images
-            docker compose -f infra/docker-compose.prod.yml pull backend frontend
+            cd infra
 
-            # Restart only app containers (infra stays up — zero downtime for DB/Redis)
-            docker compose -f infra/docker-compose.prod.yml up -d --no-deps backend frontend
+            docker compose --env-file ../.env -f docker-compose.prod.yml pull backend frontend
 
-            # Clean up old images
+            docker compose --env-file ../.env -f docker-compose.prod.yml up -d --no-deps backend frontend
+
             docker image prune -f
 
-            echo "✅ Deployed ${{ github.sha }}"
+            curl -f http://127.0.0.1:8000/api/health
+            curl -f http://127.0.0.1:3000
