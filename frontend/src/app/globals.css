@@ -270,6 +270,13 @@ p, li { max-width: 65ch; }
 /* ─── Buttons ────────────────────────────────────────────────────────────── */
 button:disabled { cursor: not-allowed; opacity: 0.5; }
 
+/* ─── Prevent iOS zoom on input focus ───────────────────────────────────── */
+@media (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   :root {

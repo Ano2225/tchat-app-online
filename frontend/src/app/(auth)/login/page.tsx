@@ -172,7 +172,8 @@ export default function LoginPage() {
         icon: '👋',
         duration: 3000
       })
-      router.push('/chat')
+      const isAdmin = (result.user as { role?: string })?.role === 'admin'
+      router.push(isAdmin ? '/admin/dashboard' : '/chat')
     }
   }
 

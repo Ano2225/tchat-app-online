@@ -3,7 +3,7 @@ const router = express.Router();
 const auth = require('../config/auth');
 const User = require('../models/User');
 const { ObjectId } = require('mongodb');
-const { getVerificationEmailPreview, sendMail } = require('../services/emailService');
+const { getVerificationEmailPreview, sendMail, sendWelcomeEmail } = require('../services/emailService');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { authMiddleware, sessionCache } = require('../middleware/authBetter');
@@ -22,18 +22,50 @@ const getErrorStatus = (error) => {
   return Number(error?.statusCode || error?.status) || 500;
 };
 
-const buildCallbackUrl = (callbackURL) => {
+const normalizeBaseUrl = (value) => {
+  if (!value) return '';
+  return String(value).split(',')[0].trim().replace(/\/+$/, '');
+};
+
+const isLocalHost = (value) => {
+  return /(^|\/\/)(localhost|127\.0\.0\.1)(:\d+)?$/i.test(String(value || '').trim());
+};
+
+const getFrontendBaseUrl = (req) => {
+  const configuredBase = normalizeBaseUrl(process.env.FRONTEND_URL);
+
+  if (process.env.NODE_ENV === 'development') {
+    return configuredBase || 'http://localhost:3000';
+  }
+
+  if (configuredBase && !isLocalHost(configuredBase)) {
+    return configuredBase;
+  }
+
+  const forwardedHost = normalizeBaseUrl(req?.headers?.['x-forwarded-host']);
+  const host = forwardedHost || normalizeBaseUrl(req?.headers?.host);
+  const forwardedProto = normalizeBaseUrl(req?.headers?.['x-forwarded-proto']);
+  const protocol = forwardedProto || (host && isLocalHost(host) ? 'http' : 'https');
+
+  if (host && !isLocalHost(host)) {
+    return `${protocol}://${host}`;
+  }
+
+  return 'https://babichat.tech';
+};
+
+const buildCallbackUrl = (callbackURL, req) => {
   if (!callbackURL) return null;
   if (/^https?:\/\//i.test(callbackURL)) {
     return callbackURL;
   }
-  const base = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const base = getFrontendBaseUrl(req);
   const normalized = callbackURL.startsWith('/') ? callbackURL : `/${callbackURL}`;
   return `${base}${normalized}`;
 };
 
-const getVerifyRedirectTarget = (callbackURL) => {
-  return buildCallbackUrl(callbackURL) || `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
+const getVerifyRedirectTarget = (callbackURL, req) => {
+  return buildCallbackUrl(callbackURL, req) || `${getFrontendBaseUrl(req)}/login`;
 };
 
 const normalizeAuthError = (error) => {
@@ -109,12 +141,19 @@ router.post('/register', async (req, res) => {
 
     const session = buildSessionFromResult(result);
     const emailPreview = getVerificationEmailPreview(email);
+    const welcomeEmailDelivery = await sendWelcomeEmail({ user: result.user });
 
     res.json({
       success: true,
       user: result.user,
       session,
       verificationRequired: !session,
+      welcomeEmailDelivery: {
+        delivered: welcomeEmailDelivery?.delivered ?? false,
+        warning: welcomeEmailDelivery?.warning,
+        preview: welcomeEmailDelivery?.preview,
+        id: welcomeEmailDelivery?.id
+      },
       emailDelivery: emailPreview
         ? {
             delivered: emailPreview.delivered,
@@ -389,7 +428,8 @@ router.get('/verify-email', async (req, res) => {
     });
 
     const redirectTarget = getVerifyRedirectTarget(
-      typeof callbackURL === 'string' ? callbackURL : undefined
+      typeof callbackURL === 'string' ? callbackURL : undefined,
+      req
     );
     if (result?.status) {
       return res.redirect(redirectTarget);
@@ -404,7 +444,8 @@ router.get('/verify-email', async (req, res) => {
 
     if (statusCode === 302 || error?.status === 'FOUND') {
       const redirectTarget = getVerifyRedirectTarget(
-        typeof req.query.callbackURL === 'string' ? req.query.callbackURL : undefined
+        typeof req.query.callbackURL === 'string' ? req.query.callbackURL : undefined,
+        req
       );
       return res.redirect(redirectTarget);
     }
@@ -412,7 +453,8 @@ router.get('/verify-email', async (req, res) => {
     const normalized = normalizeAuthError(error);
     if (normalized.status === 302) {
       const redirectTarget = getVerifyRedirectTarget(
-        typeof req.query.callbackURL === 'string' ? req.query.callbackURL : undefined
+        typeof req.query.callbackURL === 'string' ? req.query.callbackURL : undefined,
+        req
       );
       return res.redirect(redirectTarget);
     }
@@ -446,8 +488,8 @@ router.post('/request-password-reset', async (req, res) => {
       { $set: { resetPasswordToken: hashedToken, resetPasswordExpires: expires } }
     );
 
-    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0].trim();
-    const resetUrl    = `${frontendUrl}/reset-password?token=${rawToken}`;
+    const frontendUrl = getFrontendBaseUrl(req);
+    const resetUrl = `${frontendUrl}/reset-password?token=${rawToken}`;
 
     const result = await sendMail({
       to: user.email,

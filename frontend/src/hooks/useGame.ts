@@ -103,7 +103,6 @@ export const useGame = (channel: string, socket?: Socket | null) => {
 
     const handleGameState = (state: GameStatePayload) => {
       try {
-        console.log('[GAME] Game state received:', state);
         if (isGameChannel && state) {
           setGameState(state);
 
@@ -117,11 +116,9 @@ export const useGame = (channel: string, socket?: Socket | null) => {
           if (state.currentQuestion?.startTime) {
             const elapsed = Date.now() - new Date(state.currentQuestion.startTime).getTime();
             const remaining = Math.max(0, 15000 - elapsed);
-            console.log('[GAME] Question in progress, remaining ms:', remaining);
             if (remaining > 0) {
               startTimer(state.currentQuestion.startTime, 15000);
             } else {
-              console.log('[GAME] Question expired');
               setTimeLeft(0);
             }
           }
@@ -132,7 +129,6 @@ export const useGame = (channel: string, socket?: Socket | null) => {
     };
 
     const handleNewQuestion = (question: NewQuestion) => {
-      console.log('[GAME] New question received:', question);
       if (isGameChannel && question.duration) {
         // Clear previous state and loading
         setLoading(false);
@@ -151,7 +147,6 @@ export const useGame = (channel: string, socket?: Socket | null) => {
           difficulty: question.difficulty || 'Moyen',
           source: question.source || 'Local'
         };
-        console.log('[GAME] Setting question with options:', questionData);
         setQuestion(questionData);
         // Use server startTime for authoritative timer; fall back to now
         startTimer(question.startTime ?? new Date(), question.duration || 15000);
@@ -172,7 +167,6 @@ export const useGame = (channel: string, socket?: Socket | null) => {
     };
 
     const handleWinnerAnnounced = (data: WinnerData) => {
-      console.log('[GAME] Winner announced:', data);
       // Stop the frontend countdown immediately
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -248,7 +242,6 @@ export const useGame = (channel: string, socket?: Socket | null) => {
     const compute = () => Math.max(0, Math.ceil((totalDurationMs - (Date.now() - startMs)) / 1000));
 
     const initial = compute();
-    console.log('[GAME] Starting server-authoritative timer, initial seconds:', initial);
     setTimeLeft(initial);
 
     if (initial <= 0) return;

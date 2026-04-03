@@ -19,6 +19,48 @@ interface ErrorAlertProps {
   duration?: number
 }
 
+const severityStyles: Record<ErrorSeverity, {
+  icon: React.ElementType
+  bg: string
+  border: string
+  text: string
+  iconColor: string
+  titleColor: string
+}> = {
+  error: {
+    icon: XCircle,
+    bg: 'rgba(239,68,68,0.08)',
+    border: 'rgba(239,68,68,0.3)',
+    text: 'var(--danger)',
+    iconColor: 'var(--danger)',
+    titleColor: 'var(--danger)',
+  },
+  warning: {
+    icon: AlertTriangle,
+    bg: 'rgba(245,158,11,0.08)',
+    border: 'rgba(245,158,11,0.3)',
+    text: 'var(--amber)',
+    iconColor: 'var(--amber)',
+    titleColor: 'var(--amber)',
+  },
+  info: {
+    icon: Info,
+    bg: 'var(--accent-dim)',
+    border: 'var(--accent)',
+    text: 'var(--text-secondary)',
+    iconColor: 'var(--accent)',
+    titleColor: 'var(--accent-text)',
+  },
+  success: {
+    icon: AlertCircle,
+    bg: 'rgba(34,197,94,0.08)',
+    border: 'rgba(34,197,94,0.3)',
+    text: 'var(--online)',
+    iconColor: 'var(--online)',
+    titleColor: 'var(--online)',
+  },
+}
+
 const ErrorAlert: React.FC<ErrorAlertProps> = ({
   message,
   severity = 'error',
@@ -29,62 +71,24 @@ const ErrorAlert: React.FC<ErrorAlertProps> = ({
   className = '',
   dismissible = true,
   autoClose = false,
-  duration = 5000
+  duration = 5000,
 }) => {
   const [isVisible, setIsVisible] = React.useState(true)
 
   const handleClose = React.useCallback(() => {
     setIsVisible(false)
-    setTimeout(() => {
-      onClose?.()
-    }, 300)
+    setTimeout(() => { onClose?.() }, 300)
   }, [onClose])
 
   React.useEffect(() => {
     if (autoClose && duration > 0) {
-      const timer = setTimeout(() => {
-        handleClose()
-      }, duration)
+      const timer = setTimeout(handleClose, duration)
       return () => clearTimeout(timer)
     }
   }, [autoClose, duration, handleClose])
 
-  const config = {
-    error: {
-      icon: XCircle,
-      bgColor: 'bg-red-50 dark:bg-red-900/20',
-      borderColor: 'border-red-200 dark:border-red-800',
-      textColor: 'text-red-800 dark:text-red-200',
-      iconColor: 'text-red-500 dark:text-red-400',
-      titleColor: 'text-red-900 dark:text-red-100'
-    },
-    warning: {
-      icon: AlertTriangle,
-      bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
-      borderColor: 'border-yellow-200 dark:border-yellow-800',
-      textColor: 'text-yellow-800 dark:text-yellow-200',
-      iconColor: 'text-yellow-500 dark:text-yellow-400',
-      titleColor: 'text-yellow-900 dark:text-yellow-100'
-    },
-    info: {
-      icon: Info,
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      borderColor: 'border-blue-200 dark:border-blue-800',
-      textColor: 'text-blue-800 dark:text-blue-200',
-      iconColor: 'text-blue-500 dark:text-blue-400',
-      titleColor: 'text-blue-900 dark:text-blue-100'
-    },
-    success: {
-      icon: AlertCircle,
-      bgColor: 'bg-green-50 dark:bg-green-900/20',
-      borderColor: 'border-green-200 dark:border-green-800',
-      textColor: 'text-green-800 dark:text-green-200',
-      iconColor: 'text-green-500 dark:text-green-400',
-      titleColor: 'text-green-900 dark:text-green-100'
-    }
-  }
-
-  const { icon: Icon, bgColor, borderColor, textColor, iconColor, titleColor } = config[severity]
+  const s = severityStyles[severity]
+  const Icon = s.icon
 
   return (
     <AnimatePresence>
@@ -94,28 +98,30 @@ const ErrorAlert: React.FC<ErrorAlertProps> = ({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -10, scale: 0.95 }}
           transition={{ duration: 0.2 }}
-          className={`${bgColor} ${borderColor} border rounded-xl p-4 ${className}`}
+          className={`rounded-xl p-4 ${className}`}
+          style={{ background: s.bg, border: `1px solid ${s.border}` }}
           role="alert"
         >
           <div className="flex items-start gap-3">
-            <div className={`flex-shrink-0 ${iconColor}`}>
+            <div className="flex-shrink-0" style={{ color: s.iconColor }}>
               <Icon className="w-5 h-5" />
             </div>
-            
+
             <div className="flex-1 min-w-0">
               {title && (
-                <h3 className={`text-sm font-semibold ${titleColor} mb-1`}>
+                <h3 className="text-sm font-semibold mb-1" style={{ color: s.titleColor }}>
                   {title}
                 </h3>
               )}
-              <p className={`text-sm ${textColor}`}>
+              <p className="text-sm" style={{ color: s.text }}>
                 {message}
               </p>
-              
+
               {onRetry && (
                 <button
                   onClick={onRetry}
-                  className={`mt-3 text-sm font-medium ${iconColor} hover:underline focus:outline-none`}
+                  className="mt-3 text-sm font-medium hover:underline focus:outline-none"
+                  style={{ color: s.iconColor }}
                 >
                   {retryText}
                 </button>
@@ -125,7 +131,8 @@ const ErrorAlert: React.FC<ErrorAlertProps> = ({
             {dismissible && (
               <button
                 onClick={handleClose}
-                className={`flex-shrink-0 ${textColor} hover:${iconColor} transition-colors`}
+                className="flex-shrink-0 transition-opacity hover:opacity-60"
+                style={{ color: s.text }}
                 aria-label="Fermer"
               >
                 <X className="w-4 h-4" />
@@ -139,4 +146,3 @@ const ErrorAlert: React.FC<ErrorAlertProps> = ({
 }
 
 export default ErrorAlert
-

@@ -39,10 +39,10 @@ const auth = betterAuth({
   plugins: [bearer()],
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false, // MVP: désactivé — les utilisateurs se connectent immédiatement
+    requireEmailVerification: false, // Les utilisateurs se connectent immédiatement apres inscription
   },
-  // MVP: email verification désactivée pour réduire la friction et supprimer la dépendance SMTP
-  // Réactiver avec requireEmailVerification: true + les 3 lignes ci-dessous quand SMTP est prêt.
+  // Email verification encore desactivee. L'envoi transactionnel passe par Resend via emailService.
+  // Reactiver avec requireEmailVerification: true + les 3 lignes ci-dessous si vous voulez bloquer la connexion tant que l'email n'est pas verifie.
   // emailVerification: {
   //   sendOnSignUp: true,
   //   sendOnSignIn: true,

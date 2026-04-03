@@ -92,7 +92,6 @@ export const useOptimizedSocket = (options: UseOptimizedSocketOptions = {}) => {
       if (socket) {
         // Session remplacée
         socket.on('session_replaced', (data) => {
-          console.log('Session remplacée:', data.message)
           
           toast.error(
             data.message || 'Votre session a été remplacée par une nouvelle connexion.',
@@ -118,7 +117,6 @@ export const useOptimizedSocket = (options: UseOptimizedSocketOptions = {}) => {
         
         // Nom d'utilisateur déjà pris
         socket.on('username_taken', (data) => {
-          console.log('Nom d\'utilisateur pris:', data.message)
           
           toast.error(
             data.message || 'Ce nom d\'utilisateur est déjà utilisé.',
@@ -146,7 +144,6 @@ export const useOptimizedSocket = (options: UseOptimizedSocketOptions = {}) => {
         
         // Nom d'utilisateur réservé
         socket.on('username_reserved', (data) => {
-          console.log('Nom d\'utilisateur réservé:', data.message)
           
           toast.error(
             data.message || 'Ce nom d\'utilisateur appartient à un compte enregistré.',

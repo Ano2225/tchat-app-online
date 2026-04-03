@@ -5,15 +5,17 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import axiosInstance from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import ThemeToggle from '@/components/ui/ThemeToggle';
+import { LockKeyhole, Eye, EyeOff } from 'lucide-react';
 
 function ResetPasswordForm() {
-  const [password, setPassword]         = useState('');
-  const [confirm, setConfirm]           = useState('');
-  const [showPwd, setShowPwd]           = useState(false);
-  const [loading, setLoading]           = useState(false);
-  const [done, setDone]                 = useState(false);
-  const [token, setToken]               = useState('');
-  const router      = useRouter();
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm]   = useState('');
+  const [showPwd, setShowPwd]   = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [done, setDone]         = useState(false);
+  const [token, setToken]       = useState('');
+  const router       = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -25,10 +27,10 @@ function ResetPasswordForm() {
   const strength = (() => {
     if (!password) return 0;
     let s = 0;
-    if (password.length >= 6)  s++;
-    if (password.length >= 10) s++;
-    if (/[A-Z]/.test(password)) s++;
-    if (/[0-9]/.test(password)) s++;
+    if (password.length >= 6)          s++;
+    if (password.length >= 10)         s++;
+    if (/[A-Z]/.test(password))        s++;
+    if (/[0-9]/.test(password))        s++;
     if (/[^A-Za-z0-9]/.test(password)) s++;
     return s;
   })();
@@ -56,34 +58,65 @@ function ResetPasswordForm() {
   };
 
   return (
-    <div className="min-h-screen bg-blue-50 dark:bg-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Decorative blobs */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-15 animate-pulse pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse delay-1000 pointer-events-none" />
-      <div className="w-full max-w-md">
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: 'var(--bg-base)' }}
+    >
+      <header className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-end">
+        <ThemeToggle variant="inline" />
+      </header>
 
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/30">
-            <span className="text-2xl">🔒</span>
+      {/* Background glows */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div
+          className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full filter blur-3xl opacity-20 animate-pulse"
+          style={{ background: 'var(--accent)' }}
+        />
+        <div
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full filter blur-3xl opacity-10 animate-pulse"
+          style={{ background: 'var(--accent)', animationDelay: '1s' }}
+        />
+      </div>
+
+      <div className="relative w-full max-w-md">
+        <div
+          className="rounded-3xl p-6 sm:p-8"
+          style={{
+            background: 'var(--bg-panel)',
+            border: '1px solid var(--border-default)',
+            boxShadow: 'var(--shadow-xl)',
+          }}
+        >
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: 'var(--accent)', boxShadow: '0 8px 24px var(--accent-glow)' }}
+            >
+              <LockKeyhole className="w-7 h-7 text-white" />
+            </div>
+            <h1
+              className="text-2xl font-bold mb-1"
+              style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}
+            >
+              {done ? 'Mot de passe mis à jour' : 'Nouveau mot de passe'}
+            </h1>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              {done ? 'Redirection en cours…' : 'Choisissez un mot de passe sécurisé'}
+            </p>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
-            {done ? 'Mot de passe mis à jour' : 'Nouveau mot de passe'}
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            {done ? 'Redirection en cours…' : 'Choisissez un mot de passe sécurisé'}
-          </p>
-        </div>
-
-        <div className="bg-white/80 dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-3xl p-8 shadow-2xl">
 
           {done ? (
             <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto">
-                <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto"
+                style={{ background: 'var(--bg-elevated)' }}
+              >
+                <svg className="w-8 h-8" style={{ color: 'var(--online)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                 Vous allez être redirigé vers la page de connexion.
               </p>
             </div>
@@ -91,7 +124,10 @@ function ResetPasswordForm() {
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* New password */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}
+                >
                   Nouveau mot de passe
                 </label>
                 <div className="relative">
@@ -101,32 +137,49 @@ function ResetPasswordForm() {
                     onChange={e => setPassword(e.target.value)}
                     placeholder="Minimum 6 caractères"
                     required
-                    className="w-full px-4 py-3 pr-10 bg-gray-50 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white text-sm"
+                    className="w-full rounded-xl pl-10 pr-10 py-3 text-sm focus:outline-none transition-all"
+                    style={{
+                      background: 'var(--bg-surface)',
+                      border: '1px solid var(--border-default)',
+                      color: 'var(--text-primary)',
+                    }}
                   />
-                  <button type="button" onClick={() => setShowPwd(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                    {showPwd ? '🙈' : '👁'}
+                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                    <LockKeyhole className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(v => !v)}
+                    className="absolute inset-y-0 right-3 flex items-center transition-opacity hover:opacity-70"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+
                 {/* Strength bar */}
                 {password && (
                   <div className="mt-2 space-y-1">
                     <div className="flex gap-1">
-                      {[1,2,3,4,5].map(i => (
-                        <div key={i} className="h-1 flex-1 rounded-full transition-colors"
-                          style={{ background: i <= strength ? strengthColor : '#e5e7eb' }} />
+                      {[1, 2, 3, 4, 5].map(i => (
+                        <div
+                          key={i}
+                          className="h-1 flex-1 rounded-full transition-colors"
+                          style={{ background: i <= strength ? strengthColor : 'var(--border-default)' }}
+                        />
                       ))}
                     </div>
-                    <p className="text-xs" style={{ color: strengthColor }}>
-                      {strengthLabel}
-                    </p>
+                    <p className="text-xs" style={{ color: strengthColor }}>{strengthLabel}</p>
                   </div>
                 )}
               </div>
 
               {/* Confirm */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}
+                >
                   Confirmer le mot de passe
                 </label>
                 <input
@@ -135,10 +188,15 @@ function ResetPasswordForm() {
                   onChange={e => setConfirm(e.target.value)}
                   placeholder="Répétez le mot de passe"
                   required
-                  className={`w-full px-4 py-3 bg-gray-50 dark:bg-white/10 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white text-sm ${confirm && confirm !== password ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-white/20'}`}
+                  className="w-full rounded-xl px-4 py-3 text-sm focus:outline-none transition-all"
+                  style={{
+                    background: 'var(--bg-surface)',
+                    border: `1px solid ${confirm && confirm !== password ? 'var(--danger)' : 'var(--border-default)'}`,
+                    color: 'var(--text-primary)',
+                  }}
                 />
                 {confirm && confirm !== password && (
-                  <p className="text-xs mt-1 text-red-500">
+                  <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>
                     Les mots de passe ne correspondent pas
                   </p>
                 )}
@@ -147,15 +205,22 @@ function ResetPasswordForm() {
               <button
                 type="submit"
                 disabled={loading || !token}
-                className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold py-3 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-blue-500/20">
-                {loading ? 'Réinitialisation…' : 'Réinitialiser le mot de passe'}
+                className="w-full font-semibold py-3 rounded-xl transition-all disabled:opacity-50 hover:opacity-90 active:scale-[0.98] text-white flex items-center justify-center gap-2"
+                style={{ background: 'var(--accent)', boxShadow: '0 4px 16px var(--accent-glow)' }}
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Réinitialisation…
+                  </>
+                ) : 'Réinitialiser le mot de passe'}
               </button>
             </form>
           )}
         </div>
 
-        <p className="text-center mt-6 text-sm text-gray-500 dark:text-gray-400">
-          <Link href="/login" className="text-blue-600 dark:text-blue-400 hover:underline">
+        <p className="text-center mt-6 text-sm">
+          <Link href="/login" className="hover:underline" style={{ color: 'var(--accent)' }}>
             ← Retour à la connexion
           </Link>
         </p>

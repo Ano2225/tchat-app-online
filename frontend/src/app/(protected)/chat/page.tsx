@@ -186,8 +186,8 @@ const ChatPage = () => {
             clickable={false}
           />
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm text-gray-900 truncate">{sender.username}</p>
-            <p className="text-xs text-gray-500 truncate">{data.message.content || '📎 Image'}</p>
+            <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{sender.username}</p>
+            <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{data.message.content || '📎 Image'}</p>
           </div>
           <button
             onClick={() => {
@@ -196,7 +196,8 @@ const ChatPage = () => {
               setNotifChatUser(sender);
               setUnreadMap(prev => { const m = { ...prev }; delete m[senderId]; return m; });
             }}
-            className="flex-shrink-0 bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-blue-600 transition-colors font-medium"
+            className="flex-shrink-0 text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80 font-medium text-white"
+            style={{ background: 'var(--accent)' }}
           >
             Répondre
           </button>

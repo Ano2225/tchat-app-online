@@ -47,16 +47,6 @@ services:
       retries: 5
       start_period: 10s
 
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
-    container_name: babichat-mailhog-dev
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:1025:1025"   # SMTP
-      - "127.0.0.1:8025:8025"   # Web UI  →  http://localhost:8025
-    networks:
-      - babichat-dev
-
   backend:
     build:
       context: ../
@@ -69,9 +59,6 @@ services:
       NODE_ENV: development
       MONGODB_URI: mongodb://${MONGO_ROOT_USER:-babichat_dev}:${MONGO_ROOT_PASSWORD:-devpassword}@mongo:27017/babichat?authSource=admin
       REDIS_URL: redis://:${REDIS_PASSWORD:-devredis}@redis:6379
-      SMTP_HOST: mailhog
-      SMTP_PORT: 1025
-      SMTP_SECURE: "false"
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     ports:
       - "127.0.0.1:8000:8000"

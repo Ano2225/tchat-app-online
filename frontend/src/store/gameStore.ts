@@ -82,13 +82,10 @@ export const useGameStore = create<GameState>((set) => ({
           source: state.currentQuestion.source || 'Local'
         };
         
-        console.log('[STORE] Setting question with options:', gameState.currentQuestion.options);
-        
         // Calculer le temps restant si la question a un startTime
         if (state.currentQuestion.startTime) {
           const elapsed = Date.now() - new Date(state.currentQuestion.startTime).getTime();
           const remaining = Math.max(0, Math.floor((15000 - elapsed) / 1000));
-          console.log('[STORE] StartTime:', state.currentQuestion.startTime, 'Elapsed:', elapsed, 'Remaining:', remaining);
           
           // Si le temps est écoulé, ne pas afficher la question
           if (remaining <= 0) {
@@ -115,8 +112,6 @@ export const useGameStore = create<GameState>((set) => ({
 
   setQuestion: (question) => {
     try {
-      console.log('[STORE] Setting new question:', question);
-      
       if (!question) {
         set({
           currentQuestion: null,

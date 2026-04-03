@@ -11,6 +11,11 @@ import Script from 'next/script';
 export const metadata: Metadata = {
   title: "BabiChat - Chat en ligne",
   description: "BabiChat - Connecte-toi avec tes potes en temps réel. Chat sécurisé et rapide.",
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({

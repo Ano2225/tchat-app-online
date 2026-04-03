@@ -15,8 +15,8 @@ Application de chat en temps réel full-stack avec messagerie privée, quiz mult
 | **Temps réel** | Socket.IO (chat, présence, jeux, messages privés) |
 | **Upload** | Cloudinary via Multer |
 | **IA** | Groq, Ollama, Google Vertex AI, HuggingFace (sélectable) |
-| **Email (dev)** | Mailhog via Docker |
-| **Infrastructure** | Docker Compose (MongoDB + Mailhog) |
+| **Email** | Resend |
+| **Infrastructure** | Docker Compose |
 
 ---
 
@@ -105,7 +105,7 @@ Application de chat en temps réel full-stack avec messagerie privée, quiz mult
 │   │   ├── store/               # authStore (Zustand), gameStore
 │   │   └── utils/               # axiosInstance, axiosInterceptor
 ├── infra/
-│   └── docker-compose.yml       # MongoDB + Mailhog
+│   └── docker-compose.yml       # MongoDB
 ├── docs/
 ├── package.json                 # Dépendances backend (racine)
 └── .env.example
@@ -118,14 +118,14 @@ Application de chat en temps réel full-stack avec messagerie privée, quiz mult
 ### Prérequis
 
 - Node.js 20+
-- Docker (pour MongoDB + Mailhog en local)
+- Docker (pour MongoDB en local)
 
 ### 1. Infrastructure
 
 ```bash
 cd infra
 docker compose up -d
-# MongoDB sur :27017 | Mailhog UI sur http://localhost:8025
+# MongoDB sur :27017
 ```
 
 ### 2. Variables d'environnement
@@ -136,6 +136,7 @@ cp .env.example .env
 # MONGODB_URI, BETTER_AUTH_SECRET, JWT_SECRET, FRONTEND_URL
 # CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
 # GROQ_API_KEY  (ou autre provider IA)
+# RESEND_API_KEY, RESEND_FROM (ex: BabiChat <no-reply@babichat.tech>)
 ```
 
 ### 3. Backend
@@ -172,6 +173,8 @@ npm run init-admin      # Crée le compte admin
 | `BETTER_AUTH_SECRET` | Oui | Secret better-auth |
 | `JWT_SECRET` | Oui | Clé de signature JWT |
 | `FRONTEND_URL` | Oui | Origine CORS (`http://localhost:3000`) |
+| `RESEND_API_KEY` | Email | Clé API Resend |
+| `RESEND_FROM` | Email | Expéditeur validé dans Resend |
 | `CLOUDINARY_CLOUD_NAME` | Uploads | Identifiants Cloudinary |
 | `CLOUDINARY_API_KEY` | Uploads | |
 | `CLOUDINARY_API_SECRET` | Uploads | |

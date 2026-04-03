@@ -1,164 +1,80 @@
-const net = require('net');
-const tls = require('tls');
-const os = require('os');
+const { Resend } = require('resend');
 
-const getSmtpConfig = () => {
-  const host = process.env.SMTP_HOST || process.env.MAILHOG_HOST || 'localhost';
-  const port = Number(process.env.SMTP_PORT || process.env.MAILHOG_PORT || 1025);
-  const secure = String(process.env.SMTP_SECURE || 'false') === 'true';
-  const user = process.env.SMTP_USER || '';
-  const pass = process.env.SMTP_PASS || '';
-  const from = process.env.MAIL_FROM || 'no-reply@babichat.local';
-
-  return { host, port, secure, user, pass, from };
-};
-
-let cachedTransporter = null;
 const verificationPreviews = new Map();
 
-const getTransporter = () => {
-  if (cachedTransporter) return cachedTransporter;
+let cachedClient = null;
+let cachedApiKey = null;
 
-  let nodemailer;
-  try {
-    nodemailer = require('nodemailer');
-  } catch (error) {
-    return null;
-  }
+const getEmailConfig = () => {
+  const apiKey = process.env.RESEND_API_KEY || '';
+  const from = process.env.RESEND_FROM || process.env.MAIL_FROM || 'BabiChat <no-reply@babichat.tech>';
 
-  const { host, port, secure, user, pass } = getSmtpConfig();
-  const auth = user ? { user, pass } : undefined;
-  cachedTransporter = nodemailer.createTransport({ host, port, secure, auth });
-  return cachedTransporter;
+  return {
+    apiKey,
+    from
+  };
 };
 
-const readSmtpResponse = (socket) => {
-  return new Promise((resolve, reject) => {
-    let buffer = '';
+const getClient = () => {
+  const { apiKey } = getEmailConfig();
+  if (!apiKey) return null;
 
-    const cleanup = () => {
-      socket.off('data', onData);
-      socket.off('error', onError);
-      socket.off('close', onClose);
-    };
-
-    const onData = (chunk) => {
-      buffer += chunk.toString();
-      const lines = buffer.split('\r\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        if (/^\d{3} /.test(line)) {
-          cleanup();
-          resolve(line);
-          return;
-        }
-      }
-    };
-
-    const onError = (error) => {
-      cleanup();
-      reject(error);
-    };
-
-    const onClose = () => {
-      cleanup();
-      reject(new Error('SMTP connection closed'));
-    };
-
-    socket.on('data', onData);
-    socket.on('error', onError);
-    socket.on('close', onClose);
-  });
-};
-
-const sendSmtpCommand = async (socket, command, expectedCode) => {
-  if (command) {
-    socket.write(`${command}\r\n`);
+  if (!cachedClient || cachedApiKey !== apiKey) {
+    cachedClient = new Resend(apiKey);
+    cachedApiKey = apiKey;
   }
 
-  const response = await readSmtpResponse(socket);
-  if (expectedCode && !response.startsWith(expectedCode)) {
-    throw new Error(`SMTP error: ${response}`);
-  }
-
-  return response;
+  return cachedClient;
 };
 
-const buildRawMessage = ({ from, to, subject, text }) => {
-  const headers = [
-    `From: ${from}`,
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    'MIME-Version: 1.0',
-    'Content-Type: text/plain; charset="utf-8"',
-    'Content-Transfer-Encoding: 8bit'
-  ];
+const buildDisabledDelivery = ({ to, subject, text, warning }) => {
+  console.warn(warning);
+  console.log(`[EMAIL PREVIEW] to=${to} subject="${subject}"`);
+  console.log(text);
 
-  const body = (text || '').replace(/\r?\n/g, '\r\n');
-  return `${headers.join('\r\n')}\r\n\r\n${body}\r\n`;
-};
-
-const sendWithRawSmtp = async ({ host, port, secure, user, pass, from, to, subject, text }) => {
-  const socket = secure
-    ? tls.connect({ host, port })
-    : net.connect({ host, port });
-
-  socket.setTimeout(10000);
-  socket.on('timeout', () => {
-    socket.destroy(new Error('SMTP timeout'));
-  });
-
-  try {
-    await readSmtpResponse(socket);
-    await sendSmtpCommand(socket, `EHLO ${os.hostname()}`, '250');
-
-    if (user) {
-      await sendSmtpCommand(socket, 'AUTH LOGIN', '334');
-      await sendSmtpCommand(socket, Buffer.from(user).toString('base64'), '334');
-      await sendSmtpCommand(socket, Buffer.from(pass || '').toString('base64'), '235');
-    }
-
-    await sendSmtpCommand(socket, `MAIL FROM:<${from}>`, '250');
-    await sendSmtpCommand(socket, `RCPT TO:<${to}>`, '250');
-    await sendSmtpCommand(socket, 'DATA', '354');
-
-    socket.write(`${buildRawMessage({ from, to, subject, text })}\r\n.\r\n`);
-    await readSmtpResponse(socket);
-    await sendSmtpCommand(socket, 'QUIT', '221');
-  } finally {
-    socket.end();
-  }
+  return {
+    delivered: false,
+    warning,
+    preview: true
+  };
 };
 
 const sendMail = async ({ to, subject, text, html }) => {
-  const transporter = getTransporter();
-  const { host, port, secure, user, pass, from } = getSmtpConfig();
+  const client = getClient();
+  const { from } = getEmailConfig();
 
-  if (!transporter) {
-    try {
-      await sendWithRawSmtp({ host, port, secure, user, pass, from, to, subject, text });
-      return { delivered: true };
-    } catch (error) {
-      console.warn('SMTP non configure. Email de verification non envoye.');
-      console.log(`[EMAIL VERIFICATION] to=${to} subject="${subject}"`);
-      console.log(text);
-      return {
-        delivered: false,
-        warning: 'SMTP non configure. Email de verification non envoye.'
-      };
-    }
+  if (!client) {
+    return buildDisabledDelivery({
+      to,
+      subject,
+      text,
+      warning: 'RESEND_API_KEY manquante. Email non envoye.'
+    });
   }
 
   try {
-    await transporter.sendMail({ from, to, subject, text, html });
-    return { delivered: true };
+    const response = await client.emails.send({
+      from,
+      to,
+      subject,
+      text,
+      html
+    });
+
+    if (response?.error) {
+      throw new Error(response.error.message || 'Erreur Resend');
+    }
+
+    return {
+      delivered: true,
+      id: response?.data?.id
+    };
   } catch (error) {
-    console.warn('Erreur SMTP. Email de verification non envoye.');
+    console.warn('Erreur Resend. Email non envoye.');
     console.error(error);
     return {
       delivered: false,
-      warning: 'Erreur SMTP. Email de verification non envoye.'
+      warning: error?.message || 'Erreur Resend. Email non envoye.'
     };
   }
 };
@@ -173,15 +89,40 @@ const buildVerificationEmail = ({ user, url }) => {
     'Veuillez confirmer votre email en cliquant sur le lien suivant :',
     url,
     '',
-    'Si vous n\'etes pas a l\'origine de cette demande, ignorez cet email.'
+    "Si vous n'etes pas a l'origine de cette demande, ignorez cet email."
   ].join('\n');
 
   const html = [
     `<p>Bonjour ${displayName},</p>`,
     '<p>Merci pour votre inscription.</p>',
-    `<p>Veuillez confirmer votre email en cliquant sur le lien suivant :</p>`,
+    '<p>Veuillez confirmer votre email en cliquant sur le lien suivant :</p>',
     `<p><a href="${url}">${url}</a></p>`,
-    '<p>Si vous n\'etes pas a l\'origine de cette demande, ignorez cet email.</p>'
+    "<p>Si vous n'etes pas a l'origine de cette demande, ignorez cet email.</p>"
+  ].join('');
+
+  return { subject, text, html };
+};
+
+const buildWelcomeEmail = ({ user }) => {
+  const displayName = user?.name || user?.username || 'utilisateur';
+  const subject = 'Bienvenue sur BabiChat';
+  const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
+  const text = [
+    `Bonjour ${displayName},`,
+    '',
+    'Bienvenue sur BabiChat.',
+    'Votre compte a bien ete cree et vous pouvez maintenant rejoindre la communaute.',
+    `Connexion : ${loginUrl}`,
+    '',
+    "Si vous n'etes pas a l'origine de cette inscription, repondez a cet email."
+  ].join('\n');
+
+  const html = [
+    `<p>Bonjour ${displayName},</p>`,
+    '<p>Bienvenue sur <strong>BabiChat</strong>.</p>',
+    '<p>Votre compte a bien ete cree et vous pouvez maintenant rejoindre la communaute.</p>',
+    `<p><a href="${loginUrl}">Se connecter a BabiChat</a></p>`,
+    "<p>Si vous n'etes pas a l'origine de cette inscription, repondez a cet email.</p>"
   ].join('');
 
   return { subject, text, html };
@@ -194,7 +135,7 @@ const sendVerificationEmail = async ({ user, url }) => {
   }
 
   const { subject, text, html } = buildVerificationEmail({ user, url });
-  const { delivered, warning } = await sendMail({ to: user.email, subject, text, html });
+  const { delivered, warning, preview, id } = await sendMail({ to: user.email, subject, text, html });
   verificationPreviews.set(user.email.toLowerCase(), {
     email: user.email,
     subject,
@@ -203,10 +144,25 @@ const sendVerificationEmail = async ({ user, url }) => {
     url,
     delivered,
     warning,
+    preview,
+    id,
     timestamp: new Date().toISOString()
   });
 
-  return { delivered, warning, url };
+  return { delivered, warning, preview, id, url };
+};
+
+const sendWelcomeEmail = async ({ user }) => {
+  if (!user?.email) {
+    console.warn('Email utilisateur manquant, bienvenue non envoyee.');
+    return {
+      delivered: false,
+      warning: 'Email utilisateur manquant.'
+    };
+  }
+
+  const { subject, text, html } = buildWelcomeEmail({ user });
+  return sendMail({ to: user.email, subject, text, html });
 };
 
 const getVerificationEmailPreview = (email) => {
@@ -216,6 +172,7 @@ const getVerificationEmailPreview = (email) => {
 
 module.exports = {
   sendVerificationEmail,
+  sendWelcomeEmail,
   getVerificationEmailPreview,
   sendMail
 };
