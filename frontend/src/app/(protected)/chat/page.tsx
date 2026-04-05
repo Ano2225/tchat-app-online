@@ -10,6 +10,7 @@ import ChatHeader from '@/components/chat/ChatHeader';
 import ChatInput from '@/components/chat/ChatInput';
 import GamePanel from '@/components/Game/GamePanel';
 import { useGame } from '@/hooks/useGame';
+import { useGameStore } from '@/store/gameStore';
 import UsersOnline from '@/components/chat/UsersOnline';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import toast from 'react-hot-toast';
@@ -257,6 +258,15 @@ const ChatPage = () => {
   const [showGame, setShowGame] = useState(false);
   const isGameRoom = currentRoom === 'Game';
 
+  // Auto-scroll game panel to top on each new question
+  const gamePanelRef = useRef<HTMLDivElement>(null);
+  const currentQuestion = useGameStore((s) => s.currentQuestion);
+  useEffect(() => {
+    if (gamePanelRef.current) {
+      gamePanelRef.current.scrollTop = 0;
+    }
+  }, [currentQuestion?.question]);
+
   return (
     <div className="h-screen" style={{ background: 'var(--bg-base)' }}>
       <ChatHeader
@@ -267,7 +277,7 @@ const ChatPage = () => {
       />
       
       {/* Mobile: Bottom action bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around px-4 py-2 safe-area-pb"
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around px-4 py-2 safe-area-pb"
         style={{ background: 'var(--bg-panel)', borderTop: '1px solid var(--border-default)' }}>
         <button
           onClick={() => { setShowChannels(v => !v); setShowUsers(false); }}
@@ -321,7 +331,7 @@ const ChatPage = () => {
         </div>
       )}
 
-      <div className="flex h-[calc(100vh-80px)] md:h-[calc(100vh-80px)] gap-2 p-2 pb-16 md:pb-2 relative">
+      <div className="flex h-[calc(100vh-80px)] gap-2 p-2 pb-16 lg:pb-2 relative">
         {/* Channel Sidebar - Desktop always visible, Mobile overlay */}
         <div className={`
           md:flex-shrink-0 md:relative md:translate-x-0
@@ -366,7 +376,7 @@ const ChatPage = () => {
           </div>
           
           {currentRoom === 'Game' && (
-            <div className="hidden lg:flex w-80 flex-col rounded-xl overflow-y-auto p-3 gap-3" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}>
+            <div ref={gamePanelRef} className="hidden lg:flex w-80 flex-col rounded-xl overflow-y-auto p-3 gap-3" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}>
               <GamePanel channel={currentRoom} socket={socket ?? undefined} />
             </div>
           )}

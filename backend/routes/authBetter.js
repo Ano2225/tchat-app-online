@@ -5,7 +5,16 @@ const User = require('../models/User');
 const { ObjectId } = require('mongodb');
 const { getVerificationEmailPreview, sendMail, sendWelcomeEmail } = require('../services/emailService');
 const crypto = require('crypto');
-const bcrypt = require('bcryptjs');
+// Password hashing using the same scrypt config as better-auth
+// Format: hexSalt:hexKey  (matches better-auth's own hashPassword/verifyPassword)
+const { scryptAsync } = require('@noble/hashes/scrypt.js');
+const { bytesToHex, randomBytes: nobleRandomBytes } = require('@noble/hashes/utils.js');
+
+const hashPassword = async (password) => {
+  const salt = bytesToHex(nobleRandomBytes(16));
+  const key = await scryptAsync(password.normalize('NFKC'), salt, { N: 16384, r: 16, p: 1, dkLen: 64, maxmem: 128 * 16384 * 16 * 2 });
+  return `${salt}:${bytesToHex(key)}`;
+};
 const { authMiddleware, sessionCache } = require('../middleware/authBetter');
 const { getCsrfToken, csrfProtection } = require('../middleware/csrf');
 
@@ -101,6 +110,13 @@ const ensureUsernameAvailable = async (username) => {
     error.statusCode = 409;
     throw error;
   }
+};
+
+const extractResetToken = (value) => {
+  if (!value) return '';
+  const normalizedValue = decodeURIComponent(String(value)).trim();
+  const match = normalizedValue.match(/[a-f0-9]{64}/i);
+  return match ? match[0].toLowerCase() : '';
 };
 
 // Routes better-auth automatiques
@@ -483,10 +499,15 @@ router.post('/request-password-reset', async (req, res) => {
     const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
     const expires    = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    await User.collection.updateOne(
-      { _id: user._id },
+    const updateResult = await User.updateOne(
+      { email: user.email },
       { $set: { resetPasswordToken: hashedToken, resetPasswordExpires: expires } }
     );
+
+    if (updateResult.matchedCount === 0) {
+      console.error(`[password-reset] Failed to store token — user not found by email: ${user.email}`);
+      return res.status(500).json({ message: 'Erreur serveur' });
+    }
 
     const frontendUrl = getFrontendBaseUrl(req);
     const resetUrl = `${frontendUrl}/reset-password?token=${rawToken}`;
@@ -512,10 +533,11 @@ router.post('/request-password-reset', async (req, res) => {
 router.post('/reset-password', async (req, res) => {
   try {
     const { token, newPassword } = req.body;
-    if (!token || !newPassword) return res.status(400).json({ message: 'Token et nouveau mot de passe requis' });
+    const normalizedToken = extractResetToken(token);
+    if (!normalizedToken || !newPassword) return res.status(400).json({ message: 'Token et nouveau mot de passe requis' });
     if (newPassword.length < 6) return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 6 caractères' });
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    const hashedToken = crypto.createHash('sha256').update(normalizedToken).digest('hex');
 
     const user = await User.findOne({
       resetPasswordToken:   hashedToken,
@@ -525,8 +547,8 @@ router.post('/reset-password', async (req, res) => {
 
     if (!user) return res.status(400).json({ message: 'Token invalide ou expiré' });
 
-    // Hash the new password using bcryptjs (same lib better-auth uses)
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    // Hash using the same scrypt config as better-auth (salt:key hex format)
+    const hashedPassword = await hashPassword(newPassword);
 
     // Update the password in better-auth's account collection
     const db = require('mongoose').connection.db;
@@ -536,8 +558,8 @@ router.post('/reset-password', async (req, res) => {
     );
 
     // Clear reset token
-    await User.collection.updateOne(
-      { _id: user._id },
+    await User.updateOne(
+      { email: user.email },
       { $unset: { resetPasswordToken: 1, resetPasswordExpires: 1 } }
     );
 

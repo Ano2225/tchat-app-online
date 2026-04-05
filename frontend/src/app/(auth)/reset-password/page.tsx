@@ -18,9 +18,16 @@ function ResetPasswordForm() {
   const router       = useRouter();
   const searchParams = useSearchParams();
 
+  const extractToken = (value: string | null) => {
+    if (!value) return '';
+    const decoded = decodeURIComponent(value).trim();
+    const match = decoded.match(/[a-f0-9]{64}/i);
+    return match ? match[0].toLowerCase() : '';
+  };
+
   useEffect(() => {
-    const t = searchParams.get('token');
-    if (!t) { toast.error('Token manquant'); router.push('/login'); return; }
+    const t = extractToken(searchParams.get('token'));
+    if (!t) { toast.error('Token manquant ou invalide'); router.push('/login'); return; }
     setToken(t);
   }, [searchParams, router]);
 

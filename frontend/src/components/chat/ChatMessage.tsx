@@ -55,12 +55,13 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const user = useAuthStore((state) => state.user);
   const isGameChannel = currentRoom === 'Game';
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   };
 
   const loadMessages = async (room: string) => {
@@ -421,8 +422,6 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
           </div>
         </div>
       )}
-      
-      <div ref={messagesEndRef} />
       
       {selectedUser && (
         <UserSelectedModal
