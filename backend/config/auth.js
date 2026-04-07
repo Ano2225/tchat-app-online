@@ -39,15 +39,18 @@ const auth = betterAuth({
   plugins: [bearer()],
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false, // Les utilisateurs se connectent immédiatement apres inscription
+    // Enable email verification only when RESEND_API_KEY is configured.
+    // Without a working email provider, enabling this would lock all new users out.
+    requireEmailVerification: !!process.env.RESEND_API_KEY,
   },
-  // Email verification encore desactivee. L'envoi transactionnel passe par Resend via emailService.
-  // Reactiver avec requireEmailVerification: true + les 3 lignes ci-dessous si vous voulez bloquer la connexion tant que l'email n'est pas verifie.
-  // emailVerification: {
-  //   sendOnSignUp: true,
-  //   sendOnSignIn: true,
-  //   sendVerificationEmail,
-  // },
+  // Email verification is active when RESEND_API_KEY is set (see above).
+  ...(process.env.RESEND_API_KEY ? {
+    emailVerification: {
+      sendOnSignUp: true,
+      sendOnSignIn: false,
+      sendVerificationEmail,
+    },
+  } : {}),
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,

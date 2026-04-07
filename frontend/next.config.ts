@@ -4,20 +4,26 @@ const nextConfig: import('next').NextConfig = {
   // Production optimizations
   output: 'standalone',
 
-  eslint: {
-    ignoreDuringBuilds: false,
+  // Strip console.* calls in production builds (keeps console.error)
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production'
+      ? { exclude: ['error'] }
+      : false,
   },
-  typescript: {
-    ignoreBuildErrors: false,
-  },
+
+  // No source maps shipped to browser in production (reduces JS payload ~30%)
+  productionBrowserSourceMaps: false,
+
   images: {
-    domains: ['res.cloudinary.com'],
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
       },
     ],
+  },
+  turbopack: {
+    root: __dirname,
   },
   async rewrites() {
     return [
@@ -33,6 +39,21 @@ const nextConfig: import('next').NextConfig = {
       {
         source: '/:path*',
         headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-* required by Next.js dev/hydration
+              "style-src 'self' 'unsafe-inline'",
+              "font-src 'self'",
+              "img-src 'self' data: blob: https://res.cloudinary.com",
+              "connect-src 'self' https://babichat.tech wss://babichat.tech http://localhost:8000 ws://localhost:8000",
+              "media-src 'self' https://res.cloudinary.com",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join('; ')
+          },
           {
             key: 'X-DNS-Prefetch-Control',
             value: 'on'

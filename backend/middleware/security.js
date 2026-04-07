@@ -59,7 +59,7 @@ const helmetConfig = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      styleSrc: ["'self'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
       scriptSrc: ["'self'"],
@@ -157,7 +157,10 @@ const secureLogger = (req, res, next) => {
 const loginAttempts = new Map();
 
 const checkBruteForce = (req, res, next) => {
-  if (process.env.NODE_ENV === 'development') {
+  // Only bypass brute-force on explicit local dev — never in production or staging
+  const isLocalDev = process.env.NODE_ENV === 'development'
+    && (process.env.FRONTEND_URL || '').includes('localhost');
+  if (isLocalDev) {
     return next();
   }
 

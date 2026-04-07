@@ -56,10 +56,11 @@ const ReportModal: React.FC<ReportModalProps> = ({ targetUserId, onClose, userna
         
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="report-reason" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Raison du signalement
             </label>
             <select
+              id="report-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"

@@ -33,6 +33,7 @@ export const useOptimizedSocket = (options: UseOptimizedSocketOptions = {}) => {
     transports: ['websocket', 'polling'],
     upgrade: true,
     rememberUpgrade: true,
+    withCredentials: true, // send session_token httpOnly cookie with handshake
     auth: { token: useAuthStore.getState().token },
   }), [autoConnect, reconnectionAttempts, reconnectionDelay])
 

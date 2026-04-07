@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
+import dynamic from 'next/dynamic';
+import type { Socket } from 'socket.io-client';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import ChatMessage from '@/components/chat/ChatMessage';
 import ChatChannel from '@/components/chat/ChatChannel';
 import ChatHeader from '@/components/chat/ChatHeader';
 import ChatInput from '@/components/chat/ChatInput';
-import GamePanel from '@/components/Game/GamePanel';
 import { useGame } from '@/hooks/useGame';
 import { useGameStore } from '@/store/gameStore';
 import UsersOnline from '@/components/chat/UsersOnline';
@@ -17,7 +17,9 @@ import toast from 'react-hot-toast';
 import PrivateChatBox from '@/components/chat/PrivateChatBox';
 import GenderAvatar from '@/components/ui/GenderAvatar';
 import axiosInstance from '@/utils/axiosInstance';
-import MusicPlayer from '@/components/ui/MusicPlayer';
+
+const GamePanel = dynamic(() => import('@/components/Game/GamePanel'), { ssr: false });
+const MusicPlayer = dynamic(() => import('@/components/ui/MusicPlayer'), { ssr: false });
 
 interface Message {
   _id: string;
@@ -74,10 +76,14 @@ const ChatPage = () => {
 
   useEffect(() => {
     const currentToken = useAuthStore.getState().token;
-    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000', {
-      auth: { token: currentToken },
-    });
-    setSocket(newSocket);
+    let newSocket: Socket;
+
+    import('socket.io-client').then(({ io }) => {
+      newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000', {
+        auth: { token: currentToken },
+        withCredentials: true,
+      });
+      setSocket(newSocket);
 
     const handleConnect = () => {
       // Send a user_connected event as soon as the socket connects.
@@ -99,11 +105,14 @@ const ChatPage = () => {
       }
     };
 
-    newSocket.on('connect', handleConnect);
+      newSocket.on('connect', handleConnect);
+    });
 
     return () => {
-      newSocket.off('connect', handleConnect);
-      newSocket.disconnect();
+      if (newSocket) {
+        newSocket.off('connect');
+        newSocket.disconnect();
+      }
     };
   // We intentionally do not include `currentRoom` here to avoid recreating the socket when the room changes.
   // `user` is used only to pick the username to send on first connect; updates to username are handled elsewhere.
@@ -268,7 +277,7 @@ const ChatPage = () => {
   }, [currentQuestion?.question]);
 
   return (
-    <div className="h-screen" style={{ background: 'var(--bg-base)' }}>
+    <main className="h-screen-dynamic" style={{ background: 'var(--bg-base)' }}>
       <ChatHeader
         users={user || undefined}
         socket={socket}
@@ -277,11 +286,13 @@ const ChatPage = () => {
       />
       
       {/* Mobile: Bottom action bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around px-4 py-2 safe-area-pb"
-        style={{ background: 'var(--bg-panel)', borderTop: '1px solid var(--border-default)' }}>
+      <div
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around px-4 pt-2 safe-bottom"
+        style={{ background: 'var(--bg-panel)', borderTop: '1px solid var(--border-default)', paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+      >
         <button
           onClick={() => { setShowChannels(v => !v); setShowUsers(false); }}
-          className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all"
+          className="flex flex-col items-center gap-0.5 min-w-[4rem] py-2 rounded-xl transition-all active:scale-95"
           style={{ color: showChannels ? 'var(--accent)' : 'var(--text-muted)', background: showChannels ? 'var(--accent-dim)' : 'transparent' }}
           aria-label="Salons"
         >
@@ -292,7 +303,7 @@ const ChatPage = () => {
         </button>
         <button
           onClick={() => { setShowUsers(v => !v); setShowChannels(false); }}
-          className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all"
+          className="flex flex-col items-center gap-0.5 min-w-[4rem] py-2 rounded-xl transition-all active:scale-95"
           style={{ color: showUsers ? 'var(--accent)' : 'var(--text-muted)', background: showUsers ? 'var(--accent-dim)' : 'transparent' }}
           aria-label="Utilisateurs"
         >
@@ -304,7 +315,7 @@ const ChatPage = () => {
         {isGameRoom && (
           <button
             onClick={() => setShowGame(!showGame)}
-            className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-all"
+            className="flex flex-col items-center gap-0.5 min-w-[4rem] py-2 rounded-xl transition-all active:scale-95"
             style={{ color: showGame ? 'var(--accent)' : 'var(--text-muted)', background: showGame ? 'var(--accent-dim)' : 'transparent' }}
             aria-label="Quiz"
           >
@@ -331,13 +342,15 @@ const ChatPage = () => {
         </div>
       )}
 
-      <div className="flex h-[calc(100vh-80px)] gap-2 p-2 pb-16 lg:pb-2 relative">
+      <div
+        className="flex gap-2 p-2 chat-body relative"
+        style={{ height: 'calc(100dvh - var(--header-h))' }}
+      >
         {/* Channel Sidebar - Desktop always visible, Mobile overlay */}
-        <div className={`
-          md:flex-shrink-0 md:relative md:translate-x-0
-          fixed top-20 bottom-0 left-0 z-40 transform transition-transform duration-300 ease-in-out
-          ${showChannels ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        `}>
+        <div
+          className={`md:flex-shrink-0 md:relative md:translate-x-0 fixed bottom-0 left-0 z-40 transform transition-transform duration-300 ease-in-out ${showChannels ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
+          style={{ top: 'var(--header-h)' }}
+        >
           <div className="h-full md:h-auto">
             <ChatChannel
               onJoinRoom={handleJoinRoom}
@@ -383,11 +396,10 @@ const ChatPage = () => {
         </div>
 
         {/* Users Sidebar - Desktop always visible, Mobile overlay */}
-        <div className={`
-          md:flex-shrink-0 md:relative md:translate-x-0
-          fixed top-20 bottom-0 right-0 w-full sm:w-72 md:w-auto z-40 transform transition-transform duration-300 ease-in-out
-          ${showUsers ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
-        `}>
+        <div
+          className={`md:flex-shrink-0 md:relative md:translate-x-0 fixed bottom-0 right-0 w-full sm:w-72 md:w-auto z-40 transform transition-transform duration-300 ease-in-out ${showUsers ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}
+          style={{ top: 'var(--header-h)' }}
+        >
           <div className="h-full md:h-auto">
             <ErrorBoundary>
               <UsersOnline
@@ -437,7 +449,7 @@ const ChatPage = () => {
         />
       )}
       <MusicPlayer />
-    </div>
+    </main>
   );
 };
 

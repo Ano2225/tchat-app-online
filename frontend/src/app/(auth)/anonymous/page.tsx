@@ -159,10 +159,11 @@ export default function AnonymousPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}>
+              <label htmlFor="anon-sexe" className="block text-sm font-medium mb-2" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}>
                 Votre sexe
               </label>
               <select
+                id="anon-sexe"
                 name="sexe"
                 value={formData.sexe}
                 onChange={handleChange}

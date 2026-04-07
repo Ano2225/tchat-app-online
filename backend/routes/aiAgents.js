@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const aiService = require('../services/aiService');
 const { authMiddleware } = require('../middleware/authBetter');
+const { csrfProtection } = require('../middleware/csrf');
 const { enforceAIQuota } = require('../middleware/aiQuota');
 
 const requireNonAnonymous = (req, res, next) => {
@@ -41,7 +42,7 @@ router.get('/:agentId', (req, res) => {
 });
 
 // Chat with agent
-router.post('/chat', authMiddleware, requireNonAnonymous, enforceAIQuota(), async (req, res) => {
+router.post('/chat', authMiddleware, csrfProtection, requireNonAnonymous, enforceAIQuota(), async (req, res) => {
   try {
     const { message, agentId, context = [] } = req.body;
     
@@ -53,8 +54,7 @@ router.post('/chat', authMiddleware, requireNonAnonymous, enforceAIQuota(), asyn
     res.json({ response });
   } catch (error) {
     console.error('Error in AI chat:', error);
-    // Retourner l'erreur réelle au lieu d'un message générique
-    res.status(500).json({ error: error.message || 'Erreur lors de la génération de la réponse' });
+    res.status(500).json({ error: process.env.NODE_ENV === 'development' ? error.message : 'Erreur lors de la génération de la réponse' });
   }
 });
 

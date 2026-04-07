@@ -25,7 +25,8 @@ const MAGIC_BYTES = [
     { bytes: [0x89, 0x50, 0x4E, 0x47], mime: 'image/png' },
     { bytes: [0x47, 0x49, 0x46, 0x38], mime: 'image/gif' },
     { bytes: [0x42, 0x4D], mime: 'image/bmp' },
-    { bytes: [0x52, 0x49, 0x46, 0x46], mime: 'image/webp' }, // RIFF header (WebP)
+    // WebP: RIFF header (bytes 0-3) + "WEBP" marker (bytes 8-11)
+    { bytes: [0x52, 0x49, 0x46, 0x46, null, null, null, null, 0x57, 0x45, 0x42, 0x50], mime: 'image/webp' },
     { bytes: [0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70], mime: 'video/mp4' }, // ftyp MP4
     { bytes: [0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70], mime: 'video/mp4' },
 ];
@@ -33,7 +34,8 @@ const MAGIC_BYTES = [
 function detectMimeFromBuffer(buffer) {
     for (const sig of MAGIC_BYTES) {
         if (buffer.length >= sig.bytes.length) {
-            const match = sig.bytes.every((byte, i) => buffer[i] === byte);
+            // null entries act as wildcard bytes (e.g. WebP variable-length size field)
+            const match = sig.bytes.every((byte, i) => byte === null || buffer[i] === byte);
             if (match) return sig.mime;
         }
     }
@@ -55,7 +57,7 @@ const upload = multer({
     }
 });
 
-router.post('/', csrfProtection, authMiddleware, upload.single('media'), async (req, res) => {
+router.post('/', authMiddleware, csrfProtection, upload.single('media'), async (req, res) => {
     // Vérification d'autorisation supplémentaire
     if (!req.user || !req.user.id) {
         return res.status(401).json({ error: 'Utilisateur non authentifié' });
@@ -110,7 +112,7 @@ router.post('/', csrfProtection, authMiddleware, upload.single('media'), async (
         }
 
         if (error.message && error.message.startsWith('Type de fichier non supporté')) {
-            return res.status(415).json({ error: error.message });
+            return res.status(415).json({ error: 'Type de fichier non supporté' });
         }
         res.status(500).json({ error: 'Échec du téléchargement du fichier. Veuillez réessayer.' });
     }

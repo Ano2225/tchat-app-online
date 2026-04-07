@@ -3,6 +3,7 @@ import { useAuthStore } from '@/store/authStore';
 
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api',
+  withCredentials: true, // send httpOnly session_token cookie with every request
   headers: {
     'Content-Type': 'application/json',
   },

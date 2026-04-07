@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, FormEvent, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/authStore'
@@ -11,7 +11,7 @@ import ErrorAlert from '@/components/ui/ErrorAlert'
 import { isRateLimitError } from '@/utils/errorHandler'
 import { MessageCircle, User, Lock, Eye, EyeOff } from 'lucide-react'
 
-export default function LoginPage() {
+function LoginPageInner() {
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -25,6 +25,17 @@ export default function LoginPage() {
   const [sendingVerification, setSendingVerification] = useState(false)
   const { loading, error, errorInfo, withLoading, reset } = useLoadingState()
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (searchParams.get('verified') === 'true') {
+      toast.success('Email confirmé avec succès ! Vous pouvez maintenant vous connecter.', {
+        duration: 5000,
+        position: 'top-center',
+      })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const getLoginErrorMessage = (code?: string, fallback?: string) => {
     switch (code) {
@@ -223,7 +234,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div
+    <main
       className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
       style={{ background: 'var(--bg-base)' }}
     >
@@ -449,6 +460,14 @@ export default function LoginPage() {
           </Link>
         </div>
       </div>
-    </div>
+    </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageInner />
+    </Suspense>
   )
 }

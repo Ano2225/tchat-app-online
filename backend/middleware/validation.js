@@ -52,11 +52,11 @@ const validateMessage = (req, res, next) => {
   next();
 };
 
-// Validation des IDs MongoDB
+// Validation des IDs — accepte les ObjectId MongoDB 24-char ET les IDs better-auth 32-char
 const validateObjectId = (paramName) => {
   return (req, res, next) => {
     const id = req.params[paramName];
-    if (!id || !/^[0-9a-fA-F]{24}$/.test(id)) {
+    if (!id || !/^[0-9a-fA-F]{24}$/.test(id) && !/^[0-9a-fA-F]{32}$/.test(id)) {
       return res.status(400).json({ message: 'ID invalide' });
     }
     next();

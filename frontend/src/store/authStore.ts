@@ -55,6 +55,7 @@ interface AuthState {
   updateUser: (newUserData: Partial<User>) => Promise<void>
   setIsAnonymous: (isAnonymous: boolean) => void
   fetchUserProfile: () => Promise<void>
+  hydrateSession: () => Promise<boolean>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -72,6 +73,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await fetch('/api/auth/register', {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
           })
@@ -106,6 +108,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await fetch('/api/auth/login', {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
           })
@@ -136,6 +139,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await fetch('/api/auth/anonymous', {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, ...extra })
           })
@@ -164,15 +168,16 @@ export const useAuthStore = create<AuthState>()(
       signOut: async () => {
         const { session } = get()
         try {
-          if (session) {
-            await fetch('/api/auth/logout', {
-              method: 'POST',
-              headers: { 
-                'Authorization': `Bearer ${session.token}`,
-                'Content-Type': 'application/json'
-              }
-            })
-          }
+          // Always call logout so the httpOnly cookie is cleared server-side,
+          // even if the in-memory token was lost on page refresh
+          await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(session?.token ? { 'Authorization': `Bearer ${session.token}` } : {})
+            }
+          })
         } catch (error) {
           console.error('Erreur déconnexion:', error)
         } finally {
@@ -193,9 +198,10 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await fetch('/api/user', {
             method: 'PUT',
-            headers: { 
+            credentials: 'include',
+            headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${get().token}`
+              ...(get().token ? { 'Authorization': `Bearer ${get().token}` } : {})
             },
             body: JSON.stringify(data)
           })
@@ -217,12 +223,13 @@ export const useAuthStore = create<AuthState>()(
       fetchUserProfile: async () => {
         const { token } = get()
         if (!token) return
-        
+
         try {
           const response = await fetch('/api/user/profile', {
+            credentials: 'include',
             headers: { 'Authorization': `Bearer ${token}` }
           })
-          
+
           if (response.ok) {
             const userData = await response.json()
             set((state) => ({
@@ -232,25 +239,57 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           console.error('Failed to fetch user profile:', error)
         }
+      },
+
+      // Restore session from httpOnly cookie (called on page load when no token in memory)
+      hydrateSession: async () => {
+        try {
+          const response = await fetch('/api/auth/me', {
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+          })
+          if (!response.ok) return false
+          const result = await response.json()
+          if (result.user && result.session?.token) {
+            set({
+              user: result.user,
+              session: result.session,
+              token: result.session.token,
+              isAnonymous: result.user?.isAnonymous || false,
+            })
+            return true
+          }
+          return false
+        } catch {
+          return false
+        }
       }
     }),
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
+      // Only persist user profile and anonymous flag — token stays in memory only (XSS protection)
       partialize: (state) => ({
         user: state.user,
-        token: state.token,
-        session: state.session,
         isAnonymous: state.isAnonymous
       })
     }
   )
 )
 
-// Cross-tab logout sync: when another tab clears auth, reset this tab too
+// Cross-tab logout sync: when another tab logs out, clear this tab too.
+// Zustand persist no longer deletes the key (it sets user: null) so we check
+// the parsed value instead of !e.newValue.
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
-    if (e.key === 'auth-storage' && !e.newValue) {
+    if (e.key !== 'auth-storage') return;
+    try {
+      const next = e.newValue ? JSON.parse(e.newValue) : null;
+      if (!next?.user) {
+        useAuthStore.setState({ user: null, token: null, session: null, isAnonymous: false });
+      }
+    } catch {
+      // malformed JSON — treat as logout
       useAuthStore.setState({ user: null, token: null, session: null, isAnonymous: false });
     }
   });

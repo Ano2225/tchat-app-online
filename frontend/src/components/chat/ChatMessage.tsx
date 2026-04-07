@@ -154,26 +154,19 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     return new Date(dateString).toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit',
     });
   };
 
-  const getMessageColor = (isOwnMessage: boolean, sexe?: string) => {
-    if (isOwnMessage) {
-      return 'text-white';
-    }
-    if (sexe === 'homme') {
-      return 'bg-blue-50 dark:bg-blue-900/30 text-gray-900 dark:text-white border border-blue-100 dark:border-blue-800/50';
-    }
-    if (sexe === 'femme') {
-      return 'bg-pink-50 dark:bg-pink-900/30 text-gray-900 dark:text-white border border-pink-100 dark:border-pink-800/50';
-    }
-    return 'bg-gray-100 dark:bg-white/10 text-gray-900 dark:text-white';
+  const getBubbleStyle = (isOwnMessage: boolean, sexe?: string): React.CSSProperties => {
+    if (isOwnMessage) return { background: 'var(--accent)', color: '#fff' };
+    if (sexe === 'homme') return { background: 'var(--bubble-m, #EFF6FF)', color: 'var(--text-primary)', border: '1px solid var(--bubble-m-border, #BFDBFE)' };
+    if (sexe === 'femme') return { background: 'var(--bubble-f, #FDF2F8)', color: 'var(--text-primary)', border: '1px solid var(--bubble-f-border, #FBCFE8)' };
+    return { background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' };
   };
 
   const getNameColor = (sexe?: string) => {
     if (sexe === 'homme') return 'text-blue-600 dark:text-blue-400';
-    if (sexe === 'femme') return 'text-pink-600 dark:text-pink-400';
+    if (sexe === 'femme') return 'text-pink-500 dark:text-pink-400';
     return 'text-gray-900 dark:text-white';
   };
 
@@ -222,30 +215,31 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     : `Canal public • ${messages.length} message${messages.length > 1 ? 's' : ''}`;
 
   return (
-    <div 
+    <div
       ref={messagesContainerRef}
       onScroll={handleScroll}
-      className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3 md:space-y-4 relative"
+      className="flex-1 overflow-y-auto px-2 py-2 md:px-3 md:py-3 relative"
     >
-      {/* Header du canal */}
-      <div className="sticky top-0 z-10 bg-white dark:bg-gray-900/95 backdrop-blur-xl border border-gray-300 dark:border-white/20 rounded-xl p-3 md:p-4 mb-3 md:mb-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--accent-dim)' }}>
-              <span className="font-bold text-sm md:text-base" style={{ color: 'var(--accent)' }}>#</span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="font-bold text-gray-900 dark:text-white text-base md:text-lg truncate">{currentRoom}</h3>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 truncate">
-                {channelSubtitle}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-1.5 md:space-x-2 flex-shrink-0">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
-            <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">En ligne</span>
-          </div>
+      {/* Header du canal — compact */}
+      <div
+        className="sticky top-0 z-10 flex items-center gap-2 px-3 py-2 mb-2 rounded-xl"
+        style={{
+          background: 'var(--bg-panel)',
+          border: '1px solid var(--border-subtle)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+        }}
+      >
+        <div className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'var(--accent-dim)' }}>
+          <span className="text-xs font-bold" style={{ color: 'var(--accent)' }}>#</span>
         </div>
+        <span className="text-sm font-semibold truncate" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
+          {currentRoom}
+        </span>
+        <span className="text-xs ml-auto hidden sm:inline" style={{ color: 'var(--text-muted)' }}>
+          {channelSubtitle}
+        </span>
+        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: 'var(--online)' }} aria-hidden="true" />
       </div>
 
       {/* Messages de jeu */}
@@ -284,28 +278,28 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
       {loading ? (
         <ChatSkeleton count={6} />
       ) : messages.length > 0 ? (
-        <div className="space-y-2 md:space-y-3">
+        <div className="space-y-0.5">
           {/* Load previous messages */}
           {hasMore && (
-            <div className="flex justify-center py-2">
+            <div className="flex justify-center py-2 mb-1">
               <button
                 onClick={loadMoreMessages}
                 disabled={loadingMore}
                 aria-label="Charger les messages précédents"
-                className="text-xs text-primary-500 hover:text-primary-600 disabled:opacity-50 px-4 py-1.5 border border-primary-300 dark:border-primary-700 rounded-full transition-colors"
+                className="text-xs px-4 py-1.5 rounded-full transition-colors disabled:opacity-50"
+                style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid var(--border-default)' }}
               >
                 {loadingMore ? 'Chargement…' : 'Charger les messages précédents'}
               </button>
             </div>
           )}
-          {messages.map((msg) => {
+          {messages.map((msg, index) => {
             const sender = msg.sender || null;
             const senderId = sender?._id;
             const senderName = sender?.username || 'Utilisateur inconnu';
             const isOwnMessage = !!senderId && senderId === user?.id;
             const isQuizBot = senderName === 'Quiz Bot';
 
-            // Afficher les messages du Quiz Bot avec le composant GameMessage
             if (isQuizBot) {
               return (
                 <GameMessage
@@ -316,91 +310,125 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
               );
             }
 
+            // Grouping: is this the first message of a consecutive block from this sender?
+            const prevMsg = index > 0 ? messages[index - 1] : null;
+            const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
+            const prevSenderId = prevMsg?.sender?._id;
+            const nextSenderId = nextMsg?.sender?._id;
+            const isFirst = prevSenderId !== senderId || prevMsg?.sender?.username === 'Quiz Bot';
+            const isLast = nextSenderId !== senderId || nextMsg?.sender?.username === 'Quiz Bot';
+
+            // Tail shape: only on last bubble of a group
+            const ownRadius = isLast ? 'rounded-2xl rounded-br-sm' : 'rounded-2xl';
+            const otherRadius = isLast ? 'rounded-2xl rounded-bl-sm' : 'rounded-2xl';
+
             return (
               <div
                 key={msg._id}
-                className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} group hover:bg-gray-50 dark:hover:bg-white/5 p-2 rounded-lg transition-colors`}
+                className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} ${isFirst ? 'mt-3' : 'mt-0.5'} group px-1`}
               >
-                <div className="max-w-xs sm:max-w-md w-full">
-                  {/* Avatar et nom (pour les autres utilisateurs) */}
-                  {!isOwnMessage && (
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center space-x-2">
-                        <GenderAvatar
-                          username={senderName}
-                          avatarUrl={sender?.avatarUrl}
-                          sexe={sender?.sexe}
-                          size="md"
-                          onClick={() => {
-                            console.log('Clicked on user:', msg.sender);
-                            if (sender && senderId !== user?.id) {
-                              setSelectedUser(sender);
-                            }
-                          }}
-                        />
-                        <span className={`text-sm font-semibold ${getNameColor(sender?.sexe)}`}>
-                          {senderName}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatTime(msg.createdAt)}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => handleReply(msg)}
-                          aria-label={`Répondre à ${senderName}`}
-                          className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 group"
-                        >
-                          <svg className="w-4 h-4 text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Message de réponse */}
-                  {msg.replyTo && (
-                    <div className="mb-2 ml-10 p-2 bg-gray-100 dark:bg-white/10 rounded-lg border-l-2 border-primary-500">
-                      <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                        Réponse à {msg.replyTo.sender?.username || 'Utilisateur inconnu'}
-                      </div>
-                      <div className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                        {msg.replyTo.content || 'Message original indisponible'}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Bulle de message */}
-                  <div className={`${!isOwnMessage ? 'ml-10' : ''}`}>
-                    <div
-                      className={`rounded-2xl p-3 ${getMessageColor(isOwnMessage, sender?.sexe)} ${
-                        isOwnMessage ? 'rounded-br-md' : 'rounded-bl-md'
-                      }`}
-                      style={isOwnMessage ? { background: 'var(--accent)' } : undefined}
-                    >
-                      <div className="text-sm leading-relaxed break-words">
-                        {msg.content}
-                      </div>
-                      
-                      {/* Heure pour ses propres messages */}
-                      {isOwnMessage && (
-                        <div className="text-xs text-white/70 mt-1 text-right">
-                          {formatTime(msg.createdAt)}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Réactions */}
-                    <div className={`${!isOwnMessage ? '' : 'flex justify-end'}`}>
-                      <MessageReactions
-                        messageId={msg._id}
-                        reactions={msg.reactions || []}
-                        onAddReaction={handleAddReaction}
-                        isOwn={isOwnMessage}
-                        senderId={senderId}
+                {/* Avatar placeholder to maintain alignment — only shown for first message of group */}
+                {!isOwnMessage && (
+                  <div className="w-7 flex-shrink-0 mr-1.5 self-end mb-0.5">
+                    {isLast ? (
+                      <GenderAvatar
+                        username={senderName}
+                        avatarUrl={sender?.avatarUrl}
+                        sexe={sender?.sexe}
+                        size="sm"
+                        className="w-7 h-7 rounded-full"
+                        onClick={() => {
+                          if (sender && senderId !== user?.id) setSelectedUser(sender);
+                        }}
                       />
+                    ) : null}
+                  </div>
+                )}
+
+                <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[75%] sm:max-w-[65%]`}>
+                  {/* Sender name + time — only on first bubble of group */}
+                  {!isOwnMessage && isFirst && (
+                    <div className="flex items-baseline gap-1.5 mb-0.5 ml-1">
+                      <span
+                        className={`text-xs font-semibold ${getNameColor(sender?.sexe)}`}
+                        style={{ fontFamily: 'var(--font-ui)' }}
+                      >
+                        {senderName}
+                      </span>
+                      <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+                        {formatTime(msg.createdAt)}
+                      </span>
                     </div>
+                  )}
+
+                  {/* Reply context */}
+                  {msg.replyTo && (
+                    <div
+                      className="mb-1 px-2.5 py-1.5 rounded-xl w-full"
+                      style={{ background: 'var(--bg-surface)', borderLeft: '2px solid var(--accent)' }}
+                    >
+                      <div className="text-[10px] font-medium mb-0.5" style={{ color: 'var(--accent)' }}>
+                        ↩ {msg.replyTo.sender?.username || 'Inconnu'}
+                      </div>
+                      <div className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                        {msg.replyTo.content || '…'}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bubble */}
+                  <div className="relative flex items-end gap-1">
+                    {/* Reply button — visible on hover desktop, always small on mobile */}
+                    {!isOwnMessage && (
+                      <button
+                        onClick={() => handleReply(msg)}
+                        aria-label="Répondre"
+                        className="reply-btn opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full flex-shrink-0 order-first active:opacity-100"
+                        style={{ color: 'var(--text-muted)', background: 'var(--bg-surface)' }}
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                        </svg>
+                      </button>
+                    )}
+
+                    <div
+                      className={`px-3 py-1.5 text-sm leading-relaxed break-words ${isOwnMessage ? ownRadius : otherRadius}`}
+                      style={getBubbleStyle(isOwnMessage, sender?.sexe)}
+                    >
+                      {msg.content}
+                    </div>
+
+                    {isOwnMessage && (
+                      <button
+                        onClick={() => handleReply(msg)}
+                        aria-label="Répondre"
+                        className="reply-btn opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full flex-shrink-0 active:opacity-100"
+                        style={{ color: 'var(--text-muted)', background: 'var(--bg-surface)' }}
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Time for own messages (last in group only) */}
+                  {isOwnMessage && isLast && (
+                    <span className="text-[10px] mt-0.5 mr-1" style={{ color: 'var(--text-muted)' }}>
+                      {formatTime(msg.createdAt)}
+                    </span>
+                  )}
+
+                  {/* Réactions */}
+                  <div className={isOwnMessage ? 'flex justify-end' : ''}>
+                    <MessageReactions
+                      messageId={msg._id}
+                      reactions={msg.reactions || []}
+                      onAddReaction={handleAddReaction}
+                      isOwn={isOwnMessage}
+                      senderId={senderId}
+                    />
                   </div>
                 </div>
               </div>

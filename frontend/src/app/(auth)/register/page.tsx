@@ -354,11 +354,12 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <label className={labelClass} style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}>
+                    <label htmlFor="register-sexe" className={labelClass} style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}>
                       Sexe <span style={{ color: 'var(--danger)' }}>*</span>
                     </label>
                     <div className="relative">
                       <select
+                        id="register-sexe"
                         name="sexe"
                         value={formData.sexe}
                         onChange={handleChange}

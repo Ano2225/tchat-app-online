@@ -55,7 +55,7 @@ class ReportController {
 
       res.status(201).json({ message: 'Signalement envoyé avec succès' });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -115,7 +115,7 @@ class ReportController {
 
       return res.json({ message });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -168,7 +168,7 @@ class ReportController {
 
       return res.json({ message });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -197,7 +197,7 @@ class ReportController {
 
       res.json(users.map(u => ({ _id: String(u._id), username: u.username, avatarUrl: u.avatarUrl || null })));
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 }

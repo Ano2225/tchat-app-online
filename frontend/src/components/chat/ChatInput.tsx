@@ -208,8 +208,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
             onChange={handleInputChange}
             onKeyPress={handleKeyPress}
             placeholder={currentRoom === 'Game' ? 'Tapez votre réponse...' : `Message dans ${currentRoom}…`}
-            className="flex-1 bg-transparent text-sm focus:outline-none min-w-0 pr-10"
-            style={{ color: 'var(--text-primary)', caretColor: 'var(--accent)' }}
+            className="flex-1 bg-transparent focus:outline-none min-w-0 pr-10"
+            style={{ color: 'var(--text-primary)', caretColor: 'var(--accent)', fontSize: '16px' }}
             maxLength={1000}
             autoComplete="off"
             aria-label="Message input"

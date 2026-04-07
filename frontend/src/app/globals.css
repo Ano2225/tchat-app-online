@@ -2,12 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
-
 /* ─── Design Tokens ──────────────────────────────────────────────────────── */
 :root {
-  --font-ui: 'Outfit', system-ui, sans-serif;
-  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-ui: var(--font-outfit, 'Outfit'), system-ui, sans-serif;
+  --font-body: var(--font-dm-sans, 'DM Sans'), system-ui, sans-serif;
+
+  /* Layout — single source of truth for header height */
+  --header-h: 3.5rem; /* 56px mobile */
 
   /* Light mode */
   --bg-base: #F0F0F8;
@@ -38,6 +39,12 @@
   --msg-other-bg: #FFFFFF;
   --msg-other-text: #0F0F28;
   --msg-other-border: #D0D0E8;
+
+  /* Message bubble colors */
+  --bubble-m: #EFF6FF;
+  --bubble-m-border: #BFDBFE;
+  --bubble-f: #FDF2F8;
+  --bubble-f-border: #FBCFE8;
 
   /* Legacy */
   --background: var(--bg-base);
@@ -85,6 +92,12 @@
   --msg-other-text: #EAEAF8;
   --msg-other-border: #242440;
 
+  /* Message bubble colors — dark */
+  --bubble-m: #1E2A3A;
+  --bubble-m-border: #1E40AF44;
+  --bubble-f: #2A1A2A;
+  --bubble-f-border: #9D174D44;
+
   --background: var(--bg-base);
   --foreground: var(--text-primary);
   --secondary: var(--bg-surface);
@@ -98,6 +111,11 @@
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 
+/* Desktop: header is taller */
+@media (min-width: 1024px) {
+  :root { --header-h: 4rem; } /* 64px */
+}
+
 body {
   background: var(--bg-base);
   color: var(--text-primary);
@@ -105,6 +123,58 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* iOS: prevent text size adjustment */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Prevent bounce/pull-to-refresh on chat app (handled per-container) */
+  overscroll-behavior: none;
+}
+
+/* Remove 300ms tap delay everywhere */
+a, button, input, select, textarea, label, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* Prevent iOS Safari auto-zoom on focus (requires font-size >= 16px) */
+@media (max-width: 767px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Full dynamic viewport — works even when iOS Safari address bar appears/disappears */
+.h-screen-dynamic {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* On touch devices, reply button visible on tap (active state) */
+@media (hover: none) {
+  .group .reply-btn {
+    opacity: 1 !important;
+  }
+}
+
+/* Chat content area: space for bottom nav + iOS home indicator on mobile */
+.chat-body {
+  padding-bottom: max(4rem, calc(3.5rem + env(safe-area-inset-bottom)));
+}
+@media (min-width: 1024px) {
+  .chat-body { padding-bottom: 0.5rem; }
+}
+
+/* Safe area helpers */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }
 
 h1, h2, h3, h4, h5, h6, .font-ui {

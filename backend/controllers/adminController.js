@@ -64,7 +64,7 @@ class AdminController {
         totalReports
       });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -89,7 +89,7 @@ class AdminController {
 
       res.json({ messages, nextCursor });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -158,7 +158,7 @@ class AdminController {
       
       res.json(activities.slice(0, 10));
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -200,7 +200,7 @@ class AdminController {
 
       res.json(populated);
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -239,7 +239,7 @@ class AdminController {
         }
       });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -252,7 +252,7 @@ class AdminController {
       await User.collection.updateOne(buildIdQuery(userId), { $set: { isBlocked } });
       res.json({ message: 'Statut utilisateur mis à jour' });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -263,7 +263,7 @@ class AdminController {
       await User.collection.deleteOne(buildIdQuery(userId));
       res.json({ message: 'Utilisateur supprimé' });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -275,7 +275,7 @@ class AdminController {
       await channel.save();
       res.status(201).json(channel);
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -286,7 +286,7 @@ class AdminController {
       await Channel.findByIdAndDelete(channelId);
       res.json({ message: 'Canal supprimé' });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -374,7 +374,7 @@ class AdminController {
         peakDay: { day: dayNames[peakDay._id.day - 1] || 'N/A', count: peakDay.count }
       });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -406,7 +406,7 @@ class AdminController {
         unreadCount
       });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -417,7 +417,7 @@ class AdminController {
       await Alert.findByIdAndUpdate(alertId, { isRead: true });
       res.json({ message: 'Alerte marquée comme lue' });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -427,7 +427,7 @@ class AdminController {
       await Alert.updateMany({ isRead: false }, { isRead: true });
       res.json({ message: 'Toutes les alertes marquées comme lues' });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 
@@ -466,7 +466,7 @@ class AdminController {
 
       res.json({ message: 'Signalement traité avec succès' });
     } catch (error) {
-      res.status(500).json({ message: 'Erreur serveur', error: error.message });
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }
   }
 }

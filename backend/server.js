@@ -5,7 +5,6 @@ require('dotenv').config({ path: path.resolve(__dirname, '..', '.env'), override
 const REQUIRED_ENV_VARS = [
   'MONGODB_URI',
   'BETTER_AUTH_SECRET',
-  'JWT_SECRET',
 ];
 const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
 if (missingVars.length > 0) {
@@ -18,8 +17,8 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const connectDB = require('./config/database');
-const { generalLimiter } = require('./middleware/rateLimiter');
 const {
   corsOptions,
   globalRateLimit,
@@ -62,6 +61,7 @@ class ChatServer {
     // Parsing et validation
     this.app.use(express.json({ limit: '1mb' }));
     this.app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+    this.app.use(cookieParser());
     this.app.use(securitySanitize); // strip dangerous HTML/JS patterns
 
     // Rate limiting et protection
@@ -137,10 +137,15 @@ class ChatServer {
     const socketHandlers = require('./socket/socketHandlers');
 
     // Verify bearer token at handshake time.
-    // Both registered and anonymous users receive a session token from /api/auth/*,
-    // so all legitimate connections can pass a token.
+    // Accepts token from handshake.auth.token (in-memory) OR session_token cookie.
     this.io.use(async (socket, next) => {
-      const token = socket.handshake.auth?.token;
+      let token = socket.handshake.auth?.token;
+      // Fall back to httpOnly cookie sent in the handshake headers
+      if (!token) {
+        const cookieHeader = socket.handshake.headers?.cookie || '';
+        const match = cookieHeader.match(/(?:^|;\s*)session_token=([^;]+)/);
+        if (match) token = decodeURIComponent(match[1]);
+      }
       if (!token) {
         return next(new Error('Socket authentication required'));
       }

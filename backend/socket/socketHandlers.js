@@ -309,6 +309,11 @@ module.exports = (io, socket) => {
   // ── Update username ───────────────────────────────────────────────────────
   socket.on('update_username', async (newUsername) => {
     if (!newUsername || newUsername === currentUsername) return;
+    // Verify the requested username belongs to this socket's verified session
+    if (socket.verifiedUsername && newUsername !== socket.verifiedUsername) {
+      socket.emit('auth_error', { message: 'Nom d\'utilisateur non autorisé.' });
+      return;
+    }
     try {
       if (currentUsername && connectedUsers.has(currentUsername)) {
         connectedUsers.get(currentUsername).delete(socket.id);

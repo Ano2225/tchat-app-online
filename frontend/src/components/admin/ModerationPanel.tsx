@@ -135,6 +135,7 @@ const ModerationPanel: React.FC = () => {
           
           <div className="flex gap-2">
             <select
+              aria-label="Filtrer les signalements"
               value={filter}
               onChange={(e) => setFilter(e.target.value as 'all' | 'pending' | 'resolved')}
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"

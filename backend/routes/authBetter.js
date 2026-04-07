@@ -18,6 +18,25 @@ const hashPassword = async (password) => {
 const { authMiddleware, sessionCache } = require('../middleware/authBetter');
 const { getCsrfToken, csrfProtection } = require('../middleware/csrf');
 
+// ── httpOnly session cookie helpers ────���─────────────────────────────────────
+const COOKIE_NAME = 'session_token';
+const COOKIE_MAX_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days (matches session TTL)
+
+const setSessionCookie = (res, token) => {
+  res.cookie(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: COOKIE_MAX_AGE,
+    path: '/',
+  });
+};
+
+const clearSessionCookie = (res) => {
+  res.clearCookie(COOKIE_NAME, { path: '/' });
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 const EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED';
 
 const buildSessionFromResult = (result) => {
@@ -40,35 +59,40 @@ const isLocalHost = (value) => {
   return /(^|\/\/)(localhost|127\.0\.0\.1)(:\d+)?$/i.test(String(value || '').trim());
 };
 
+// Build the set of allowed frontend origins from FRONTEND_URL (comma-separated)
+const getAllowedFrontendOrigins = () => {
+  const raw = process.env.FRONTEND_URL || 'http://localhost:3000';
+  return raw.split(',').map(o => normalizeBaseUrl(o)).filter(Boolean);
+};
+
 const getFrontendBaseUrl = (req) => {
-  const configuredBase = normalizeBaseUrl(process.env.FRONTEND_URL);
+  const allowed = getAllowedFrontendOrigins();
 
+  // In development, use the first configured origin
   if (process.env.NODE_ENV === 'development') {
-    return configuredBase || 'http://localhost:3000';
+    return allowed[0] || 'http://localhost:3000';
   }
 
-  if (configuredBase && !isLocalHost(configuredBase)) {
-    return configuredBase;
-  }
+  // In production, only use a non-localhost configured origin — never trust request headers
+  const prodOrigin = allowed.find(o => !isLocalHost(o));
+  if (prodOrigin) return prodOrigin;
 
-  const forwardedHost = normalizeBaseUrl(req?.headers?.['x-forwarded-host']);
-  const host = forwardedHost || normalizeBaseUrl(req?.headers?.host);
-  const forwardedProto = normalizeBaseUrl(req?.headers?.['x-forwarded-proto']);
-  const protocol = forwardedProto || (host && isLocalHost(host) ? 'http' : 'https');
-
-  if (host && !isLocalHost(host)) {
-    return `${protocol}://${host}`;
-  }
-
+  // Last-resort fallback (should not be reached if FRONTEND_URL is set correctly)
   return 'https://babichat.tech';
 };
 
 const buildCallbackUrl = (callbackURL, req) => {
   if (!callbackURL) return null;
-  if (/^https?:\/\//i.test(callbackURL)) {
-    return callbackURL;
-  }
   const base = getFrontendBaseUrl(req);
+  // Absolute URLs are only allowed if they start with an allowed frontend origin
+  if (/^https?:\/\//i.test(callbackURL)) {
+    const allowed = getAllowedFrontendOrigins();
+    if (allowed.some(o => callbackURL.startsWith(o))) {
+      return callbackURL;
+    }
+    // Reject: absolute URL not in allowlist (open redirect prevention)
+    return `${base}/`;
+  }
   const normalized = callbackURL.startsWith('/') ? callbackURL : `/${callbackURL}`;
   return `${base}${normalized}`;
 };
@@ -156,20 +180,17 @@ router.post('/register', async (req, res) => {
     }
 
     const session = buildSessionFromResult(result);
+    // Set httpOnly cookie so the token is not exposed to JavaScript on subsequent requests
+    if (session?.token) setSessionCookie(res, session.token);
+
     const emailPreview = getVerificationEmailPreview(email);
-    const welcomeEmailDelivery = await sendWelcomeEmail({ user: result.user });
+    // Welcome email is sent after email verification, not at registration
 
     res.json({
       success: true,
       user: result.user,
       session,
       verificationRequired: !session,
-      welcomeEmailDelivery: {
-        delivered: welcomeEmailDelivery?.delivered ?? false,
-        warning: welcomeEmailDelivery?.warning,
-        preview: welcomeEmailDelivery?.preview,
-        id: welcomeEmailDelivery?.id
-      },
       emailDelivery: emailPreview
         ? {
             delivered: emailPreview.delivered,
@@ -216,10 +237,13 @@ router.post('/login', async (req, res) => {
       return res.status(500).json({ error: 'Réponse de connexion invalide' });
     }
 
+    const loginSession = buildSessionFromResult(result);
+    if (loginSession?.token) setSessionCookie(res, loginSession.token);
+
     res.json({
       success: true,
       user: result.user,
-      session: buildSessionFromResult(result)
+      session: loginSession
     });
 
   } catch (error) {
@@ -360,7 +384,8 @@ router.post('/anonymous', async (req, res) => {
       return res.status(500).json({ error: 'Création de session anonyme échouée' });
     }
 
-    // Spread extra into the response — Object.assign on better-auth object can silently fail
+    if (session?.token) setSessionCookie(res, session.token);
+
     res.json({
       success: true,
       user: { ...anonymousUser, ...extra },
@@ -377,7 +402,8 @@ router.post('/anonymous', async (req, res) => {
 // Route pour la déconnexion
 router.post('/logout', async (req, res) => {
   try {
-    const sessionToken = req.headers.authorization?.replace('Bearer ', '');
+    const sessionToken = req.headers.authorization?.replace('Bearer ', '')
+      || req.cookies?.session_token;
 
     if (sessionToken) {
       await auth.api.signOut({
@@ -387,6 +413,8 @@ router.post('/logout', async (req, res) => {
       sessionCache.delete(sessionToken);
     }
 
+    // Always clear the httpOnly cookie regardless of token presence
+    clearSessionCookie(res);
     res.json({ success: true });
   } catch (error) {
     console.error('Erreur déconnexion:', error);
@@ -395,34 +423,13 @@ router.post('/logout', async (req, res) => {
   }
 });
 
-// Route pour obtenir l'utilisateur actuel
-router.get('/me', async (req, res) => {
-  try {
-    const sessionToken = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!sessionToken) {
-      return res.status(401).json({ error: 'Token manquant' });
-    }
-
-    const result = await auth.api.getSession({
-      headers: { authorization: `Bearer ${sessionToken}` }
-    });
-
-    if (!result || !result.user || !result.session) {
-      return res.status(401).json({ error: 'Session invalide' });
-    }
-
-    res.json({
-      success: true,
-      user: result.user,
-      session: result.session
-    });
-
-  } catch (error) {
-    console.error('Erreur récupération utilisateur:', error);
-    const normalized = normalizeAuthError(error);
-    res.status(normalized.status).json(normalized);
-  }
+// Route pour obtenir l'utilisateur actuel — accepte cookie OU Bearer via authMiddleware
+router.get('/me', authMiddleware, (req, res) => {
+  res.json({
+    success: true,
+    user: req.user,
+    session: req.session
+  });
 });
 
 // Email verification callback
@@ -435,6 +442,14 @@ router.get('/verify-email', async (req, res) => {
       return res.status(400).json({ error: 'Token manquant' });
     }
 
+    // Look up the verification record to retrieve the user email before it's consumed
+    let verifiedUserEmail = null;
+    try {
+      const db = require('mongoose').connection.db;
+      const record = await db.collection('verification').findOne({ value: token });
+      if (record?.identifier) verifiedUserEmail = record.identifier;
+    } catch (_) { /* non-blocking */ }
+
     const result = await auth.api.verifyEmail({
       query: {
         token,
@@ -443,10 +458,24 @@ router.get('/verify-email', async (req, res) => {
       headers: req.headers
     });
 
-    const redirectTarget = getVerifyRedirectTarget(
+    // Send welcome email after successful verification
+    if (verifiedUserEmail) {
+      try {
+        const verifiedUser = await User.findOne({ email: verifiedUserEmail }).lean();
+        if (verifiedUser) {
+          sendWelcomeEmail({ user: verifiedUser }).catch(() => {});
+        }
+      } catch (_) { /* non-blocking */ }
+    }
+
+    const base = getVerifyRedirectTarget(
       typeof callbackURL === 'string' ? callbackURL : undefined,
       req
     );
+    // Append verified=true so the login page can show a success toast
+    const separator = base.includes('?') ? '&' : '?';
+    const redirectTarget = `${base}${separator}verified=true`;
+
     if (result?.status) {
       return res.redirect(redirectTarget);
     }
@@ -455,24 +484,28 @@ router.get('/verify-email', async (req, res) => {
     const statusCode = Number(error?.statusCode || error?.status);
     const redirectLocation = error?.headers?.Location || error?.headers?.location;
     if (redirectLocation) {
-      return res.redirect(redirectLocation);
+      // Append verified=true to the library's own redirect too
+      const sep = redirectLocation.includes('?') ? '&' : '?';
+      return res.redirect(`${redirectLocation}${sep}verified=true`);
     }
 
     if (statusCode === 302 || error?.status === 'FOUND') {
-      const redirectTarget = getVerifyRedirectTarget(
+      const base = getVerifyRedirectTarget(
         typeof req.query.callbackURL === 'string' ? req.query.callbackURL : undefined,
         req
       );
-      return res.redirect(redirectTarget);
+      const sep = base.includes('?') ? '&' : '?';
+      return res.redirect(`${base}${sep}verified=true`);
     }
 
     const normalized = normalizeAuthError(error);
     if (normalized.status === 302) {
-      const redirectTarget = getVerifyRedirectTarget(
+      const base = getVerifyRedirectTarget(
         typeof req.query.callbackURL === 'string' ? req.query.callbackURL : undefined,
         req
       );
-      return res.redirect(redirectTarget);
+      const sep = base.includes('?') ? '&' : '?';
+      return res.redirect(`${base}${sep}verified=true`);
     }
     return res.status(normalized.status).json(normalized);
   }
@@ -535,7 +568,7 @@ router.post('/reset-password', async (req, res) => {
     const { token, newPassword } = req.body;
     const normalizedToken = extractResetToken(token);
     if (!normalizedToken || !newPassword) return res.status(400).json({ message: 'Token et nouveau mot de passe requis' });
-    if (newPassword.length < 6) return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 6 caractères' });
+    if (newPassword.length < 8) return res.status(400).json({ message: 'Le mot de passe doit contenir au moins 8 caractères' });
 
     const hashedToken = crypto.createHash('sha256').update(normalizedToken).digest('hex');
 
