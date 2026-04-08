@@ -342,7 +342,14 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
 
   return (
     // Mobile: full-screen between header and tab bar. Desktop: compact corner popup.
-    <div className="fixed z-50 flex flex-col inset-x-0 top-20 bottom-16 md:inset-auto md:bottom-4 md:right-4 md:w-[360px]">
+    <div
+      className="fixed z-50 flex flex-col md:inset-auto md:bottom-4 md:right-4 md:w-[360px]"
+      style={{
+        insetInline: '0',
+        top: 'var(--header-h)',
+        bottom: 'max(4rem, calc(3.5rem + env(safe-area-inset-bottom)))',
+      }}
+    >
 
       {/* Emoji Picker portal */}
       {showEmojiPicker && pickerPos && typeof document !== 'undefined' && createPortal(

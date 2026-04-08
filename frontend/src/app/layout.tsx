@@ -25,8 +25,15 @@ const dmSans = DM_Sans({
 
 
 export const metadata: Metadata = {
-  title: "BabiChat - Chat en ligne",
-  description: "BabiChat - Connecte-toi avec tes potes en temps réel. Chat sécurisé et rapide.",
+  title: "BabiChat – Le tchat 100% ivoirien",
+  description: "BabiChat est le premier tchat en ligne dédié à la Côte d'Ivoire. Connecte-toi avec des jeunes ivoiriens, discute en temps réel, joue au quiz et envoie des messages privés. Gratuit, sans inscription obligatoire.",
+  keywords: "chat Côte d'Ivoire, tchat ivoirien, chat CI, babichat, chat en ligne Abidjan, tchat gratuit Côte d'Ivoire, chat Abidjan, tchat CI, messagerie Côte d'Ivoire, chat ivoirien gratuit, discussion en ligne Côte d'Ivoire",
+  openGraph: {
+    title: "BabiChat – Le tchat 100% ivoirien",
+    description: "Connecte-toi avec des jeunes ivoiriens en temps réel. Chat, quiz, messages privés. Gratuit et sans inscription.",
+    type: "website",
+    locale: "fr_CI",
+  },
   icons: {
     icon: '/icon.svg',
     shortcut: '/icon.svg',
@@ -46,7 +53,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" data-scroll-behavior="smooth">
+    <html lang="fr" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         {/* Theme init: runs before first paint — prevents flash of wrong theme */}
         <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(t==='dark'||(t===null&&d))document.documentElement.classList.add('dark')}catch(e){}})()` }} />

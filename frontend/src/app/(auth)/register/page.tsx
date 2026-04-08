@@ -67,8 +67,8 @@ export default function RegisterPage() {
       const age = parseInt(formData.age)
       if (!formData.age) {
         errors.age = 'L\'âge est requis'
-      } else if (isNaN(age) || age < 13 || age > 25) {
-        errors.age = 'Âge valide entre 13 et 25 ans'
+      } else if (isNaN(age) || age < 18 || age > 28) {
+        errors.age = 'Âge valide entre 18 et 28 ans'
       }
       if (!formData.sexe) {
         errors.sexe = 'Veuillez sélectionner votre sexe'
@@ -149,7 +149,7 @@ export default function RegisterPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      className="min-h-[100dvh] flex flex-col items-center justify-center p-4 py-8 relative"
       style={{ background: 'var(--bg-base)' }}
     >
       <header className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-end">
@@ -157,23 +157,23 @@ export default function RegisterPage() {
       </header>
 
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full filter blur-3xl opacity-20 animate-pulse" style={{ background: 'var(--accent)' }} />
-        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 rounded-full filter blur-3xl opacity-10 animate-pulse" style={{ background: 'var(--accent)', animationDelay: '1s' }} />
+        <div className="absolute top-1/4 right-1/4 w-64 h-64 sm:w-96 sm:h-96 rounded-full filter blur-3xl opacity-20 animate-pulse" style={{ background: 'var(--accent)' }} />
+        <div className="absolute bottom-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 rounded-full filter blur-3xl opacity-10 animate-pulse" style={{ background: 'var(--accent)', animationDelay: '1s' }} />
       </div>
 
       <div className="relative w-full max-w-md">
         <div
-          className="rounded-3xl p-6 sm:p-8"
+          className="rounded-3xl p-5 sm:p-8"
           style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-xl)' }}
         >
           <div className="text-center mb-6">
             <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-3"
               style={{ background: 'var(--accent)', boxShadow: '0 8px 24px var(--accent-glow)' }}
             >
-              <Sparkles className="w-7 h-7 text-white" />
+              <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
             </div>
-            <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
+            <h1 className="text-xl sm:text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
               Rejoignez BabiChat
             </h1>
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Étape {currentStep} sur {totalSteps}</p>
@@ -328,7 +328,7 @@ export default function RegisterPage() {
             {/* ── Étape 3 ── */}
             {currentStep === 3 && (
               <>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-3">
                   <div>
                     <label className={labelClass} style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}>
                       Âge <span style={{ color: 'var(--danger)' }}>*</span>
@@ -339,11 +339,11 @@ export default function RegisterPage() {
                         type="number"
                         value={formData.age}
                         onChange={handleChange}
-                        placeholder="25"
+                        placeholder="22"
                         className="w-full rounded-xl pl-10 py-3 text-sm focus:outline-none transition-all"
                         style={inputStyle('age')}
-                        min="13"
-                        max="25"
+                        min="18"
+                        max="28"
                         aria-invalid={!!fieldErrors.age}
                       />
                       <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">

@@ -19,6 +19,7 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./config/database');
+const { getRedisClient } = require('./config/redis');
 const {
   corsOptions,
   globalRateLimit,
@@ -132,6 +133,21 @@ class ChatServer {
     this.app.get('/api/health', healthHandler);
   }
 
+  async initSocketAdapter() {
+    const redisClient = getRedisClient();
+    if (!redisClient) return; // graceful: single-instance mode without Redis
+    try {
+      const { createAdapter } = require('@socket.io/redis-adapter');
+      const pubClient = redisClient;
+      const subClient = redisClient.duplicate();
+      // ioredis auto-connects on creation — no need to call .connect()
+      this.io.adapter(createAdapter(pubClient, subClient));
+      console.log('✅ Socket.IO Redis adapter enabled');
+    } catch (err) {
+      console.error('⚠️  Socket.IO Redis adapter failed, using in-memory:', err.message);
+    }
+  }
+
   initSocketEvents() {
     const auth = require('./config/auth');
     const socketHandlers = require('./socket/socketHandlers');
@@ -173,6 +189,7 @@ class ChatServer {
   async start() {
     await this.connectDatabase();
     this.setupRoutes();
+    await this.initSocketAdapter();
     this.initSocketEvents();
 
     const PORT = process.env.PORT || 8000;

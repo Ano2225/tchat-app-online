@@ -4,6 +4,33 @@ const aiService = require('../services/aiService');
 const { ObjectId } = require('mongodb');
 const gameHandlers = require('./gameHandlers');
 
+// ─── Socket-level rate limiting ─────────────────────────────────────────────
+// 20 messages per minute per socket (matches HTTP messageRateLimit)
+const MSG_RATE_WINDOW_MS = 60_000;
+const MSG_RATE_MAX       = 20;
+// socketId → { count, windowStart }
+const socketMsgRateMap = new Map();
+
+function isSocketRateLimited(socketId) {
+  const now = Date.now();
+  let entry = socketMsgRateMap.get(socketId);
+  if (!entry || now - entry.windowStart > MSG_RATE_WINDOW_MS) {
+    entry = { count: 1, windowStart: now };
+    socketMsgRateMap.set(socketId, entry);
+    return false;
+  }
+  entry.count += 1;
+  return entry.count > MSG_RATE_MAX;
+}
+
+// Cleanup stale entries every 5 minutes
+setInterval(() => {
+  const cutoff = Date.now() - MSG_RATE_WINDOW_MS;
+  for (const [id, entry] of socketMsgRateMap.entries()) {
+    if (entry.windowStart < cutoff) socketMsgRateMap.delete(id);
+  }
+}, 5 * 60_000);
+
 // ─── In-memory presence store ────────────────────────────────────────────────
 // username → Set<socketId>
 const connectedUsers = new Map();
@@ -123,6 +150,11 @@ module.exports = (io, socket) => {
   socket.on('send_message', async (messageData) => {
     const { content, room, replyTo, replyPreview } = messageData;
     if (!room || !content) return;
+
+    if (isSocketRateLimited(socket.id)) {
+      socket.emit('error', { message: 'Trop de messages. Attendez un moment.' });
+      return;
+    }
 
     try {
       const senderId = socket.userId;
@@ -417,6 +449,10 @@ module.exports = (io, socket) => {
   socket.on('send_private_message', async ({ optimisticId, recipientId, content, media_url, media_type }) => {
     const senderId = socket.userId;
     if (!senderId) { socket.emit('error', { message: 'Not authenticated' }); return; }
+    if (isSocketRateLimited(socket.id)) {
+      socket.emit('private_message_error', { optimisticId, message: 'Trop de messages. Attendez un moment.' });
+      return;
+    }
 
     try {
       // Anonymous users (anon_ prefix) are not stored in MongoDB — skip DB lookup
@@ -584,6 +620,7 @@ module.exports = (io, socket) => {
 
   // ── Disconnect ────────────────────────────────────────────────────────────
   socket.on('disconnect', () => {
+    socketMsgRateMap.delete(socket.id);
     if (!currentUsername || !connectedUsers.has(currentUsername)) return;
 
     connectedUsers.get(currentUsername).delete(socket.id);

@@ -15,6 +15,7 @@
   "author": "Arouna Ouattara",
   "license": "ISC",
   "dependencies": {
+    "@socket.io/redis-adapter": "^8.3.0",
     "axios": "^1.14.0",
     "bcryptjs": "^3.0.2",
     "better-auth": "^1.4.17",

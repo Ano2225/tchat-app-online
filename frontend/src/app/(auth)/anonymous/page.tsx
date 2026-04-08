@@ -44,8 +44,8 @@ export default function AnonymousPage() {
     }
 
     const age = parseInt(formData.age)
-    if (!formData.age || isNaN(age) || age < 13 || age > 25) {
-      toast.error('Veuillez entrer un âge valide (13-25 ans)')
+    if (!formData.age || isNaN(age) || age < 18 || age > 28) {
+      toast.error('Veuillez entrer un âge valide (18-28 ans)')
       return
     }
 
@@ -79,7 +79,7 @@ export default function AnonymousPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      className="min-h-[100dvh] flex flex-col items-center justify-center p-4 py-8 relative"
       style={{ background: 'var(--bg-base)' }}
     >
       <header className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-end">
@@ -87,23 +87,23 @@ export default function AnonymousPage() {
       </header>
 
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-1/3 left-1/3 w-96 h-96 rounded-full filter blur-3xl opacity-15 animate-pulse" style={{ background: 'var(--text-muted)' }} />
-        <div className="absolute bottom-1/3 right-1/3 w-96 h-96 rounded-full filter blur-3xl opacity-10 animate-pulse" style={{ background: 'var(--text-muted)', animationDelay: '1s' }} />
+        <div className="absolute top-1/3 left-1/3 w-64 h-64 sm:w-96 sm:h-96 rounded-full filter blur-3xl opacity-15 animate-pulse" style={{ background: 'var(--text-muted)' }} />
+        <div className="absolute bottom-1/3 right-1/3 w-64 h-64 sm:w-96 sm:h-96 rounded-full filter blur-3xl opacity-10 animate-pulse" style={{ background: 'var(--text-muted)', animationDelay: '1s' }} />
       </div>
 
       <div className="relative w-full max-w-md">
         <div
-          className="rounded-3xl p-6 sm:p-8"
+          className="rounded-3xl p-5 sm:p-8"
           style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-xl)' }}
         >
-          <div className="text-center mb-6">
+          <div className="text-center mb-5">
             <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-3"
               style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)' }}
             >
-              <User className="w-7 h-7" style={{ color: 'var(--text-secondary)' }} />
+              <User className="w-6 h-6 sm:w-7 sm:h-7" style={{ color: 'var(--text-secondary)' }} />
             </div>
-            <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
+            <h1 className="text-xl sm:text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
               Mode Anonyme
             </h1>
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Chattez sans créer de compte</p>
@@ -148,14 +148,14 @@ export default function AnonymousPage() {
                   className="w-full rounded-xl pl-10 py-3 text-sm focus:outline-none transition-all"
                   style={inputStyle}
                   required
-                  min="13"
-                  max="25"
+                  min="18"
+                  max="28"
                 />
                 <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                   <Calendar className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
                 </div>
               </div>
-              <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }}>Âge requis : 13 à 25 ans</p>
+              <p className="text-xs mt-1.5" style={{ color: 'var(--text-muted)' }}>Âge requis : 18 à 28 ans</p>
             </div>
 
             <div>

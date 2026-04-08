@@ -235,7 +235,7 @@ function LoginPageInner() {
 
   return (
     <main
-      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      className="min-h-[100dvh] flex flex-col items-center justify-center p-4 py-8 relative"
       style={{ background: 'var(--bg-base)' }}
     >
       {/* Header avec ThemeToggle */}
@@ -246,32 +246,32 @@ function LoginPageInner() {
       {/* Background glow */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
-          className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full filter blur-3xl opacity-20 animate-pulse"
+          className="absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 rounded-full filter blur-3xl opacity-20 animate-pulse"
           style={{ background: 'var(--accent)' }}
         />
         <div
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full filter blur-3xl opacity-10 animate-pulse"
+          className="absolute bottom-1/4 right-1/4 w-64 h-64 sm:w-96 sm:h-96 rounded-full filter blur-3xl opacity-10 animate-pulse"
           style={{ background: 'var(--accent)', animationDelay: '1s' }}
         />
       </div>
 
       <div className="relative w-full max-w-md">
         <div
-          className="rounded-3xl p-6 sm:p-8"
+          className="rounded-3xl p-5 sm:p-8"
           style={{
             background: 'var(--bg-panel)',
             border: '1px solid var(--border-default)',
             boxShadow: 'var(--shadow-xl)',
           }}
         >
-          <div className="text-center mb-8">
+          <div className="text-center mb-6 sm:mb-8">
             <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center mx-auto mb-3"
               style={{ background: 'var(--accent)', boxShadow: '0 8px 24px var(--accent-glow)' }}
             >
-              <MessageCircle className="w-7 h-7 text-white" />
+              <MessageCircle className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
             </div>
-            <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
+            <h1 className="text-xl sm:text-2xl font-bold mb-1" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
               Bon retour !
             </h1>
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Connectez-vous à votre compte</p>

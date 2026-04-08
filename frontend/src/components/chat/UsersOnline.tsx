@@ -107,7 +107,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
         background: 'var(--bg-panel)',
         border: '1px solid var(--border-default)',
         width: isCollapsed ? '52px' : undefined,
-        minWidth: isCollapsed ? undefined : '180px',
+        minWidth: isCollapsed ? undefined : 'clamp(140px, 15vw, 200px)',
       }}
     >
       {/* Header */}
