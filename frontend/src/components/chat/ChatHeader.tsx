@@ -10,13 +10,14 @@ import Toast from '../ui/Toast'
 import ThemeToggle from '../ui/ThemeToggle'
 import ProfileModal from '../profile/ProfileModal'
 import GenderAvatar from '@/components/ui/GenderAvatar'
+import AdminBadge from '@/components/ui/AdminBadge'
 import { LogOut, MessageSquare, Shield } from 'lucide-react'
 
 interface ChatHeaderProps {
   users?: { id: string; username: string }
   socket: Socket | null
   totalUnread?: number
-  onOpenChat?: (user: { _id: string; username: string; avatarUrl?: string; sexe?: string }) => void
+  onOpenChat?: (user: { _id: string; username: string; avatarUrl?: string; sexe?: string; role?: string }) => void
 }
 
 interface Conversation {
@@ -25,11 +26,12 @@ interface Conversation {
     username: string
     avatarUrl?: string
     sexe?: string
+    role?: string
   }
   lastMessage?: {
     content?: string
     createdAt?: string
-    sender?: { _id: string; username: string }
+    sender?: { _id: string; username: string; role?: string }
   }
   hasNewMessages: boolean
   unreadCount: number
@@ -106,7 +108,13 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
 
   const handleOpenConversation = (conv: Conversation) => {
     if (!conv.user || !onOpenChat) return
-    onOpenChat({ _id: conv.user._id, username: conv.user.username, avatarUrl: conv.user.avatarUrl, sexe: conv.user.sexe })
+    onOpenChat({
+      _id: conv.user._id,
+      username: conv.user.username,
+      avatarUrl: conv.user.avatarUrl,
+      sexe: conv.user.sexe,
+      role: conv.user.role,
+    })
     setShowMessages(false)
   }
 
@@ -324,7 +332,10 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                                     fontWeight: hasUnread ? '600' : '500',
                                   }}
                                 >
-                                  {conv.user.username}
+                                  <span className="inline-flex items-center gap-1.5 max-w-full">
+                                    <span className="truncate">{conv.user.username}</span>
+                                    {conv.user.role === 'admin' && <AdminBadge className="flex-shrink-0" />}
+                                  </span>
                                 </p>
                                 <span className="text-[10px] flex-shrink-0" style={{ color: 'var(--text-muted)' }}>
                                   {formatTime(conv.lastMessage?.createdAt)}
@@ -385,7 +396,10 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                   className="text-xs md:text-sm font-semibold leading-tight truncate max-w-[96px]"
                   style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}
                 >
-                  {users?.username || user?.username}
+                  <span className="inline-flex items-center gap-1.5 max-w-full">
+                    <span className="truncate">{users?.username || user?.username}</span>
+                    {user?.role === 'admin' && <AdminBadge className="flex-shrink-0" />}
+                  </span>
                 </p>
                 <div className="flex items-center gap-1">
                   <div

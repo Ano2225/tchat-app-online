@@ -89,8 +89,11 @@ class ChatServer {
         }
       }
 
-      // MVP: Quiz/Game désactivé — trop lourd pour le MVP initial
-      // Réactiver en décommentant le bloc ci-dessous quand le scaling est prêt.
+      // Le canal Game n'est pas pre-initialise au demarrage du serveur.
+      // Le quiz reste toutefois actif a la demande: `gameHandlers` peut creer
+      // et demarrer une partie quand un utilisateur inscrit rejoint le salon Game.
+      // Decommenter le bloc ci-dessous uniquement si vous voulez pre-seeder
+      // une partie active des le boot.
       /*
       const Game = require('./models/Game');
       const { getRandomQuestion } = require('./services/questionService');
@@ -186,21 +189,48 @@ class ChatServer {
     });
   }
 
+  async initBots() {
+    try {
+      const botService = require('./services/botService');
+      await botService.init(this.io);
+    } catch (err) {
+      console.error('⚠️  BotService init failed:', err.message);
+    }
+  }
+
   async start() {
     await this.connectDatabase();
     this.setupRoutes();
     await this.initSocketAdapter();
     this.initSocketEvents();
+    await this.initBots();
 
     const PORT = process.env.PORT || 8000;
-    this.server.listen(PORT, () => {
-      console.log(`🚀 Serveur démarré sur le port ${PORT}`);
+    await new Promise((resolve, reject) => {
+      const onError = (error) => {
+        this.server.off('listening', onListening);
+        reject(error);
+      };
+      const onListening = () => {
+        this.server.off('error', onError);
+        console.log(`🚀 Serveur démarré sur le port ${PORT}`);
+        resolve();
+      };
+
+      this.server.once('error', onError);
+      this.server.once('listening', onListening);
+      this.server.listen(PORT);
     });
   }
 }
 
 const chatServer = new ChatServer();
 chatServer.start().catch((error) => {
+  if (error?.code === 'EADDRINUSE') {
+    const port = process.env.PORT || 8000;
+    console.error(`❌ Port ${port} déjà utilisé. Arrête le processus qui écoute sur ce port ou démarre avec un autre PORT.`);
+    process.exit(1);
+  }
   console.error('❌ Échec du démarrage du serveur:', error);
   process.exit(1);
 });

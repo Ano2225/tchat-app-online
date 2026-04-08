@@ -3,6 +3,7 @@ const Message = require("../models/Message");
 const aiService = require('../services/aiService');
 const { ObjectId } = require('mongodb');
 const gameHandlers = require('./gameHandlers');
+const botService = require('../services/botService');
 
 // ─── Socket-level rate limiting ─────────────────────────────────────────────
 // 20 messages per minute per socket (matches HTTP messageRateLimit)
@@ -74,6 +75,19 @@ function emitUserList(io) {
       userId: s?.userId || null,
       avatarUrl: s?.userMeta?.avatarUrl || null,
       sexe: s?.userMeta?.sexe || 'autre',
+      role: s?.userMeta?.role || null,
+      isBot: false,
+    });
+  }
+  // Append bot profiles so they appear in the online list
+  const { BOT_PROFILES } = require('./botProfiles');
+  for (const bot of BOT_PROFILES) {
+    usersInfo.push({
+      username:  bot.username,
+      userId:    bot.id,
+      avatarUrl: bot.avatarUrl,
+      sexe:      bot.sexe,
+      isBot:     true,
     });
   }
   io.emit('update_user_list', usersInfo);
@@ -81,25 +95,42 @@ function emitUserList(io) {
 
 function emitRoomUserList(room, io) {
   if (!io) return;
-  const roomInfo = io.sockets.adapter.rooms.get(room);
-  if (!roomInfo) {
-    io.to(room).emit('update_room_user_list', { room, users: [] });
-    return;
-  }
   const seen = new Set();
   const usersInfo = [];
-  for (const socketId of roomInfo) {
-    const s = io.sockets.sockets.get(socketId);
-    if (s && s.username && !seen.has(s.username)) {
-      seen.add(s.username);
+
+  const roomInfo = io.sockets.adapter.rooms.get(room);
+  if (roomInfo) {
+    for (const socketId of roomInfo) {
+      const s = io.sockets.sockets.get(socketId);
+      if (s && s.username && !seen.has(s.username)) {
+        seen.add(s.username);
+        usersInfo.push({
+          username: s.username,
+          userId:   s.userId || null,
+          avatarUrl: s.userMeta?.avatarUrl || null,
+          sexe:     s.userMeta?.sexe || 'autre',
+          role:     s.userMeta?.role || null,
+          isBot:    false,
+        });
+      }
+    }
+  }
+
+  // Always include bots that cover this room
+  const { BOT_PROFILES } = require('./botProfiles');
+  for (const bot of BOT_PROFILES) {
+    if (bot.channels.includes(room) && !seen.has(bot.username)) {
+      seen.add(bot.username);
       usersInfo.push({
-        username: s.username,
-        userId: s.userId || null,
-        avatarUrl: s.userMeta?.avatarUrl || null,
-        sexe: s.userMeta?.sexe || 'autre',
+        username:  bot.username,
+        userId:    bot.id,
+        avatarUrl: bot.avatarUrl,
+        sexe:      bot.sexe,
+        isBot:     true,
       });
     }
   }
+
   io.to(room).emit('update_room_user_list', { room, users: usersInfo });
 }
 
@@ -135,6 +166,11 @@ module.exports = (io, socket) => {
     socket.join(room);
     socket.currentRoom = room;
     _scheduleRoomList(room);
+
+    // Bot engagement: greet the joining user (non-blocking)
+    if (socket.username) {
+      botService.onUserJoined(io, room, socket.username).catch(() => {});
+    }
   });
 
   // ── Leave a public room ───────────────────────────────────────────────────
@@ -165,16 +201,16 @@ module.exports = (io, socket) => {
         if (senderId.startsWith('anon_')) {
           // Anonymous user — no DB record, use username from socket
           socket.username = socket.username || senderId.slice(5);
-          socket.userMeta = { avatarUrl: null, sexe: null };
+          socket.userMeta = { avatarUrl: null, sexe: null, role: null };
         } else {
           const isObjId = /^[0-9a-f]{24}$/i.test(senderId);
           const user = await User.collection.findOne(
             isObjId ? { $or: [{ _id: senderId }, { _id: new ObjectId(senderId) }] } : { _id: senderId },
-            { projection: { username: 1, avatarUrl: 1, sexe: 1 } }
+            { projection: { username: 1, avatarUrl: 1, sexe: 1, role: 1 } }
           );
           if (!user) return;
           socket.username = user.username;
-          socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null };
+          socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null, role: user.role || 'user' };
         }
       }
 
@@ -205,6 +241,7 @@ module.exports = (io, socket) => {
           username: socket.username,
           avatarUrl: socket.userMeta?.avatarUrl || undefined,
           sexe:      socket.userMeta?.sexe      || undefined,
+          role:      socket.userMeta?.role      || undefined,
         },
         content,
         room,
@@ -214,6 +251,9 @@ module.exports = (io, socket) => {
       });
 
       newMessage.save().catch((err) => console.error('Message save error:', err));
+
+      // Bot engagement: maybe respond if user mentions a bot name
+      botService.onUserMessage(io, room, content, replyPreview).catch(() => {});
 
     } catch (err) {
       console.error('send_message error:', err);
@@ -288,7 +328,7 @@ module.exports = (io, socket) => {
       const isObjId = /^[0-9a-f]{24}$/i.test(verifiedId);
       const user = await User.collection.findOne(
         isObjId ? { $or: [{ _id: verifiedId }, { _id: new ObjectId(verifiedId) }] } : { _id: verifiedId },
-        { projection: { username: 1, avatarUrl: 1, sexe: 1, isBlocked: 1, isAnonymous: 1 } }
+        { projection: { username: 1, avatarUrl: 1, sexe: 1, role: 1, isBlocked: 1, isAnonymous: 1 } }
       );
 
       if (!user) {
@@ -306,7 +346,7 @@ module.exports = (io, socket) => {
       currentUserId   = verifiedId;
       socket.userId   = verifiedId;
       socket.username = user.username || username;
-      socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null };
+      socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null, role: user.role || 'user' };
 
       // Evict duplicate sessions for this account
       if (connectedUsers.has(socket.username)) {
@@ -366,7 +406,7 @@ module.exports = (io, socket) => {
         currentUserId   = user._id.toString();
         socket.userId   = currentUserId;
         socket.username = newUsername;
-        socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null };
+        socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null, role: user.role || 'user' };
         userIdToUsername.set(currentUserId, newUsername);
         // Join personal room so direct delivery of private messages works
         socket.join(currentUserId);
@@ -512,6 +552,7 @@ module.exports = (io, socket) => {
           username: socket.username,
           avatarUrl: socket.userMeta?.avatarUrl || null,
           sexe: socket.userMeta?.sexe || null,
+          role: socket.userMeta?.role || null,
         },
         recipient: recipientId,
         content: newMessage.content,
@@ -595,23 +636,37 @@ module.exports = (io, socket) => {
   // ── Get room users (on-demand request from client) ────────────────────────
   socket.on('get_room_users', (room) => {
     if (!room || typeof room !== 'string') return;
-    // Synchronous — no DB queries, uses cached socket.userMeta
-    const roomInfo = io.sockets.adapter.rooms.get(room);
-    if (!roomInfo) {
-      socket.emit('update_room_user_list', { room, users: [] });
-      return;
-    }
+    // Reuse emitRoomUserList (includes bots) but emit only to this socket
     const seen = new Set();
     const usersInfo = [];
-    for (const socketId of roomInfo) {
-      const s = io.sockets.sockets.get(socketId);
-      if (s && s.username && !seen.has(s.username)) {
-        seen.add(s.username);
+    const roomInfo = io.sockets.adapter.rooms.get(room);
+    if (roomInfo) {
+      for (const socketId of roomInfo) {
+        const s = io.sockets.sockets.get(socketId);
+        if (s && s.username && !seen.has(s.username)) {
+          seen.add(s.username);
+          usersInfo.push({
+            username: s.username,
+            userId:   s.userId || null,
+            avatarUrl: s.userMeta?.avatarUrl || null,
+            sexe:     s.userMeta?.sexe || 'autre',
+            role:     s.userMeta?.role || null,
+            isBot:    false,
+          });
+        }
+      }
+    }
+    // Inject bots for this room
+    const { BOT_PROFILES } = require('./botProfiles');
+    for (const bot of BOT_PROFILES) {
+      if (bot.channels.includes(room) && !seen.has(bot.username)) {
+        seen.add(bot.username);
         usersInfo.push({
-          username: s.username,
-          userId: s.userId || null,
-          avatarUrl: s.userMeta?.avatarUrl || null,
-          sexe: s.userMeta?.sexe || 'autre',
+          username:  bot.username,
+          userId:    bot.id,
+          avatarUrl: bot.avatarUrl,
+          sexe:      bot.sexe,
+          isBot:     true,
         });
       }
     }

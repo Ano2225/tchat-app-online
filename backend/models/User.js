@@ -24,6 +24,9 @@ const UserSchema = new mongoose.Schema({
   isBlocked: { type: Boolean, default: false },
   blockedUsers: [{ type: String, ref: 'User' }],
   
+  // Bot flag
+  isBot: { type: Boolean, default: false },
+
   // Reset password
   resetPasswordToken:   { type: String, default: null },
   resetPasswordExpires: { type: Date,   default: null },

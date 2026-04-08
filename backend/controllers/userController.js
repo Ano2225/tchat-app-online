@@ -66,7 +66,7 @@ class UserController {
       // Inclusion projection: only expose fields the UI actually needs
       const user = await User.collection.findOne(
         buildIdQuery(id),
-        { projection: { username: 1, avatarUrl: 1, sexe: 1, isOnline: 1, isAnonymous: 1 } }
+        { projection: { username: 1, avatarUrl: 1, sexe: 1, role: 1, isOnline: 1, isAnonymous: 1 } }
       );
 
       if (!user) {

@@ -3,6 +3,7 @@ import { useAuthStore } from '@/store/authStore';
 import axiosInstance from '@/utils/axiosInstance';
 import BlockedUsers from '@/components/settings/BlockedUsers';
 import GenderAvatar from '@/components/ui/GenderAvatar';
+import AdminBadge from '@/components/ui/AdminBadge';
 import AvatarUpload from '@/components/ui/AvatarUpload';
 import { Settings, User, UserX, X, Lock, Eye, EyeOff, Pencil, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -369,7 +370,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <span className="text-gray-500 dark:text-gray-400">Nom d&apos;utilisateur</span>
-                      <p className="font-medium text-gray-900 dark:text-white">{user?.username}</p>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span>{user?.username}</span>
+                          {user?.role === 'admin' && <AdminBadge className="flex-shrink-0" />}
+                        </span>
+                      </p>
                     </div>
                     <div>
                       <span className="text-gray-500 dark:text-gray-400">Email</span>

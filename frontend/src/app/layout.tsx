@@ -1,23 +1,18 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Outfit, DM_Sans } from 'next/font/google';
-import AuthProvider from "./providers";
-import { Toaster } from 'react-hot-toast';
-import ErrorBoundary from '@/components/ui/ErrorBoundary';
-import { NotificationProvider } from '@/contexts/NotificationContext';
 import Script from 'next/script';
 
 const outfit = Outfit({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800'],
+  weight: ['400', '600', '700', '800'],
   variable: '--font-outfit',
   display: 'swap',
 });
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600'],
-  style: ['normal', 'italic'],
+  weight: ['400', '500', '600'],
   variable: '--font-dm-sans',
   display: 'swap',
 });
@@ -69,12 +64,7 @@ export default function RootLayout({
         )}
       </head>
       <body className={`antialiased ${outfit.variable} ${dmSans.variable}`}>
-        <ErrorBoundary>
-          <NotificationProvider>
-            <Toaster/>
-            <AuthProvider>{children}</AuthProvider>
-          </NotificationProvider>
-        </ErrorBoundary>
+        {children}
       </body>
     </html>
   );

@@ -8,6 +8,7 @@ import MessageReactions from './MessageReactions';
 import GameMessage from '../Game/GameMessage';
 import { ChatSkeleton } from '@/components/ui/skeletons';
 import GenderAvatar from '@/components/ui/GenderAvatar';
+import AdminBadge from '@/components/ui/AdminBadge';
 import { MessageCircle } from 'lucide-react';
 
 interface Reaction {
@@ -23,6 +24,8 @@ interface Message {
     username: string;
     avatarUrl?: string;
     sexe?: string;
+    role?: string;
+    isBot?: boolean;
   };
   content: string;
   createdAt: string;
@@ -30,6 +33,8 @@ interface Message {
   replyTo?: Message;
   reactions?: Reaction[];
   isGameMessage?: boolean;
+  isAI?: boolean;
+  aiCharacter?: string;
 }
 
 interface GameMessage {
@@ -353,7 +358,10 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                         className={`text-xs font-semibold ${getNameColor(sender?.sexe)}`}
                         style={{ fontFamily: 'var(--font-ui)' }}
                       >
-                        {senderName}
+                        <span className="inline-flex items-center gap-1.5">
+                          <span>{senderName}</span>
+                          {sender?.role === 'admin' && <AdminBadge className="flex-shrink-0" />}
+                        </span>
                       </span>
                       <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
                         {formatTime(msg.createdAt)}

@@ -1,5 +1,3 @@
-'use client'
-
 import Link from 'next/link'
 import ThemeToggle from '@/components/ui/ThemeToggle'
 import { LogIn, Sparkles, Ghost, MessageSquare, Shield, Gamepad2, Heart } from 'lucide-react'

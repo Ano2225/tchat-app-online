@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Socket } from 'socket.io-client'
 import GenderAvatar from '@/components/ui/GenderAvatar'
+import AdminBadge from '@/components/ui/AdminBadge'
 import { UserListSkeleton } from '@/components/ui/skeletons'
 import { ChevronRight, Users, X } from 'lucide-react'
 
@@ -13,18 +14,20 @@ interface User {
   isOnline: boolean
   avatarUrl?: string
   sexe?: string
+  role?: string
+  isBot?: boolean
 }
 
 interface UnreadEntry {
   count: number
-  sender: { _id: string; username: string; avatarUrl?: string; sexe?: string }
+  sender: { _id: string; username: string; avatarUrl?: string; sexe?: string; role?: string }
 }
 
 interface UsersOnlineProps {
   socket: Socket | null
   currentRoom?: string
   unreadMap?: Record<string, UnreadEntry>
-  onOpenChat?: (user: { _id: string; username: string; avatarUrl?: string; sexe?: string }) => void
+  onOpenChat?: (user: { _id: string; username: string; avatarUrl?: string; sexe?: string; role?: string }) => void
   onSelectAgent?: (agent: unknown) => void
   onClose?: () => void
 }
@@ -49,7 +52,9 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
           username: item.username,
           avatarUrl: item.avatarUrl || undefined,
           sexe: item.sexe || 'autre',
+          role: (item as { role?: string }).role,
           isOnline: true,
+          isBot: (item as { isBot?: boolean }).isBot || false,
         }
       })
 
@@ -188,7 +193,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
         ) : (
           users.map(u => {
             const unread = u.userId ? unreadMap[u.userId] : undefined
-            const canChat = !!u.userId && !!onOpenChat
+            const canChat = !!u.userId && !!onOpenChat && !u.isBot
 
             return (
               <div
@@ -196,7 +201,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
                 role="listitem"
                 aria-label={`${u.username}${unread ? ` — ${unread.count} non lu(s)` : ''}`}
                 onClick={() =>
-                  canChat && onOpenChat({ _id: u.userId!, username: u.username, avatarUrl: u.avatarUrl, sexe: u.sexe })
+                  canChat && onOpenChat({ _id: u.userId!, username: u.username, avatarUrl: u.avatarUrl, sexe: u.sexe, role: u.role })
                 }
                 className={`flex items-center gap-2.5 px-2 py-2 rounded-xl transition-all duration-200 ${canChat ? 'cursor-pointer' : ''}`}
                 onMouseEnter={e => {
@@ -236,7 +241,10 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
                         fontWeight: unread ? '600' : '500',
                       }}
                     >
-                      {u.username}
+                      <span className="inline-flex items-center gap-1.5 max-w-full">
+                        <span className="truncate">{u.username}</span>
+                        {u.role === 'admin' && <AdminBadge className="flex-shrink-0" />}
+                      </span>
                     </p>
                     {unread && unread.count > 0 && (
                       <span

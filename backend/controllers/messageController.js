@@ -19,13 +19,13 @@ function buildIdQuery(id) {
  */
 function fallbackSender(rawId, displayName = null) {
   const id = rawId ? String(rawId) : null;
-  if (displayName) return { _id: id, username: displayName, avatarUrl: null, sexe: null };
-  if (!id) return { _id: null, username: 'Utilisateur supprimé', avatarUrl: null, sexe: null };
+  if (displayName) return { _id: id, username: displayName, avatarUrl: null, sexe: null, role: null };
+  if (!id) return { _id: null, username: 'Utilisateur supprimé', avatarUrl: null, sexe: null, role: null };
   if (id.startsWith('anon_')) {
     const username = id.slice(5) || 'Anonyme';
-    return { _id: id, username, avatarUrl: null, sexe: null };
+    return { _id: id, username, avatarUrl: null, sexe: null, role: null };
   }
-  return { _id: id, username: 'Utilisateur supprimé', avatarUrl: null, sexe: null };
+  return { _id: id, username: 'Utilisateur supprimé', avatarUrl: null, sexe: null, role: null };
 }
 
 /**
@@ -54,7 +54,7 @@ async function populateSenders(msgs) {
   });
 
   const users = await User.collection
-    .find({ $or: orClauses }, { projection: { username: 1, avatarUrl: 1, sexe: 1, email: 1 } })
+    .find({ $or: orClauses }, { projection: { username: 1, avatarUrl: 1, sexe: 1, role: 1, email: 1 } })
     .toArray();
 
   // Index by string representation of _id (covers both ObjectId and string stored values)
@@ -63,7 +63,7 @@ async function populateSenders(msgs) {
   return msgs.map(msg => {
     const rawId = String(msg.sender ?? '');
     const found = rawId ? userMap.get(rawId) : null;
-    if (found) return { ...msg, sender: { _id: String(found._id), username: found.username, avatarUrl: found.avatarUrl || null, sexe: found.sexe || null } };
+    if (found) return { ...msg, sender: { _id: String(found._id), username: found.username, avatarUrl: found.avatarUrl || null, sexe: found.sexe || null, role: found.role || 'user' } };
     return { ...msg, sender: fallbackSender(rawId, msg.senderUsername || null) };
   });
 }
@@ -105,13 +105,19 @@ class MessageController {
     try {
       const senderUser = await User.collection.findOne(
         buildIdQuery(sender),
-        { projection: { username: 1 } }
+        { projection: { username: 1, role: 1 } }
       );
       const message = await Message.create({ content, sender, senderUsername: senderUser?.username || null, room });
       const payload = {
         ...message.toObject(),
         _id: message._id.toString(),
-        sender: { _id: sender, username: senderUser?.username || 'Utilisateur', avatarUrl: null, sexe: null }
+        sender: {
+          _id: sender,
+          username: senderUser?.username || 'Utilisateur',
+          avatarUrl: null,
+          sexe: null,
+          role: senderUser?.role || 'user'
+        }
       };
       res.status(201).json(payload);
     } catch (error) {
@@ -171,7 +177,7 @@ class MessageController {
     try {
       // Check blocking using collection.findOne to handle mixed ID types
       const [senderUser, recipientUser] = await Promise.all([
-        User.collection.findOne(buildIdQuery(sender), { projection: { blockedUsers: 1, username: 1 } }),
+        User.collection.findOne(buildIdQuery(sender), { projection: { blockedUsers: 1, username: 1, role: 1 } }),
         User.collection.findOne(buildIdQuery(recipient), { projection: { blockedUsers: 1 } }),
       ]);
       const sBlocked = senderUser?.blockedUsers || [];
@@ -197,6 +203,7 @@ class MessageController {
           username: senderUser?.username || 'Utilisateur',
           avatarUrl: null,
           sexe: null,
+          role: senderUser?.role || 'user',
         },
         recipient,
         content: message.content,
@@ -279,14 +286,14 @@ class MessageController {
         return [{ _id: id }];
       });
       const usersFound = orClauses.length
-        ? await User.collection.find({ $or: orClauses }, { projection: { username: 1, avatarUrl: 1, sexe: 1 } }).toArray()
+        ? await User.collection.find({ $or: orClauses }, { projection: { username: 1, avatarUrl: 1, sexe: 1, role: 1 } }).toArray()
         : [];
       const userMap = new Map(usersFound.map(u => [String(u._id), u]));
       const resolveUser = (rawId) => {
         if (!rawId) return null;
         const str = String(rawId);
         const found = userMap.get(str);
-        if (found) return { _id: String(found._id), username: found.username, avatarUrl: found.avatarUrl || null, sexe: found.sexe || null };
+        if (found) return { _id: String(found._id), username: found.username, avatarUrl: found.avatarUrl || null, sexe: found.sexe || null, role: found.role || 'user' };
         return fallbackSender(str);
       };
 

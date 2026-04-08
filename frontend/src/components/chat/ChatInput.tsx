@@ -1,8 +1,9 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
-import type { EmojiClickData } from 'emoji-picker-react'
+import { createPortal } from 'react-dom'
+import { EmojiStyle, type EmojiClickData } from 'emoji-picker-react'
 import { useAuthStore } from '@/store/authStore'
 import { Socket } from 'socket.io-client'
 
@@ -41,10 +42,21 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [message, setMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [pickerPos, setPickerPos] = useState<{ bottom: number; right: number } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
   const user = useAuthStore((state) => state.user)
+
+  const openPicker = useCallback(() => {
+    if (!emojiButtonRef.current) return
+    const rect = emojiButtonRef.current.getBoundingClientRect()
+    setPickerPos({
+      bottom: window.innerHeight - rect.top + 8,
+      right: window.innerWidth - rect.right,
+    })
+    setShowEmojiPicker(true)
+  }, [])
 
   useEffect(() => {
     if (!showEmojiPicker) return
@@ -182,18 +194,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
       
-      {showEmojiPicker && (
-        <div
-          ref={emojiPickerRef}
-          className="absolute bottom-full mb-2 z-10 transition-all duration-150 ease-out"
-          style={{ right: 0, maxWidth: 'min(350px, calc(100vw - 16px))' }}
-        >
-          <EmojiPicker
-            onEmojiClick={onEmojiClick}
-            width={typeof window !== 'undefined' ? Math.min(350, window.innerWidth - 16) : 350}
-          />
-        </div>
-      )}
       
       <form onSubmit={handleSubmit} className="flex items-end gap-2">
         {/* Pill input */}
@@ -228,7 +228,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <button
             type="button"
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            onClick={() => showEmojiPicker ? setShowEmojiPicker(false) : openPicker()}
             ref={emojiButtonRef}
             className="w-9 h-9 flex items-center justify-center rounded-xl transition-all focus:outline-none"
             style={{
@@ -274,6 +274,28 @@ const ChatInput: React.FC<ChatInputProps> = ({
           </div>
           <span>Vous tapez…</span>
         </div>
+      )}
+
+      {/* Emoji picker — portal pour éviter tout clipping overflow */}
+      {showEmojiPicker && pickerPos && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={emojiPickerRef}
+          style={{
+            position: 'fixed',
+            bottom: pickerPos.bottom,
+            right: pickerPos.right,
+            zIndex: 99999,
+            filter: 'drop-shadow(0 8px 32px rgba(0,0,0,0.3))',
+          }}
+        >
+          <EmojiPicker
+            emojiStyle={EmojiStyle.NATIVE}
+            onEmojiClick={onEmojiClick}
+            width={Math.min(320, window.innerWidth - 16)}
+            height={380}
+          />
+        </div>,
+        document.body
       )}
     </div>
   )

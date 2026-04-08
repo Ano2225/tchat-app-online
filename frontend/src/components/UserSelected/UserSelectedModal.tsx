@@ -5,6 +5,7 @@ import { Socket } from 'socket.io-client';
 import axiosInstance from '@/utils/axiosInstance';
 import toast from 'react-hot-toast';
 import GenderAvatar from '@/components/ui/GenderAvatar';
+import AdminBadge from '@/components/ui/AdminBadge';
 import { MessageCircle, AlertTriangle, UserX, Cake, MapPin, Venus, Mars, CircleEllipsis, X } from 'lucide-react';
 
 interface UserProfile {
@@ -14,6 +15,7 @@ interface UserProfile {
   ville?: string;
   sexe?: string;
   avatarUrl?: string;
+  role?: string;
 }
 
 interface Props {
@@ -123,7 +125,10 @@ const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
           </div>
 
           <h3 className="font-bold text-lg leading-tight mb-1" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
-            {profile.username}
+            <span className="inline-flex items-center gap-1.5">
+              <span>{profile.username}</span>
+              {profile.role === 'admin' && <AdminBadge className="flex-shrink-0" />}
+            </span>
           </h3>
 
           <div className="flex items-center justify-center gap-1.5">

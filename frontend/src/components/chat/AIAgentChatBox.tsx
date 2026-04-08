@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import type { EmojiClickData } from 'emoji-picker-react'
+import { EmojiStyle, type EmojiClickData } from 'emoji-picker-react'
 import { useAuthStore } from '@/store/authStore'
 import QuickReactions from './QuickReactions'
 import AIStatus from './AIStatus'
@@ -220,10 +220,13 @@ const AIAgentChatBox: React.FC<AIAgentChatBoxProps> = ({ agent, onClose }) => {
           ref={emojiPickerRef}
           className="fixed bottom-20 right-6 z-[9999] transition-all duration-150 ease-out"
         >
-          <EmojiPicker onEmojiClick={(emojiObject: EmojiClickData) => {
-            setNewMessage(prev => prev + emojiObject.emoji)
-            setShowEmojiPicker(false)
-          }} />
+          <EmojiPicker
+            emojiStyle={EmojiStyle.NATIVE}
+            onEmojiClick={(emojiObject: EmojiClickData) => {
+              setNewMessage(prev => prev + emojiObject.emoji)
+              setShowEmojiPicker(false)
+            }}
+          />
         </div>
       )}
       

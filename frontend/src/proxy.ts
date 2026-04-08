@@ -5,6 +5,13 @@ import type { NextRequest } from 'next/server'
 const ALLOWED_COUNTRY = 'CI'
 
 export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Keep the landing page static while still redirecting active sessions away from it.
+  if (pathname === '/' && request.cookies.get('session_token')?.value) {
+    return NextResponse.redirect(new URL('/chat', request.url))
+  }
+
   // Bypass geo-check in development (NEXT_PUBLIC_GEO_RESTRICT=true to force even in dev)
   const forceRestrict = process.env.NEXT_PUBLIC_GEO_RESTRICT === 'true'
   if (process.env.NODE_ENV !== 'production' && !forceRestrict) {
@@ -12,7 +19,6 @@ export function proxy(request: NextRequest) {
   }
 
   // Don't restrict the restricted page itself (prevents redirect loop)
-  const { pathname } = request.nextUrl
   if (pathname.startsWith('/restricted')) {
     return NextResponse.next()
   }

@@ -16,6 +16,7 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import toast from 'react-hot-toast';
 import PrivateChatBox from '@/components/chat/PrivateChatBox';
 import GenderAvatar from '@/components/ui/GenderAvatar';
+import AdminBadge from '@/components/ui/AdminBadge';
 import axiosInstance from '@/utils/axiosInstance';
 
 const GamePanel = dynamic(() => import('@/components/Game/GamePanel'), { ssr: false });
@@ -46,8 +47,8 @@ const ChatPage = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [registeredOnSocket, setRegisteredOnSocket] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
-  const [unreadMap, setUnreadMap] = useState<Record<string, { count: number; sender: { _id: string; username: string; avatarUrl?: string; sexe?: string } }>>({});
-  const [notifChatUser, setNotifChatUser] = useState<{ _id: string; username: string; avatarUrl?: string; sexe?: string } | null>(null);
+  const [unreadMap, setUnreadMap] = useState<Record<string, { count: number; sender: { _id: string; username: string; avatarUrl?: string; sexe?: string; role?: string } }>>({});
+  const [notifChatUser, setNotifChatUser] = useState<{ _id: string; username: string; avatarUrl?: string; sexe?: string; role?: string } | null>(null);
   const openChatUserIdRef = React.useRef<string | null>(null);
 
   const previousRoomRef = useRef<string | null>(null);
@@ -58,7 +59,7 @@ const ChatPage = () => {
     axiosInstance.get(`/messages/conversations/${user.id}`)
       .then(res => {
         const data: Array<{
-          user: { _id: string; username: string; avatarUrl?: string; sexe?: string };
+          user: { _id: string; username: string; avatarUrl?: string; sexe?: string; role?: string };
           unreadCount: number;
         }> = Array.isArray(res.data) ? res.data : [];
         const initial: typeof unreadMap = {};
@@ -171,7 +172,7 @@ const ChatPage = () => {
       }, 3000);
     };
     
-    const handleNewPrivateMessage = (data: { message: { _id: string; content?: string; sender: { _id: string; username: string; avatarUrl?: string; sexe?: string }; createdAt: string }; senderId: string }) => {
+    const handleNewPrivateMessage = (data: { message: { _id: string; content?: string; sender: { _id: string; username: string; avatarUrl?: string; sexe?: string; role?: string }; createdAt: string }; senderId: string }) => {
       const sender = data.message.sender;
       const senderId = sender._id;
       // If chatbox is open for this sender, let the chatbox handle it (via new_private_message fallback)
@@ -196,7 +197,12 @@ const ChatPage = () => {
             clickable={false}
           />
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{sender.username}</p>
+            <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+              <span className="inline-flex items-center gap-1.5 max-w-full">
+                <span className="truncate">{sender.username}</span>
+                {sender.role === 'admin' && <AdminBadge className="flex-shrink-0" />}
+              </span>
+            </p>
             <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{data.message.content || '📎 Image'}</p>
           </div>
           <button
@@ -256,7 +262,7 @@ const ChatPage = () => {
     setReplyTo(null);
   };
 
-  const handleOpenChatFromSidebar = (user: { _id: string; username: string; avatarUrl?: string; sexe?: string }) => {
+  const handleOpenChatFromSidebar = (user: { _id: string; username: string; avatarUrl?: string; sexe?: string; role?: string }) => {
     openChatUserIdRef.current = user._id;
     setNotifChatUser(user);
     setUnreadMap(prev => { const m = { ...prev }; delete m[user._id]; return m; });
@@ -426,7 +432,7 @@ const ChatPage = () => {
               axiosInstance.get(`/messages/conversations/${user.id}`)
                 .then(res => {
                   const data: Array<{
-                    user: { _id: string; username: string; avatarUrl?: string; sexe?: string };
+                    user: { _id: string; username: string; avatarUrl?: string; sexe?: string; role?: string };
                     unreadCount: number;
                   }> = Array.isArray(res.data) ? res.data : [];
                   setUnreadMap(prev => {

@@ -3,12 +3,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
-import type { EmojiClickData, Theme } from 'emoji-picker-react';
+import { EmojiStyle, type EmojiClickData, type Theme } from 'emoji-picker-react';
 import { useAuthStore } from '@/store/authStore';
 import { Socket } from 'socket.io-client';
 import chatService from '@/services/chatServices';
 import axiosInstance from '@/utils/axiosInstance';
 import GenderAvatar from '@/components/ui/GenderAvatar';
+import AdminBadge from '@/components/ui/AdminBadge';
 import { reportService } from '@/services/reportService';
 import toast from 'react-hot-toast';
 import { ShieldBan, ShieldCheck, Smile, Paperclip, Send, X } from 'lucide-react';
@@ -29,6 +30,7 @@ interface PrivateChatBoxProps {
     username: string;
     avatarUrl?: string;
     sexe?: string;
+    role?: string;
   };
   socket: Socket | null;
   onClose: () => void;
@@ -41,6 +43,7 @@ interface Message {
     _id: string;
     username: string;
     avatarUrl?: string;
+    role?: string;
   };
   recipient?: string;
   media_url?: string;
@@ -366,6 +369,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         >
           <EmojiPicker
             width={pickerPos.width}
+            emojiStyle={EmojiStyle.NATIVE}
             onEmojiClick={(emojiObject: EmojiClickData) => {
               setNewMessage(prev => prev + emojiObject.emoji);
               setShowEmojiPicker(false);
@@ -410,7 +414,10 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
 
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold truncate leading-tight" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
-              {recipient.username}
+              <span className="inline-flex items-center gap-1.5 max-w-full">
+                <span className="truncate">{recipient.username}</span>
+                {recipient.role === 'admin' && <AdminBadge className="flex-shrink-0" />}
+              </span>
             </p>
             <p className="text-xs leading-tight mt-0.5" style={{ color: isRecipientOnline ? 'var(--online)' : 'var(--text-muted)' }}>
               {isRecipientOnline ? '● En ligne' : '○ Hors ligne'}
