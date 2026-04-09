@@ -69,7 +69,7 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
   if (loading) {
     return (
       <div
-        className="w-full md:w-60 h-full rounded-xl overflow-hidden"
+        className="h-full w-full rounded-xl overflow-hidden md:w-60"
         style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}
       >
         <div className="p-4" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
@@ -83,7 +83,7 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
 
   return (
     <div
-      className="w-full md:w-60 h-full flex flex-col rounded-xl overflow-hidden"
+      className="flex h-full min-h-0 w-full flex-col rounded-xl overflow-hidden md:w-60"
       style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}
     >
       {/* Header */}
@@ -112,7 +112,7 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
       </div>
 
       {/* Channel list */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+      <div className="flex-1 overflow-y-auto overscroll-contain p-2 space-y-0.5">
 
         {/* Game channel */}
         <button

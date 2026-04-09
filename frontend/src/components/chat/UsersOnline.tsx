@@ -107,7 +107,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
 
   return (
     <div
-      className="h-full flex flex-col rounded-xl overflow-hidden transition-all duration-300"
+      className="flex h-full min-h-0 flex-col rounded-xl overflow-hidden transition-all duration-300"
       style={{
         background: 'var(--bg-panel)',
         border: '1px solid var(--border-default)',
@@ -181,7 +181,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
       </div>
 
       {/* User list */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+      <div className="flex-1 overflow-y-auto overscroll-contain p-2 space-y-0.5">
         {loading ? (
           !isCollapsed && <UserListSkeleton count={5} />
         ) : users.length === 0 ? (

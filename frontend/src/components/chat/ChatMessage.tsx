@@ -175,6 +175,35 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     return 'text-gray-900 dark:text-white';
   };
 
+  // Render message content with @mention highlighting
+  const renderContent = (content: string, isOwn: boolean): React.ReactNode => {
+    const myUsername = user?.username?.toLowerCase();
+    const parts = content.split(/(@[a-zA-Z0-9_]{1,50})/g);
+    return parts.map((part, i) => {
+      if (!part.startsWith('@')) return part;
+      const mentioned = part.slice(1).toLowerCase();
+      const isMe = mentioned === myUsername;
+      return (
+        <span
+          key={i}
+          style={{
+            fontWeight: 700,
+            borderRadius: '4px',
+            padding: '0 3px',
+            background: isMe
+              ? isOwn ? 'rgba(255,255,255,0.25)' : 'var(--accent-dim)'
+              : isOwn ? 'rgba(255,255,255,0.15)' : 'var(--bg-elevated)',
+            color: isMe
+              ? isOwn ? '#fff' : 'var(--accent)'
+              : isOwn ? 'rgba(255,255,255,0.9)' : 'var(--text-secondary)',
+          }}
+        >
+          {part}
+        </span>
+      );
+    });
+  };
+
   const handleAddReaction = (messageId: string, emoji: string) => {
     if (!socket || !user?.id) {
       console.log('Cannot add reaction: missing socket or user', { socket: !!socket, userId: user?.id });
@@ -223,7 +252,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
     <div
       ref={messagesContainerRef}
       onScroll={handleScroll}
-      className="flex-1 overflow-y-auto px-2 py-2 md:px-3 md:py-3 relative"
+      className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 py-2 md:px-3 md:py-3"
     >
       {/* Header du canal — compact */}
       <div
@@ -404,7 +433,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                       className={`px-3 py-1.5 text-sm leading-relaxed break-words ${isOwnMessage ? ownRadius : otherRadius}`}
                       style={getBubbleStyle(isOwnMessage, sender?.sexe)}
                     >
-                      {msg.content}
+                      {renderContent(msg.content, isOwnMessage)}
                     </div>
 
                     {isOwnMessage && (

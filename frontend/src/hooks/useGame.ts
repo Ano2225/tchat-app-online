@@ -57,6 +57,7 @@ interface QuestionEndedData {
 export const useGame = (channel: string, socket?: Socket | null) => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const joinedRef = useRef<boolean>(false);
+  const questionEndTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const user = useAuthStore((state) => state.user);
   const isGameChannel = channel === 'Game';
   
@@ -130,6 +131,10 @@ export const useGame = (channel: string, socket?: Socket | null) => {
 
     const handleNewQuestion = (question: NewQuestion) => {
       if (isGameChannel && question.duration) {
+        // Cancel any pending reset/loading timeouts from question_ended
+        questionEndTimeoutsRef.current.forEach(t => clearTimeout(t));
+        questionEndTimeoutsRef.current = [];
+
         // Clear previous state and loading
         setLoading(false);
         setHasAnswered(false);
@@ -178,6 +183,10 @@ export const useGame = (channel: string, socket?: Socket | null) => {
     };
 
     const handleQuestionEnded = (data: QuestionEndedData) => {
+      // Cancel any previous pending timeouts
+      questionEndTimeoutsRef.current.forEach(t => clearTimeout(t));
+      questionEndTimeoutsRef.current = [];
+
       updateLeaderboard(data.leaderboard || []);
       setCorrectAnswer(data.correctAnswer || null);
       setExplanation(data.explanation || null);
@@ -188,16 +197,20 @@ export const useGame = (channel: string, socket?: Socket | null) => {
         timerRef.current = null;
       }
 
-      setTimeout(() => setLoading(true), 5000);
+      // Show loading spinner just before next question arrives (backend pause = 5s)
+      const t1 = setTimeout(() => setLoading(true), 4500);
+      questionEndTimeoutsRef.current.push(t1);
 
-      setTimeout(() => {
+      // Reset question state — cancelled by handleNewQuestion if question arrives first
+      const t2 = setTimeout(() => {
         setHasAnswered(false);
         setAnswerResult(null);
         setCorrectAnswer(null);
         setWinner(null);
         setExplanation(null);
         setQuestion(null);
-      }, 8000);
+      }, 7500);
+      questionEndTimeoutsRef.current.push(t2);
     };
 
     const handleGameStarted = () => {
@@ -217,6 +230,8 @@ export const useGame = (channel: string, socket?: Socket | null) => {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+      questionEndTimeoutsRef.current.forEach(t => clearTimeout(t));
+      questionEndTimeoutsRef.current = [];
       if (joinedRef.current) {
         socket.emit('leave_game_channel', channel);
         joinedRef.current = false;

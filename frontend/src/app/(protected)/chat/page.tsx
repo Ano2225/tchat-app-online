@@ -14,6 +14,7 @@ import { useGameStore } from '@/store/gameStore';
 import UsersOnline from '@/components/chat/UsersOnline';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import toast from 'react-hot-toast';
+import MentionBanner from '@/components/chat/MentionBanner';
 import PrivateChatBox from '@/components/chat/PrivateChatBox';
 import GenderAvatar from '@/components/ui/GenderAvatar';
 import AdminBadge from '@/components/ui/AdminBadge';
@@ -50,6 +51,11 @@ const ChatPage = () => {
   const [unreadMap, setUnreadMap] = useState<Record<string, { count: number; sender: { _id: string; username: string; avatarUrl?: string; sexe?: string; role?: string } }>>({});
   const [notifChatUser, setNotifChatUser] = useState<{ _id: string; username: string; avatarUrl?: string; sexe?: string; role?: string } | null>(null);
   const openChatUserIdRef = React.useRef<string | null>(null);
+  const [onlineUsers, setOnlineUsers] = useState<{ id: string; username: string; avatarUrl?: string; sexe?: string }[]>([]);
+  const [mentionNotif, setMentionNotif] = useState<{
+    fromUsername: string; room: string; preview: string;
+    senderAvatarUrl?: string | null; senderSexe?: string | null;
+  } | null>(null);
 
   const previousRoomRef = useRef<string | null>(null);
 
@@ -74,6 +80,33 @@ const ChatPage = () => {
   }, [user?.id]);
 
   useGame(currentRoom, socket);
+
+  // Track online users for @mention feature
+  useEffect(() => {
+    if (!socket) return;
+    type UserItem = string | { username: string; userId?: string; avatarUrl?: string; sexe?: string };
+    type Payload = UserItem[] | { room: string; users: UserItem[] };
+    const normalize = (list: UserItem[]) =>
+      list.map((item, i) =>
+        typeof item === 'string'
+          ? { id: `u_${i}`, username: item }
+          : { id: item.userId || item.username || `u_${i}`, username: item.username, avatarUrl: item.avatarUrl, sexe: item.sexe }
+      );
+    const onGlobal = (payload: Payload) => {
+      const list = Array.isArray(payload) ? payload : (payload.users || []);
+      setOnlineUsers(normalize(list));
+    };
+    const onRoom = (payload: Payload) => {
+      const list = Array.isArray(payload) ? payload : (payload.users || []);
+      setOnlineUsers(normalize(list));
+    };
+    socket.on('update_user_list', onGlobal);
+    socket.on('update_room_user_list', onRoom);
+    return () => {
+      socket.off('update_user_list', onGlobal);
+      socket.off('update_room_user_list', onRoom);
+    };
+  }, [socket]);
 
   useEffect(() => {
     const currentToken = useAuthStore.getState().token;
@@ -221,16 +254,28 @@ const ChatPage = () => {
       ), { duration: 6000, position: 'bottom-right' });
     };
 
+    const handleMentionNotification = (data: {
+      fromUsername: string;
+      room: string;
+      preview: string;
+      senderAvatarUrl?: string | null;
+      senderSexe?: string | null;
+    }) => {
+      setMentionNotif(data);
+    };
+
     socket.on('username_taken', handleUsernameTaken);
     socket.on('username_reserved', handleUsernameReserved);
     socket.on('session_replaced', handleSessionReplaced);
     socket.on('new_private_message', handleNewPrivateMessage);
+    socket.on('mention_notification', handleMentionNotification);
 
     return () => {
       socket.off('username_taken', handleUsernameTaken);
       socket.off('username_reserved', handleUsernameReserved);
       socket.off('session_replaced', handleSessionReplaced);
       socket.off('new_private_message', handleNewPrivateMessage);
+      socket.off('mention_notification', handleMentionNotification);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, currentRoom]);
@@ -283,14 +328,20 @@ const ChatPage = () => {
   }, [currentQuestion?.question]);
 
   return (
-    <main className="h-screen-dynamic" style={{ background: 'var(--bg-base)' }}>
+    <main className="h-screen-dynamic flex flex-col overflow-hidden" style={{ background: 'var(--bg-base)' }}>
       <ChatHeader
         users={user || undefined}
         socket={socket}
         totalUnread={Object.values(unreadMap).reduce((s, e) => s + e.count, 0)}
         onOpenChat={handleOpenChatFromSidebar}
       />
-      
+
+      <MentionBanner
+        notif={mentionNotif}
+        onDismiss={() => setMentionNotif(null)}
+        onNavigate={handleJoinRoom}
+      />
+
       {/* Mobile: Bottom action bar */}
       <div
         className="lg:hidden fixed bottom-0 left-0 right-0 z-30 flex items-center justify-around px-4 pt-2 safe-bottom"
@@ -348,16 +399,13 @@ const ChatPage = () => {
         </div>
       )}
 
-      <div
-        className="flex gap-2 p-2 chat-body relative"
-        style={{ height: 'calc(100dvh - var(--header-h))' }}
-      >
+      <div className="chat-body relative flex flex-1 min-h-0 gap-2 overflow-hidden p-2">
         {/* Channel Sidebar - Desktop always visible, Mobile overlay */}
         <div
-          className={`md:flex-shrink-0 md:relative md:translate-x-0 fixed bottom-0 left-0 z-40 transform transition-transform duration-300 ease-in-out ${showChannels ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
+          className={`md:flex md:min-h-0 md:flex-shrink-0 md:relative md:translate-x-0 fixed bottom-0 left-0 z-40 transform transition-transform duration-300 ease-in-out ${showChannels ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
           style={{ top: 'var(--header-h)' }}
         >
-          <div className="h-full md:h-auto">
+          <div className="h-full md:min-h-0">
             <ChatChannel
               onJoinRoom={handleJoinRoom}
               currentRoom={currentRoom}
@@ -378,9 +426,9 @@ const ChatPage = () => {
           />
         )}
 
-        <div className="flex flex-1 gap-2 min-w-0">
+        <div className="flex min-h-0 min-w-0 flex-1 gap-2 overflow-hidden">
           {/* Chat principal */}
-          <div className="flex flex-col flex-1 rounded-xl overflow-hidden min-w-0" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col rounded-xl overflow-hidden" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}>
             <ErrorBoundary>
               <ChatMessage currentRoom={currentRoom} socket={socket} onReply={handleReply} />
             </ErrorBoundary>
@@ -390,12 +438,13 @@ const ChatPage = () => {
                 socket={socket}
                 replyTo={replyTo}
                 onCancelReply={handleCancelReply}
+                mentionUsers={onlineUsers}
               />
             </ErrorBoundary>
           </div>
           
           {currentRoom === 'Game' && (
-            <div ref={gamePanelRef} className="hidden lg:flex w-80 flex-col rounded-xl overflow-y-auto p-3 gap-3" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}>
+            <div ref={gamePanelRef} className="hidden lg:flex w-80 min-h-0 flex-col gap-3 overflow-y-auto rounded-xl p-3" style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}>
               <GamePanel channel={currentRoom} socket={socket ?? undefined} />
             </div>
           )}
@@ -403,10 +452,10 @@ const ChatPage = () => {
 
         {/* Users Sidebar - Desktop always visible, Mobile overlay */}
         <div
-          className={`md:flex-shrink-0 md:relative md:translate-x-0 fixed bottom-0 right-0 w-full sm:w-72 md:w-auto z-40 transform transition-transform duration-300 ease-in-out ${showUsers ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}
+          className={`md:flex md:min-h-0 md:flex-shrink-0 md:relative md:translate-x-0 fixed bottom-0 right-0 w-full sm:w-72 md:w-auto z-40 transform transition-transform duration-300 ease-in-out ${showUsers ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}
           style={{ top: 'var(--header-h)' }}
         >
-          <div className="h-full md:h-auto">
+          <div className="h-full md:min-h-0">
             <ErrorBoundary>
               <UsersOnline
                 socket={socket}

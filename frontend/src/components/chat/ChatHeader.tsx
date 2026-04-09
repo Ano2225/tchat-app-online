@@ -130,7 +130,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
   return (
     <>
       <header
-        className="sticky top-0 z-[200] h-14 lg:h-16 px-3 md:px-4 lg:px-6 flex items-center"
+        className="sticky top-0 z-[200] flex h-14 flex-shrink-0 items-center px-3 md:px-4 lg:h-16 lg:px-6"
         style={{
           background: 'var(--bg-panel)',
           borderBottom: '1px solid var(--border-default)',

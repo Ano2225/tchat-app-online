@@ -252,6 +252,31 @@ module.exports = (io, socket) => {
 
       newMessage.save().catch((err) => console.error('Message save error:', err));
 
+      // ── @mention notifications ────────────────────────────────────────────
+      const mentionRegex = /@([a-zA-Z0-9_]{1,50})/g;
+      const mentionedNames = new Set();
+      let m;
+      while ((m = mentionRegex.exec(content)) !== null) {
+        const name = m[1];
+        if (name !== socket.username) mentionedNames.add(name);
+      }
+      for (const mentionedName of mentionedNames) {
+        const socketIds = connectedUsers.get(mentionedName);
+        if (!socketIds) continue;
+        const notif = {
+          fromUsername: socket.username,
+          room,
+          messageId: newMessage._id.toString(),
+          preview: content.length > 120 ? content.slice(0, 120) + '…' : content,
+          createdAt: newMessage.createdAt,
+          senderAvatarUrl: socket.userMeta?.avatarUrl || null,
+          senderSexe: socket.userMeta?.sexe || null,
+        };
+        for (const socketId of socketIds) {
+          io.to(socketId).emit('mention_notification', notif);
+        }
+      }
+
       // Bot engagement: maybe respond if user mentions a bot name
       botService.onUserMessage(io, room, content, replyPreview).catch(() => {});
 
