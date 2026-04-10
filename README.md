@@ -14,7 +14,7 @@ Application de chat en temps réel — salons publics, messagerie privée, quiz 
 | **Auth** | better-auth (email/password + anonyme) |
 | **Upload** | Cloudinary |
 | **IA** | Groq (`llama-3.1-8b-instant`) — UI masquée MVP |
-| **Infrastructure** | Docker Compose (MongoDB, Redis, Mailhog, Umami) |
+| **Infrastructure** | Docker Compose (MongoDB, Redis, Umami) |
 
 ---
 
@@ -35,23 +35,26 @@ Application de chat en temps réel — salons publics, messagerie privée, quiz 
 **Prérequis** : Node.js 20+, Docker
 
 ```bash
-# 1. Infrastructure
+# 1. Variables d'environnement
+cp .env.example .env
+# Remplir au minimum : MONGODB_URI, BETTER_AUTH_SECRET, CSRF_SECRET, FRONTEND_URL
+
+# 2. Infrastructure
 cd infra && docker compose up -d
 
-# 2. Variables d'environnement
-cp .env.example .env
-# Remplir : MONGODB_URI, BETTER_AUTH_SECRET, JWT_SECRET, FRONTEND_URL
-
 # 3. Backend (port 8000)
+cd ..
 npm install && npm run dev
 
 # 4. Frontend (port 3000)
 cd frontend && npm install && npm run dev
 
 # Première fois seulement
-npm run init-channels   # salons par défaut
+cd ..
 npm run init-admin      # compte admin (variables ADMIN_*)
 ```
+
+Les salons publics par défaut (`General`, `Music`, `Sport`) sont créés automatiquement au démarrage du backend.
 
 ---
 
@@ -61,12 +64,12 @@ npm run init-admin      # compte admin (variables ADMIN_*)
 |---|---|
 | `MONGODB_URI` | URI MongoDB |
 | `BETTER_AUTH_SECRET` | Secret better-auth |
-| `JWT_SECRET` | Clé JWT |
 | `FRONTEND_URL` | Origine CORS (ex: `http://localhost:3000`) |
+| `CSRF_SECRET` | Secret CSRF |
 | `CLOUDINARY_*` | Credentials Cloudinary (uploads) |
 | `GROQ_API_KEY` | Clé Groq (quiz + agents IA) |
 | `DEEPL_API_KEY` | Traduction quiz FR — optionnel, fallback MyMemory |
-| `CSRF_SECRET` | HMAC CSRF — recommandé |
+| `NEXT_PUBLIC_UMAMI_*` | Analytics frontend — optionnel |
 
 Voir `.env.example` pour la liste complète.
 

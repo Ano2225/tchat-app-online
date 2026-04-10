@@ -4,7 +4,7 @@
 #
 # Prerequisites:
 #   cp .env.example .env   (from repo root)
-#   Fill in at minimum: BETTER_AUTH_SECRET, CSRF_SECRET, JWT_SECRET, FRONTEND_URL
+#   Fill in at minimum: BETTER_AUTH_SECRET, CSRF_SECRET, FRONTEND_URL
 
 services:
   mongo:

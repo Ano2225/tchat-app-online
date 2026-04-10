@@ -467,7 +467,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
         </div>
       </header>
 
-      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} socket={socket} />}
 
       {/* Logout confirmation modal */}
       {showLogoutConfirm && (

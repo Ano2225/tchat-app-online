@@ -195,27 +195,9 @@ export const useAuthStore = create<AuthState>()(
       },
 
       updateUser: async (data) => {
-        try {
-          const response = await fetch('/api/user', {
-            method: 'PUT',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(get().token ? { 'Authorization': `Bearer ${get().token}` } : {})
-            },
-            body: JSON.stringify(data)
-          })
-          
-          if (response.ok) {
-            const updatedUser = await response.json()
-            set((state) => ({
-              user: { ...state.user, ...updatedUser }
-            }))
-          }
-        } catch (error) {
-          console.error('Failed to update user:', error)
-          throw error
-        }
+        set((state) => ({
+          user: state.user ? { ...state.user, ...data } : state.user
+        }))
       },
 
       setIsAnonymous: (isAnonymous) => set({ isAnonymous }),
@@ -294,4 +276,3 @@ if (typeof window !== 'undefined') {
     }
   });
 }
-

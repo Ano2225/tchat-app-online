@@ -109,40 +109,48 @@ const ChatPage = () => {
   }, [socket]);
 
   useEffect(() => {
+    // `cancelled` guards against React Strict Mode double-invocation: the cleanup
+    // runs before the async import resolves, so `newSocket` would still be undefined
+    // at cleanup time — without this flag, two sockets would be created and the
+    // second one would trigger `session_replaced` on the first, causing a logout.
+    let cancelled = false;
     const currentToken = useAuthStore.getState().token;
     let newSocket: Socket;
 
     import('socket.io-client').then(({ io }) => {
+      if (cancelled) return;
+
       newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000', {
         auth: { token: currentToken },
         withCredentials: true,
       });
       setSocket(newSocket);
 
-    const handleConnect = () => {
-      // Send a user_connected event as soon as the socket connects.
-      // Use the authenticated username when available, otherwise send an anon id.
-      const idPart = newSocket.id ?? Math.random().toString(36).slice(2, 8);
-      const usernameToSend = user?.username ?? `anon_${idPart}`;
-      try {
-        newSocket.emit('user_connected', usernameToSend);
-      } catch (err) {
-        console.error('Failed to emit user_connected on connect', err);
-      }
-      // mark locally that we've registered on the socket so joins can happen safely
-      setRegisteredOnSocket(true);
+      const handleConnect = () => {
+        // Send a user_connected event as soon as the socket connects.
+        // Use the authenticated username when available, otherwise send an anon id.
+        const idPart = newSocket.id ?? Math.random().toString(36).slice(2, 8);
+        const usernameToSend = user?.username ?? `anon_${idPart}`;
+        try {
+          newSocket.emit('user_connected', usernameToSend);
+        } catch (err) {
+          console.error('Failed to emit user_connected on connect', err);
+        }
+        // mark locally that we've registered on the socket so joins can happen safely
+        setRegisteredOnSocket(true);
 
-      // Ensure we join the default/current room after being registered on socket
-      if (currentRoom) {
-        newSocket.emit('join_room', currentRoom);
-        previousRoomRef.current = currentRoom;
-      }
-    };
+        // Ensure we join the default/current room after being registered on socket
+        if (currentRoom) {
+          newSocket.emit('join_room', currentRoom);
+          previousRoomRef.current = currentRoom;
+        }
+      };
 
       newSocket.on('connect', handleConnect);
     });
 
     return () => {
+      cancelled = true;
       if (newSocket) {
         newSocket.off('connect');
         newSocket.disconnect();
@@ -199,10 +207,15 @@ const ChatPage = () => {
         duration: 5000,
         position: 'top-center',
       });
-      setTimeout(() => {
-        logout();
-        window.location.reload();
-      }, 3000);
+      logout(); // AuthProvider detects token = null → redirects to /login
+    };
+
+    const handleAuthError = (data: { message?: string }) => {
+      toast.error(data.message || 'Erreur d\'authentification.', {
+        duration: 4000,
+        position: 'top-center',
+      });
+      logout(); // AuthProvider detects token = null → redirects to /login
     };
     
     const handleNewPrivateMessage = (data: { message: { _id: string; content?: string; sender: { _id: string; username: string; avatarUrl?: string; sexe?: string; role?: string }; createdAt: string }; senderId: string }) => {
@@ -267,6 +280,7 @@ const ChatPage = () => {
     socket.on('username_taken', handleUsernameTaken);
     socket.on('username_reserved', handleUsernameReserved);
     socket.on('session_replaced', handleSessionReplaced);
+    socket.on('auth_error', handleAuthError);
     socket.on('new_private_message', handleNewPrivateMessage);
     socket.on('mention_notification', handleMentionNotification);
 
@@ -274,6 +288,7 @@ const ChatPage = () => {
       socket.off('username_taken', handleUsernameTaken);
       socket.off('username_reserved', handleUsernameReserved);
       socket.off('session_replaced', handleSessionReplaced);
+      socket.off('auth_error', handleAuthError);
       socket.off('new_private_message', handleNewPrivateMessage);
       socket.off('mention_notification', handleMentionNotification);
     };

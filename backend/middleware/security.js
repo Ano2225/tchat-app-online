@@ -3,14 +3,23 @@ const helmet = require('helmet');
 const cors = require('cors');
 const validator = require('validator');
 
+const getAllowedOrigins = () => {
+  const configuredOrigins = (process.env.FRONTEND_URL || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  if (process.env.NODE_ENV !== 'production') {
+    configuredOrigins.push('http://localhost:3000');
+  }
+
+  return [...new Set(configuredOrigins)];
+};
+
 // Configuration CORS sécurisée
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
-      .split(',')
-      .map(o => o.trim())
-      .concat(['http://localhost:3000'])
-      .filter(Boolean);
+    const allowedOrigins = getAllowedOrigins();
     
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
@@ -63,7 +72,7 @@ const helmetConfig = helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
       scriptSrc: ["'self'"],
-      connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:3000'],
+      connectSrc: ["'self'", ...getAllowedOrigins()],
     },
   },
   crossOriginEmbedderPolicy: false,

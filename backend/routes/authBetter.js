@@ -98,7 +98,11 @@ const buildCallbackUrl = (callbackURL, req) => {
 };
 
 const getVerifyRedirectTarget = (callbackURL, req) => {
-  return buildCallbackUrl(callbackURL, req) || `${getFrontendBaseUrl(req)}/login`;
+  // Ignore bare '/' — better-auth sends it as a default, treat as "no callback"
+  if (!callbackURL || callbackURL === '/') {
+    return `${getFrontendBaseUrl(req)}/email-verified`;
+  }
+  return buildCallbackUrl(callbackURL, req) || `${getFrontendBaseUrl(req)}/email-verified`;
 };
 
 const normalizeAuthError = (error) => {
@@ -433,80 +437,70 @@ router.get('/me', authMiddleware, (req, res) => {
 });
 
 // Email verification callback
+// Fire-and-forget welcome email — safe to call in all verified paths
+const sendWelcomeIfVerified = (email) => {
+  if (!email) return;
+  User.findOne({ email }).lean()
+    .then(user => { if (user) sendWelcomeEmail({ user }).catch(() => {}); })
+    .catch(() => {});
+};
+
 router.get('/verify-email', async (req, res) => {
+  const token = req.query.token;
+  const callbackURL = req.query.callbackURL;
+
+  if (!token || typeof token !== 'string') {
+    return res.status(400).json({ error: 'Token manquant' });
+  }
+
+  // Retrieve user email from the verification record BEFORE it is consumed by better-auth
+  let verifiedUserEmail = null;
   try {
-    const token = req.query.token;
-    const callbackURL = req.query.callbackURL;
+    const db = require('mongoose').connection.db;
+    const record = await db.collection('verification').findOne({ value: token });
+    if (record?.identifier) verifiedUserEmail = record.identifier;
+  } catch (_) { /* non-blocking */ }
 
-    if (!token || typeof token !== 'string') {
-      return res.status(400).json({ error: 'Token manquant' });
-    }
+  const redirectBase = getVerifyRedirectTarget(
+    typeof callbackURL === 'string' ? callbackURL : undefined,
+    req
+  );
+  const redirectTarget = redirectBase.includes('?')
+    ? `${redirectBase}&verified=true`
+    : `${redirectBase}?verified=true`;
 
-    // Look up the verification record to retrieve the user email before it's consumed
-    let verifiedUserEmail = null;
-    try {
-      const db = require('mongoose').connection.db;
-      const record = await db.collection('verification').findOne({ value: token });
-      if (record?.identifier) verifiedUserEmail = record.identifier;
-    } catch (_) { /* non-blocking */ }
-
+  try {
     const result = await auth.api.verifyEmail({
-      query: {
-        token,
-        ...(callbackURL ? { callbackURL } : {})
-      },
+      query: { token, ...(callbackURL ? { callbackURL } : {}) },
       headers: req.headers
     });
 
-    // Send welcome email after successful verification
-    if (verifiedUserEmail) {
-      try {
-        const verifiedUser = await User.findOne({ email: verifiedUserEmail }).lean();
-        if (verifiedUser) {
-          sendWelcomeEmail({ user: verifiedUser }).catch(() => {});
-        }
-      } catch (_) { /* non-blocking */ }
-    }
+    // better-auth returned a result (no redirect thrown) — verification succeeded
+    sendWelcomeIfVerified(verifiedUserEmail);
 
-    const base = getVerifyRedirectTarget(
-      typeof callbackURL === 'string' ? callbackURL : undefined,
-      req
-    );
-    // Append verified=true so the login page can show a success toast
-    const separator = base.includes('?') ? '&' : '?';
-    const redirectTarget = `${base}${separator}verified=true`;
-
-    if (result?.status) {
-      return res.redirect(redirectTarget);
-    }
+    if (result?.status) return res.redirect(redirectTarget);
     return res.json(result);
   } catch (error) {
     const statusCode = Number(error?.statusCode || error?.status);
     const redirectLocation = error?.headers?.Location || error?.headers?.location;
-    if (redirectLocation) {
-      // Append verified=true to the library's own redirect too
-      const sep = redirectLocation.includes('?') ? '&' : '?';
-      return res.redirect(`${redirectLocation}${sep}verified=true`);
-    }
 
-    if (statusCode === 302 || error?.status === 'FOUND') {
-      const base = getVerifyRedirectTarget(
-        typeof req.query.callbackURL === 'string' ? req.query.callbackURL : undefined,
-        req
-      );
-      const sep = base.includes('?') ? '&' : '?';
-      return res.redirect(`${base}${sep}verified=true`);
+    // better-auth signals success via a 302 redirect thrown as an error
+    const isSuccessRedirect =
+      redirectLocation ||
+      statusCode === 302 ||
+      error?.status === 'FOUND' ||
+      normalizeAuthError(error).status === 302;
+
+    if (isSuccessRedirect) {
+      sendWelcomeIfVerified(verifiedUserEmail);
+      if (redirectLocation) {
+        const sep = redirectLocation.includes('?') ? '&' : '?';
+        return res.redirect(`${redirectLocation}${sep}verified=true`);
+      }
+      return res.redirect(redirectTarget);
     }
 
     const normalized = normalizeAuthError(error);
-    if (normalized.status === 302) {
-      const base = getVerifyRedirectTarget(
-        typeof req.query.callbackURL === 'string' ? req.query.callbackURL : undefined,
-        req
-      );
-      const sep = base.includes('?') ? '&' : '?';
-      return res.redirect(`${base}${sep}verified=true`);
-    }
     return res.status(normalized.status).json(normalized);
   }
 });

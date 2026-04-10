@@ -8,7 +8,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const publicPaths = ['/', '/login', '/register', '/anonymous', '/forgot-password', '/reset-password'];
+const publicPaths = ['/', '/login', '/register', '/anonymous', '/forgot-password', '/reset-password', '/email-verified'];
 
 export default function AuthProvider({ children }: AuthProviderProps) {
   const [hasHydrated, setHasHydrated] = useState(false);
@@ -27,7 +27,11 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       currentAnonymous && (pathname === '/login' || pathname === '/register');
 
     if (!currentToken && !isPublicPath) {
-      router.push('/anonymous');
+      // If the user object exists in the store, they had a session that expired/was replaced
+      // → redirect to /login so they can reconnect easily.
+      // If there's no user at all (new visitor), redirect to /anonymous.
+      const storedUser = useAuthStore.getState().user;
+      router.push(storedUser ? '/login' : '/anonymous');
     } else if (currentToken && isPublicPath && !allowAnonymousPublic) {
       router.push('/chat');
     }

@@ -7,6 +7,7 @@ import AdminBadge from '@/components/ui/AdminBadge';
 import AvatarUpload from '@/components/ui/AvatarUpload';
 import { Settings, User, UserX, X, Lock, Eye, EyeOff, Pencil, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Socket } from 'socket.io-client';
 
 // Composant pour le changement de mot de passe
 const PasswordChangeSection: React.FC = () => {
@@ -152,9 +153,10 @@ const PasswordChangeSection: React.FC = () => {
 
 interface ProfileModalProps {
   onClose: () => void;
+  socket?: Socket | null;
 }
 
-const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
+const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, socket }) => {
   const { user, updateUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'blocked'>('profile');
   const [isEditing, setIsEditing] = useState(false);
@@ -169,6 +171,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
   const handleAvatarUpdate = (avatarUrl: string | null) => {
     if (user) {
       updateUser({ ...user, avatarUrl: avatarUrl || undefined });
+      socket?.emit('profile_updated');
     }
   };
 
@@ -196,6 +199,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
       await updateUser(data);
       setIsEditing(false);
       toast.success('Profil mis à jour');
+      socket?.emit('profile_updated');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       toast.error(msg || 'Erreur lors de la mise à jour');

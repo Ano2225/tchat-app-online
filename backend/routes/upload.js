@@ -12,8 +12,14 @@ const cloudinaryConfig = {
     api_secret: process.env.CLOUDINARY_API_SECRET,
 };
 
-if (!cloudinaryConfig.cloud_name || !cloudinaryConfig.api_key || !cloudinaryConfig.api_secret) {
-    console.error('Erreur : Les variables d\'environnement Cloudinary ne sont pas définies. Veuillez configurer CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET dans votre fichier .env');
+const missingCloudinaryConfig = !cloudinaryConfig.cloud_name || !cloudinaryConfig.api_key || !cloudinaryConfig.api_secret;
+
+if (missingCloudinaryConfig) {
+    const message = 'Erreur : Les variables d\'environnement Cloudinary ne sont pas définies. Veuillez configurer CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET dans votre fichier .env';
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error(message);
+    }
+    console.error(message);
 }
 
 // Configure Cloudinary
@@ -61,6 +67,9 @@ router.post('/', authMiddleware, csrfProtection, upload.single('media'), async (
     // Vérification d'autorisation supplémentaire
     if (!req.user || !req.user.id) {
         return res.status(401).json({ error: 'Utilisateur non authentifié' });
+    }
+    if (missingCloudinaryConfig) {
+        return res.status(503).json({ error: 'Service d\'upload indisponible: configuration Cloudinary manquante.' });
     }
     try {
         if (!req.file) {

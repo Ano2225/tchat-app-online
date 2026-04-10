@@ -454,6 +454,41 @@ module.exports = (io, socket) => {
     }
   });
 
+  // ── Profile updated — re-sync socket metadata from DB ─────────────────────
+  socket.on('profile_updated', async () => {
+    if (!socket.userId) return;
+    try {
+      const isObjId = /^[0-9a-f]{24}$/i.test(socket.userId);
+      const user = await User.collection.findOne(
+        isObjId ? { $or: [{ _id: socket.userId }, { _id: new ObjectId(socket.userId) }] } : { _id: socket.userId },
+        { projection: { username: 1, avatarUrl: 1, sexe: 1, role: 1 } }
+      );
+      if (!user) return;
+
+      socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null, role: user.role || 'user' };
+
+      // Handle username change (keep connectedUsers map in sync)
+      const newUsername = user.username;
+      if (newUsername && newUsername !== socket.username) {
+        if (socket.username && connectedUsers.has(socket.username)) {
+          connectedUsers.get(socket.username).delete(socket.id);
+          if (connectedUsers.get(socket.username).size === 0) connectedUsers.delete(socket.username);
+        }
+        socket.username = newUsername;
+        currentUsername = newUsername;
+        userIdToUsername.set(socket.userId, newUsername);
+        if (!connectedUsers.has(newUsername)) connectedUsers.set(newUsername, new Set());
+        connectedUsers.get(newUsername).add(socket.id);
+        io.emit('presence_update', { userId: socket.userId, username: newUsername, isOnline: true });
+      }
+
+      _scheduleUserList();
+      if (socket.currentRoom) _scheduleRoomList(socket.currentRoom);
+    } catch (err) {
+      console.error('profile_updated error:', err);
+    }
+  });
+
   // ── Join private room ─────────────────────────────────────────────────────
   socket.on('join_private_room', async ({ recipientId }) => {
     const senderId = socket.userId;
