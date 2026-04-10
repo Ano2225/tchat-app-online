@@ -316,7 +316,22 @@ const ChatPage = () => {
   const [showChannels, setShowChannels] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
   const [showGame, setShowGame] = useState(false);
+  const [showDesktopMusicPlayer, setShowDesktopMusicPlayer] = useState(false);
   const isGameRoom = currentRoom === 'Game';
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const syncDesktopState = (event?: MediaQueryListEvent) => {
+      setShowDesktopMusicPlayer(event ? event.matches : mediaQuery.matches);
+    };
+
+    syncDesktopState();
+    mediaQuery.addEventListener('change', syncDesktopState);
+
+    return () => {
+      mediaQuery.removeEventListener('change', syncDesktopState);
+    };
+  }, []);
 
   // Auto-scroll game panel to top on each new question
   const gamePanelRef = useRef<HTMLDivElement>(null);
@@ -503,7 +518,7 @@ const ChatPage = () => {
           }}
         />
       )}
-      <MusicPlayer />
+      {showDesktopMusicPlayer ? <MusicPlayer /> : null}
     </main>
   );
 };

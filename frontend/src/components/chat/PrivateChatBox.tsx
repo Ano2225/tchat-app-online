@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
-import { EmojiStyle, type EmojiClickData, type Theme } from 'emoji-picker-react';
+import type { EmojiClickData, Theme } from 'emoji-picker-react';
 import { useAuthStore } from '@/store/authStore';
 import { Socket } from 'socket.io-client';
 import chatService from '@/services/chatServices';
@@ -13,6 +13,8 @@ import AdminBadge from '@/components/ui/AdminBadge';
 import { reportService } from '@/services/reportService';
 import toast from 'react-hot-toast';
 import { ShieldBan, ShieldCheck, Smile, Paperclip, Send, X } from 'lucide-react';
+
+const NATIVE_EMOJI_STYLE = 'native' as never;
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
   ssr: false,
@@ -369,7 +371,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         >
           <EmojiPicker
             width={pickerPos.width}
-            emojiStyle={EmojiStyle.NATIVE}
+            emojiStyle={NATIVE_EMOJI_STYLE}
             onEmojiClick={(emojiObject: EmojiClickData) => {
               setNewMessage(prev => prev + emojiObject.emoji);
               setShowEmojiPicker(false);

@@ -181,7 +181,11 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
       </div>
 
       {/* User list */}
-      <div className="flex-1 overflow-y-auto overscroll-contain p-2 space-y-0.5">
+      <div
+        className="flex-1 overflow-y-auto overscroll-contain p-2 space-y-0.5"
+        role="list"
+        aria-label="Utilisateurs en ligne"
+      >
         {loading ? (
           !isCollapsed && <UserListSkeleton count={5} />
         ) : users.length === 0 ? (

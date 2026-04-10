@@ -10,7 +10,7 @@ const AdminBadge: React.FC<AdminBadgeProps> = ({
   className = '',
   title = 'Compte admin certifie',
 }) => (
-  <span className="inline-flex items-center" title={title} aria-label={title}>
+  <span className="inline-flex items-center" title={title} role="img" aria-label={title}>
     <BadgeCheck
       className={`w-3.5 h-3.5 ${className}`.trim()}
       style={{ color: 'var(--accent)' }}

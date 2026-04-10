@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Socket } from 'socket.io-client';
@@ -194,7 +194,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
               ? isOwn ? 'rgba(255,255,255,0.25)' : 'var(--accent-dim)'
               : isOwn ? 'rgba(255,255,255,0.15)' : 'var(--bg-elevated)',
             color: isMe
-              ? isOwn ? '#fff' : 'var(--accent)'
+              ? isOwn ? '#fff' : 'var(--accent-text)'
               : isOwn ? 'rgba(255,255,255,0.9)' : 'var(--text-secondary)',
           }}
         >

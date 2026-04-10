@@ -3,10 +3,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
-import { EmojiStyle, type EmojiClickData } from 'emoji-picker-react'
+import type { EmojiClickData } from 'emoji-picker-react'
 import { useAuthStore } from '@/store/authStore'
 import { Socket } from 'socket.io-client'
 import GenderAvatar from '@/components/ui/GenderAvatar'
+
+const NATIVE_EMOJI_STYLE = 'native' as never
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
   ssr: false,
@@ -63,7 +65,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [message, setMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-  const [pickerPos, setPickerPos] = useState<{ bottom: number; right: number } | null>(null)
+  const [pickerPos, setPickerPos] = useState<{ top: number; left: number; width: number; height: number } | null>(null)
 
   // Mention state
   const [mentionState, setMentionState] = useState<{ start: number; query: string } | null>(null)
@@ -124,15 +126,42 @@ const ChatInput: React.FC<ChatInputProps> = ({
   }, [message, mentionState])
 
   // Emoji picker
-  const openPicker = useCallback(() => {
+  const updatePickerPos = useCallback(() => {
     if (!emojiButtonRef.current) return
+
+    const margin = 8
+    const gap = 8
     const rect = emojiButtonRef.current.getBoundingClientRect()
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight
+
+    const width = Math.min(320, viewportWidth - margin * 2)
+    const height = Math.min(380, Math.max(240, viewportHeight - margin * 2))
+
+    const availableAbove = rect.top - margin
+    const availableBelow = viewportHeight - rect.bottom - margin
+    const preferAbove = availableAbove >= height || availableAbove > availableBelow
+
+    const unclampedTop = preferAbove
+      ? rect.top - height - gap
+      : rect.bottom + gap
+    const top = Math.max(margin, Math.min(unclampedTop, viewportHeight - height - margin))
+
+    const preferredLeft = rect.right - width
+    const left = Math.max(margin, Math.min(preferredLeft, viewportWidth - width - margin))
+
     setPickerPos({
-      bottom: window.innerHeight - rect.top + 8,
-      right: window.innerWidth - rect.right,
+      top,
+      left,
+      width,
+      height,
     })
-    setShowEmojiPicker(true)
   }, [])
+
+  const openPicker = useCallback(() => {
+    updatePickerPos()
+    setShowEmojiPicker(true)
+  }, [updatePickerPos])
 
   useEffect(() => {
     if (!showEmojiPicker) return
@@ -148,12 +177,16 @@ const ChatInput: React.FC<ChatInputProps> = ({
     document.addEventListener('mousedown', handlePointerDown)
     document.addEventListener('touchstart', handlePointerDown)
     document.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('resize', updatePickerPos)
+    window.visualViewport?.addEventListener('resize', updatePickerPos)
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
       document.removeEventListener('touchstart', handlePointerDown)
       document.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('resize', updatePickerPos)
+      window.visualViewport?.removeEventListener('resize', updatePickerPos)
     }
-  }, [showEmojiPicker])
+  }, [showEmojiPicker, updatePickerPos])
 
   // Close mention dropdown on outside click
   useEffect(() => {
@@ -323,7 +356,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
             autoComplete="off"
             aria-label="Message input"
             aria-autocomplete="list"
-            aria-expanded={showMentionDropdown}
           />
 
           {/* Character counter */}
@@ -522,17 +554,17 @@ const ChatInput: React.FC<ChatInputProps> = ({
           ref={emojiPickerRef}
           style={{
             position: 'fixed',
-            bottom: pickerPos.bottom,
-            right: pickerPos.right,
+            top: pickerPos.top,
+            left: pickerPos.left,
             zIndex: 99999,
             filter: 'drop-shadow(0 8px 32px rgba(0,0,0,0.3))',
           }}
         >
           <EmojiPicker
-            emojiStyle={EmojiStyle.NATIVE}
+            emojiStyle={NATIVE_EMOJI_STYLE}
             onEmojiClick={onEmojiClick}
-            width={Math.min(320, window.innerWidth - 16)}
-            height={380}
+            width={pickerPos.width}
+            height={pickerPos.height}
           />
         </div>,
         document.body
