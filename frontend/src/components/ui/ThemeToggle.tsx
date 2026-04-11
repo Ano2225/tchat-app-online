@@ -33,7 +33,7 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ variant = 'fixed' }) => {
     return (
       <button
         onClick={toggleTheme}
-        className="p-1.5 md:p-2 bg-gray-100/10 hover:bg-gray-100/20 border border-gray-200/20 rounded-lg md:rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
+        className="flex items-center justify-center w-8 h-8 md:w-9 md:h-9 bg-gray-100/10 hover:bg-gray-100/20 border border-gray-200/20 rounded-lg md:rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
         title="Changer le thème"
         aria-label="Toggle theme"
       >

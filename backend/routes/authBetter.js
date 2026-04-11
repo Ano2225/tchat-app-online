@@ -11,7 +11,12 @@ const { scryptAsync } = require('@noble/hashes/scrypt.js');
 const { bytesToHex, randomBytes: nobleRandomBytes } = require('@noble/hashes/utils.js');
 
 const hashPassword = async (password) => {
-  const salt = bytesToHex(nobleRandomBytes(16));
+  // better-auth's hashPassword uses the hex string directly as the salt argument
+  // to scryptAsync (not the raw bytes). Its verifyPassword splits "salt:key",
+  // then calls generateKey(password, salt) with the same hex string — so
+  // scrypt sees the hex string as UTF-8 bytes in both paths.
+  // We must replicate that exact behaviour to produce a hash that better-auth can verify.
+  const salt = bytesToHex(nobleRandomBytes(16)); // hex string (32 chars, 16 bytes encoded)
   const key = await scryptAsync(password.normalize('NFKC'), salt, { N: 16384, r: 16, p: 1, dkLen: 64, maxmem: 128 * 16384 * 16 * 2 });
   return `${salt}:${bytesToHex(key)}`;
 };
@@ -563,8 +568,8 @@ router.post('/request-password-reset', async (req, res) => {
     return res.json({
       success: true,
       message: 'Si cet email existe, un lien a été envoyé.',
-      // Dev only: expose the raw token so the reset flow can be tested without SMTP
-      ...(process.env.NODE_ENV === 'development' && { resetToken: rawToken })
+      // Non-production only: expose the raw token so the reset flow can be tested without SMTP
+      ...(process.env.NODE_ENV !== 'production' && { resetToken: rawToken })
     });
   } catch (error) {
     console.error('Erreur request-password-reset:', error);
@@ -592,10 +597,19 @@ router.post('/reset-password', async (req, res) => {
     // Hash using the same scrypt config as better-auth (salt:key hex format)
     const hashedPassword = await hashPassword(newPassword);
 
-    // Update the password in better-auth's account collection
+    // Update the password in better-auth's account collection.
+    // The mongodb adapter stores userId as ObjectId when the ID is a valid 24-char hex string
+    // (which is the case for better-auth v1.4+ with the mongodb adapter).
+    // We must query with both the string and the ObjectId form to handle all cases.
     const db = require('mongoose').connection.db;
+    const userId = String(user._id);
+    const userIdVariants = [userId];
+    if (/^[0-9a-f]{24}$/i.test(userId)) {
+      try { userIdVariants.push(new ObjectId(userId)); } catch (_) { /* not a valid ObjectId */ }
+    }
+
     await db.collection('account').updateOne(
-      { userId: String(user._id), providerId: 'credential' },
+      { userId: { $in: userIdVariants }, providerId: 'credential' },
       { $set: { password: hashedPassword } }
     );
 

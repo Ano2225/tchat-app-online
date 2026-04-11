@@ -50,7 +50,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         {/* Theme init: runs before first paint — prevents flash of wrong theme.
             Native <script> in a Server Component is serialized as raw HTML by the

@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test backend/tests/unit/*.test.js",
+    "test:unit": "node --test backend/tests/unit/*.test.js",
+    "test:integration": "NODE_ENV=test node --test backend/tests/integration/*.test.js",
+    "test:all": "node --test backend/tests/unit/*.test.js && NODE_ENV=test node --test backend/tests/integration/*.test.js",
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
     "init-channels": "node backend/scripts/initChannels.js",
@@ -36,6 +39,7 @@
   },
   "devDependencies": {
     "@types/axios": "^0.14.4",
-    "nodemon": "^3.1.9"
+    "nodemon": "^3.1.9",
+    "supertest": "^7.2.2"
   }
 }

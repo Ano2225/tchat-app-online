@@ -41,6 +41,7 @@ const GenderAvatar: React.FC<GenderAvatarProps> = ({
             src={avatarUrl}
             alt={username}
             fill
+            sizes="(max-width: 768px) 48px, 48px"
             className="object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/20 rounded-full"></div>

@@ -143,7 +143,9 @@ class ChatServer {
       const { createAdapter } = require('@socket.io/redis-adapter');
       const pubClient = redisClient;
       const subClient = redisClient.duplicate();
-      // ioredis auto-connects on creation — no need to call .connect()
+      // Both clients need error handlers — unhandled 'error' events crash Node
+      subClient.on('error', (err) => console.error('Redis sub error:', err.message ?? err));
+      subClient.on('end', () => console.warn('⚠️  Redis sub client disconnected'));
       this.io.adapter(createAdapter(pubClient, subClient));
       console.log('✅ Socket.IO Redis adapter enabled');
     } catch (err) {

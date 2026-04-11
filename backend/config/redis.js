@@ -17,15 +17,27 @@ const getRedisClient = () => {
   }
 
   client = new Redis(url, {
-    enableReadyCheck: true,
-    maxRetriesPerRequest: 3,
-    retryStrategy: (times) => Math.min(times * 100, 3000),
+    enableReadyCheck: false,
+    // null = never throw MaxRetriesPerRequestError (commands wait in offline queue)
+    maxRetriesPerRequest: null,
+    retryStrategy: (times) => {
+      if (times > 5) {
+        // Give up after 5 attempts — Redis is likely not available in this env
+        return null;
+      }
+      return Math.min(times * 500, 3000);
+    },
     lazyConnect: false,
   });
 
   client.on('connect', () => console.log('✅ Redis connected'));
-  client.on('error', (err) => console.error('Redis error:', err.message));
+  client.on('error', (err) => console.error('Redis error:', err.message ?? err));
   client.on('close', () => console.warn('⚠️  Redis connection closed'));
+  client.on('end', () => {
+    // retryStrategy returned null — Redis is unavailable, drop to in-memory
+    console.warn('⚠️  Redis unavailable — falling back to in-memory (single-instance)');
+    client = null;
+  });
 
   return client;
 };
