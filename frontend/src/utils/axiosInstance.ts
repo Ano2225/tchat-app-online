@@ -66,12 +66,11 @@ const requestInterceptor = async (config: InternalAxiosRequestConfig) => {
 // ── Response error interceptor ────────────────────────────────────────────────
 const responseErrorInterceptor = (error: AxiosError) => {
   if (error.response?.status === 401) {
-    console.warn('Invalid or expired token. Logging out...');
+    // Clear the CSRF cache and in-memory token so future requests won't use stale credentials.
+    // Do NOT call logout() here — that clears localStorage and triggers cross-tab logout for
+    // all open tabs. Let AuthProvider detect the missing token and redirect naturally.
     clearCsrfToken();
-    useAuthStore.getState().logout();
-    if (typeof window !== 'undefined') {
-      window.location.href = '/';
-    }
+    useAuthStore.setState({ token: null, session: null });
   }
 
   // CSRF token expired — clear cache so next request fetches a fresh one

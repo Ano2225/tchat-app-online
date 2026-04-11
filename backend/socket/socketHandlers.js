@@ -373,16 +373,17 @@ module.exports = (io, socket) => {
       socket.username = user.username || username;
       socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null, role: user.role || 'user' };
 
-      // Evict duplicate sessions for this account
+      // Add this socket to the user's set of connections (multi-tab support).
+      // Stale socket IDs (from disconnected sockets) are cleaned up here.
       if (connectedUsers.has(socket.username)) {
-        connectedUsers.get(socket.username).forEach(oldId => {
-          const old = io.sockets.sockets.get(oldId);
-          if (old && old.id !== socket.id) {
-            old.emit('session_replaced', { message: 'Session remplacée par une nouvelle connexion.' });
-            old.disconnect(true);
+        const existing = connectedUsers.get(socket.username);
+        // Prune dead sockets from the set
+        for (const oldId of existing) {
+          if (oldId !== socket.id && !io.sockets.sockets.get(oldId)) {
+            existing.delete(oldId);
           }
-        });
-        connectedUsers.delete(socket.username);
+        }
+        existing.add(socket.id);
       }
 
       userIdToUsername.set(currentUserId, socket.username);
@@ -392,7 +393,9 @@ module.exports = (io, socket) => {
         { $set: { isOnline: true, lastSeen: new Date() } }
       ).catch(() => {});
 
-      connectedUsers.set(socket.username, new Set([socket.id]));
+      if (!connectedUsers.has(socket.username)) {
+        connectedUsers.set(socket.username, new Set([socket.id]));
+      }
       if (currentUserId) socket.join(currentUserId);
       _scheduleUserList();
       if (socket.currentRoom) _scheduleRoomList(socket.currentRoom);

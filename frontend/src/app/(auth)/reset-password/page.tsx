@@ -34,8 +34,8 @@ function ResetPasswordForm() {
   const strength = (() => {
     if (!password) return 0;
     let s = 0;
-    if (password.length >= 6)          s++;
-    if (password.length >= 10)         s++;
+    if (password.length >= 8)          s++;
+    if (password.length >= 12)         s++;
     if (/[A-Z]/.test(password))        s++;
     if (/[0-9]/.test(password))        s++;
     if (/[^A-Za-z0-9]/.test(password)) s++;
@@ -48,7 +48,7 @@ function ResetPasswordForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirm) { toast.error('Les mots de passe ne correspondent pas'); return; }
-    if (password.length < 6)  { toast.error('Minimum 6 caractères'); return; }
+    if (password.length < 8)  { toast.error('Minimum 8 caractères'); return; }
 
     setLoading(true);
     try {
@@ -142,7 +142,7 @@ function ResetPasswordForm() {
                     type={showPwd ? 'text' : 'password'}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    placeholder="Minimum 6 caractères"
+                    placeholder="Minimum 8 caractères"
                     required
                     className="w-full rounded-xl pl-10 pr-10 py-3 text-sm focus:outline-none transition-all"
                     style={{

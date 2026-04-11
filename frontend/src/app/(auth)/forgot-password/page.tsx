@@ -9,7 +9,7 @@ import ThemeToggle from '@/components/ui/ThemeToggle';
 import { KeyRound, Mail } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail]     = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent]       = useState(false);
   const [devToken, setDevToken] = useState<string | null>(null);
@@ -17,11 +17,11 @@ export default function ForgotPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) { toast.error('Veuillez saisir votre email'); return; }
+    if (!identifier.trim()) { toast.error('Veuillez saisir votre email ou nom d\'utilisateur'); return; }
 
     setLoading(true);
     try {
-      const { data } = await axiosInstance.post('/auth/request-password-reset', { email });
+      const { data } = await axiosInstance.post('/auth/request-password-reset', { email: identifier.trim() });
       setSent(true);
       if (data.resetToken) setDevToken(data.resetToken); // dev only
     } catch (err: unknown) {
@@ -132,14 +132,14 @@ export default function ForgotPasswordPage() {
                   className="block text-sm font-medium mb-2"
                   style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-secondary)' }}
                 >
-                  Adresse email
+                  Email ou nom d&apos;utilisateur
                 </label>
                 <div className="relative">
                   <input
-                    type="email"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    placeholder="votre@email.com"
+                    type="text"
+                    value={identifier}
+                    onChange={e => setIdentifier(e.target.value)}
+                    placeholder="votre@email.com ou votre_pseudo"
                     required
                     className="w-full rounded-xl pl-10 py-3 text-sm focus:outline-none transition-all"
                     style={{

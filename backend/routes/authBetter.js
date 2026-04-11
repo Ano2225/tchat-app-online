@@ -41,9 +41,11 @@ const EMAIL_NOT_VERIFIED = 'EMAIL_NOT_VERIFIED';
 
 const buildSessionFromResult = (result) => {
   if (!result) return null;
-  if (result.session) return result.session;
-  if (result.token) return { token: result.token };
-  return null;
+  // better-auth may put the token in result.token, result.session.token, or both
+  const token = result.session?.token || result.token || null;
+  if (!token) return result.session || null;
+  // Always embed the token inside the returned session object
+  return { ...(result.session || {}), token };
 };
 
 const getErrorStatus = (error) => {
@@ -289,10 +291,21 @@ router.post('/change-password', authMiddleware, csrfProtection, handleChangePass
 
 const handleSendVerificationEmail = async (req, res) => {
   try {
-    const { email, callbackURL } = req.body || {};
+    let { email, callbackURL } = req.body || {};
 
     if (!email) {
       return res.status(400).json({ error: 'Email requis' });
+    }
+
+    // Resolve username → email (user may have typed their username, not their email)
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!isEmail) {
+      const userByUsername = await User.findOne({ username: email, isAnonymous: { $ne: true } })
+        .select('email').lean();
+      if (!userByUsername) {
+        return res.status(404).json({ error: 'Utilisateur introuvable' });
+      }
+      email = userByUsername.email;
     }
 
     await auth.api.sendVerificationEmail({
@@ -517,10 +530,19 @@ router.get('/csrf-token', authMiddleware, getCsrfToken);
 
 router.post('/request-password-reset', async (req, res) => {
   try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ message: 'Email requis' });
+    const { email: identifier } = req.body;
+    if (!identifier) return res.status(400).json({ message: 'Email ou nom d\'utilisateur requis' });
 
-    const user = await User.findOne({ email: email.toLowerCase().trim(), isAnonymous: { $ne: true } });
+    const trimmed = identifier.trim();
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+
+    // Resolve username → email when the user typed their username
+    let user;
+    if (isEmail) {
+      user = await User.findOne({ email: trimmed.toLowerCase(), isAnonymous: { $ne: true } });
+    } else {
+      user = await User.findOne({ username: trimmed, isAnonymous: { $ne: true } });
+    }
 
     // Always respond success to avoid user enumeration
     if (!user) {
@@ -556,7 +578,12 @@ router.post('/request-password-reset', async (req, res) => {
       console.warn(`[password-reset] Email delivery failed for ${user.email} — token not sent to client`);
     }
 
-    return res.json({ success: true, message: 'Si cet email existe, un lien a été envoyé.' });
+    return res.json({
+      success: true,
+      message: 'Si cet email existe, un lien a été envoyé.',
+      // Dev only: expose the raw token so the reset flow can be tested without SMTP
+      ...(process.env.NODE_ENV === 'development' && { resetToken: rawToken })
+    });
   } catch (error) {
     console.error('Erreur request-password-reset:', error);
     return res.status(500).json({ message: 'Erreur serveur' });

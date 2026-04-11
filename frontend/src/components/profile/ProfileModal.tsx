@@ -32,8 +32,8 @@ const PasswordChangeSection: React.FC = () => {
       return;
     }
 
-    if (passwords.newPassword.length < 6) {
-      setMessage({type: 'error', text: 'Le mot de passe doit contenir au moins 6 caractères'});
+    if (passwords.newPassword.length < 8) {
+      setMessage({type: 'error', text: 'Le mot de passe doit contenir au moins 8 caractères'});
       return;
     }
 
@@ -193,7 +193,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
       if (editForm.age) payload.age = Number(editForm.age);
 
       const { data } = await axiosInstance.put('/user', payload);
-      await updateUser(data);
+      updateUser(data);
       setIsEditing(false);
       toast.success('Profil mis à jour');
     } catch (err: unknown) {
@@ -264,7 +264,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
   return (
     <>
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998]" onClick={onClose} />
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 w-96 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto z-[9999] animate-in fade-in-0 zoom-in-95 duration-300">
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 w-96 max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto z-[9999] animate-in fade-in-0 zoom-in-95 duration-200">
         
         {/* Header avec gradient */}
         <div className="p-6 text-center rounded-t-2xl relative" style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-default)' }}>

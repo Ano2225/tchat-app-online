@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import type { Socket } from 'socket.io-client';
-import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import ChatMessage from '@/components/chat/ChatMessage';
 import ChatChannel from '@/components/chat/ChatChannel';
@@ -41,9 +40,7 @@ interface Message {
 }
 
 const ChatPage = () => {
-  const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
   const [currentRoom, setCurrentRoom] = useState('General');
   const [socket, setSocket] = useState<Socket | null>(null);
   const [registeredOnSocket, setRegisteredOnSocket] = useState(false);
@@ -172,37 +169,15 @@ const ChatPage = () => {
   useEffect(() => {
     if (!socket) return;
     
-    const handleUsernameTaken = (data: { message?: string }) => {
-      toast.error(data.message || 'Ce nom d\'utilisateur est déjà utilisé.', {
-        duration: 6000,
-        position: 'top-center',
-      });
-      setTimeout(() => {
-        logout();
-        router.push('/anonymous');
-      }, 2000);
-    };
-    
-    const handleUsernameReserved = (data: { message?: string }) => {
-      toast.error(data.message || 'Ce nom d\'utilisateur appartient à un compte enregistré.', {
-        duration: 6000,
-        position: 'top-center',
-      });
-      setTimeout(() => {
-        logout();
-        router.push('/login');
-      }, 2000);
-    };
-    
     const handleSessionReplaced = (data: { message?: string }) => {
       toast.error(data.message || 'Votre session a été remplacée par une nouvelle connexion.', {
         duration: 5000,
         position: 'top-center',
       });
-      setTimeout(() => {
-        logout();
-        window.location.reload();
-      }, 3000);
+      // Disconnect the socket only — do NOT call logout() here.
+      // logout() clears localStorage which triggers the cross-tab storage listener
+      // and would log out ALL open tabs, including the new tab that just connected.
+      socket?.disconnect();
     };
     
     const handleNewPrivateMessage = (data: { message: { _id: string; content?: string; sender: { _id: string; username: string; avatarUrl?: string; sexe?: string; role?: string }; createdAt: string }; senderId: string }) => {
@@ -264,15 +239,11 @@ const ChatPage = () => {
       setMentionNotif(data);
     };
 
-    socket.on('username_taken', handleUsernameTaken);
-    socket.on('username_reserved', handleUsernameReserved);
     socket.on('session_replaced', handleSessionReplaced);
     socket.on('new_private_message', handleNewPrivateMessage);
     socket.on('mention_notification', handleMentionNotification);
 
     return () => {
-      socket.off('username_taken', handleUsernameTaken);
-      socket.off('username_reserved', handleUsernameReserved);
       socket.off('session_replaced', handleSessionReplaced);
       socket.off('new_private_message', handleNewPrivateMessage);
       socket.off('mention_notification', handleMentionNotification);

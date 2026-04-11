@@ -3,6 +3,9 @@ const User = require('../models/User');
 const { ObjectId } = require('mongodb');
 const { getRandomQuestion } = require('../services/questionService');
 
+const isDev = process.env.NODE_ENV !== 'production';
+const log = (...args) => { if (isDev) console.log(...args); };
+
 function buildIdQuery(id) {
   const str = String(id);
   return /^[0-9a-f]{24}$/i.test(str)
@@ -26,7 +29,7 @@ const CACHE_TTL = 30000; // 30 secondes de cache
 const handleChatMessage = async (socket, data, io) => {
   // Validate authentication for game messages
   if (!socket.userId || !socket.username) {
-    console.log(`[SECURITY] Unauthorized game message attempt from socket: ${socket.id}`);
+    log(`[SECURITY] Unauthorized game message attempt from socket: ${socket.id}`);
     return false;
   }
   
@@ -36,7 +39,7 @@ const handleChatMessage = async (socket, data, io) => {
   const recentActions = userActions.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
   
   if (recentActions.length >= MAX_ACTIONS_PER_WINDOW) {
-    console.log(`[SECURITY] Rate limit exceeded for game message from user: ${socket.username}`);
+    log(`[SECURITY] Rate limit exceeded for game message from user: ${socket.username}`);
     return true; // Suppress the message
   }
   
@@ -47,13 +50,13 @@ const handleChatMessage = async (socket, data, io) => {
   
   // Validate input parameters
   if (!channel || typeof channel !== 'string' || !message || typeof message !== 'string') {
-    console.log(`[SECURITY] Invalid parameters in game message from user: ${socket.username}`);
+    log(`[SECURITY] Invalid parameters in game message from user: ${socket.username}`);
     return false;
   }
   
   // Sanitize message length
   if (message.length > 500) {
-    console.log(`[SECURITY] Message too long from user: ${socket.username}`);
+    log(`[SECURITY] Message too long from user: ${socket.username}`);
     return false;
   }
   
@@ -78,11 +81,11 @@ const handleChatMessage = async (socket, data, io) => {
     }
   }
   
-  console.log(`[GAME] Message received in channel ${channel}: "${message}"`);
-  console.log(`[GAME] Game exists: ${!!game}, isActive: ${game?.isActive}, hasQuestion: ${!!game?.currentQuestion}`);
+  log(`[GAME] Message received in channel ${channel}: "${message}"`);
+  log(`[GAME] Game exists: ${!!game}, isActive: ${game?.isActive}, hasQuestion: ${!!game?.currentQuestion}`);
   
   if (!game || !game.isActive || !game.currentQuestion) {
-    console.log(`[GAME] No active game, allowing normal chat`);
+    log(`[GAME] No active game, allowing normal chat`);
     return false; // Allow normal chat message processing
   }
   
@@ -105,7 +108,7 @@ const handleChatMessage = async (socket, data, io) => {
 
   // Server-side deadline: reject answers submitted after question expired (+ 1s grace)
   if (responseTime > QUESTION_DURATION + 1000) {
-    console.log(`[SECURITY] Late answer rejected from ${socket.username}, response time: ${responseTime}ms`);
+    log(`[SECURITY] Late answer rejected from ${socket.username}, response time: ${responseTime}ms`);
     socket.emit('answer_result', { userId: socket.userId, isCorrect: false, late: true, alreadyAnswered: false });
     return false;
   }
@@ -127,7 +130,7 @@ const handleChatMessage = async (socket, data, io) => {
                    normalizedUserAnswer.includes(normalizedCorrectAnswer) ||
                    normalizedCorrectAnswer.includes(normalizedUserAnswer);
   
-  console.log(`[GAME] Answer comparison - User: "${normalizedUserAnswer}", Correct: "${normalizedCorrectAnswer}", IsCorrect: ${isCorrect}`);
+  log(`[GAME] Answer comparison - User: "${normalizedUserAnswer}", Correct: "${normalizedCorrectAnswer}", IsCorrect: ${isCorrect}`);
   
   // Enregistrer la réponse
   game.currentQuestion.answers.push({
@@ -172,7 +175,7 @@ const handleChatMessage = async (socket, data, io) => {
         correctAnswer: game.currentQuestion.correctAnswerText
       };
       
-      console.log(`[GAME] Announcing winner:`, winnerData);
+      log(`[GAME] Announcing winner:`, winnerData);
       io.to(`game_${channel}`).emit('winner_announced', winnerData);
       
       // Délai plus long pour s'assurer que le message utilisateur arrive en premier
@@ -240,12 +243,12 @@ const handleChatMessage = async (socket, data, io) => {
 };
 
 module.exports = (io, socket) => {
-  console.log('Game handlers initialized for socket:', socket.id);
+  log('Game handlers initialized for socket:', socket.id);
   
   // Helper function to validate authenticated user
   const validateAuthenticatedUser = (socket) => {
     if (!socket.userId || !socket.username) {
-      console.log(`[SECURITY] Unauthorized game action attempt from socket: ${socket.id}`);
+      log(`[SECURITY] Unauthorized game action attempt from socket: ${socket.id}`);
       const errorMessage = 'Authentication required for game actions';
       console.error(`[GAME_ERROR] ${errorMessage}`);
       socket.emit('game_error', { message: errorMessage });
@@ -267,7 +270,7 @@ module.exports = (io, socket) => {
     const maxActions = actionType === 'join' ? 2 : MAX_ACTIONS_PER_WINDOW;
     
     if (recentActions.length >= maxActions) {
-      console.log(`[RATE_LIMIT] User ${userId} exceeded limit for ${actionType}: ${recentActions.length}/${maxActions}`);
+      log(`[RATE_LIMIT] User ${userId} exceeded limit for ${actionType}: ${recentActions.length}/${maxActions}`);
       return false;
     }
     
@@ -317,7 +320,7 @@ module.exports = (io, socket) => {
 
     // Check rate limiting spécifique pour join
     if (!checkRateLimit(socket.userId, 'join')) {
-      console.log(`[RATE_LIMIT] Join game channel blocked for user: ${socket.username}`);
+      log(`[RATE_LIMIT] Join game channel blocked for user: ${socket.username}`);
       socket.emit('game_error', { message: 'Trop de tentatives de connexion. Attendez un moment.' });
       return;
     }
@@ -328,7 +331,7 @@ module.exports = (io, socket) => {
       return;
     }
 
-    console.log(`User ${socket.username} joining game channel: ${channel}`);
+    log(`User ${socket.username} joining game channel: ${channel}`);
     socket.join(`game_${channel}`);
 
     let game = activeGames.get(channel);
@@ -344,7 +347,7 @@ module.exports = (io, socket) => {
           });
         }
         activeGames.set(channel, game);
-        console.log(`Game created/loaded for channel: ${channel}`);
+        log(`Game created/loaded for channel: ${channel}`);
       } catch (error) {
         const errorMessage = 'Erreur lors du chargement du jeu';
         console.error('Error creating/loading game:', error);
@@ -371,7 +374,7 @@ module.exports = (io, socket) => {
                 { $push: { leaderboard: { userId: socket.userId, username: socket.username, score: 0 } } },
                 { new: false }
               );
-              console.log(`[GAME] Added ${socket.username} to leaderboard`);
+              log(`[GAME] Added ${socket.username} to leaderboard`);
             } catch (error) {
               console.error('Error adding player to leaderboard:', error);
             }
@@ -383,22 +386,22 @@ module.exports = (io, socket) => {
     }
 
     // Démarrer le jeu automatiquement avec un délai
-    console.log(`Game status for ${channel}: isActive=${game.isActive}`);
+    log(`Game status for ${channel}: isActive=${game.isActive}`);
     if (!game.isActive && !gameTimers.has(`start_${channel}`)) {
-      console.log(`Starting game for channel: ${channel}`);
+      log(`Starting game for channel: ${channel}`);
       const startTimer = setTimeout(() => {
         gameTimers.delete(`start_${channel}`);
         startGame(channel, io);
       }, 1000);
       gameTimers.set(`start_${channel}`, startTimer);
     } else {
-      console.log(`Game already active for channel: ${channel}`);
+      log(`Game already active for channel: ${channel}`);
       // Vérifier si une question est en cours
       if (game.currentQuestion) {
         const timeElapsed = Date.now() - new Date(game.currentQuestion.startTime).getTime();
         const timeLeft = Math.max(0, Math.floor((QUESTION_DURATION - timeElapsed) / 1000));
 
-        console.log(`[GAME] Sending current question to new player, time left: ${timeLeft}s`);
+        log(`[GAME] Sending current question to new player, time left: ${timeLeft}s`);
         
         if (timeLeft > 0) {
           // Send full question data so late joiners have all fields
@@ -413,11 +416,11 @@ module.exports = (io, socket) => {
             explanation: game.currentQuestion.explanation || ''
           });
         } else {
-          console.log(`[GAME] Question expired, ending it`);
+          log(`[GAME] Question expired, ending it`);
           endQuestion(channel, io);
         }
       } else {
-        console.log(`[GAME] No current question, starting new one in 2s`);
+        log(`[GAME] No current question, starting new one in 2s`);
         setTimeout(() => nextQuestion(channel, io), 2000);
       }
     }
@@ -429,7 +432,7 @@ module.exports = (io, socket) => {
       leaderboard: (game.leaderboard || []).sort((a, b) => (b.score || 0) - (a.score || 0))
     };
     
-    console.log(`[GAME] Sending initial game state to ${socket.username}:`, gameState);
+    log(`[GAME] Sending initial game state to ${socket.username}:`, gameState);
     socket.emit('game_state', gameState);
   });
 
@@ -446,7 +449,7 @@ module.exports = (io, socket) => {
 
     // Check rate limiting pour start_game
     if (!checkRateLimit(socket.userId, 'start')) {
-      console.log(`[RATE_LIMIT] Start game blocked for user: ${socket.username}`);
+      log(`[RATE_LIMIT] Start game blocked for user: ${socket.username}`);
       socket.emit('game_error', { message: 'Trop de tentatives de démarrage. Attendez un moment.' });
       return;
     }
@@ -476,7 +479,7 @@ module.exports = (io, socket) => {
 
     // Check rate limiting pour leave (ne pas bloquer la déconnexion)
     if (!checkRateLimit(socket.userId, 'leave')) {
-      console.log(`[RATE_LIMIT] Leave game channel rate limited for user: ${socket.username}`);
+      log(`[RATE_LIMIT] Leave game channel rate limited for user: ${socket.username}`);
       // Ne pas bloquer la déconnexion, juste logger
     }
 
@@ -513,7 +516,7 @@ module.exports = (io, socket) => {
 
     // Check rate limiting pour les réponses
     if (!checkRateLimit(socket.userId, 'answer')) {
-      console.log(`[RATE_LIMIT] Game answer blocked for user: ${socket.username}`);
+      log(`[RATE_LIMIT] Game answer blocked for user: ${socket.username}`);
       socket.emit('game_error', { message: 'Trop de réponses envoyées. Ralentissez.' });
       return;
     }
@@ -537,7 +540,7 @@ module.exports = (io, socket) => {
 };
 
 async function startGame(channel, io) {
-  console.log(`[START_GAME] Starting game for channel: ${channel}`);
+  log(`[START_GAME] Starting game for channel: ${channel}`);
   
   try {
     const updatedGame = await Game.findOneAndUpdate(
@@ -547,12 +550,12 @@ async function startGame(channel, io) {
     );
     
     if (!updatedGame) {
-      console.log(`[START_GAME] Game already active or not found for channel: ${channel}`);
+      log(`[START_GAME] Game already active or not found for channel: ${channel}`);
       return;
     }
     
     activeGames.set(channel, updatedGame);
-    console.log(`Game activated for channel: ${channel}`);
+    log(`Game activated for channel: ${channel}`);
     
     io.to(`game_${channel}`).emit('game_started');
     
@@ -636,10 +639,10 @@ async function nextQuestion(channel, io) {
 }
 
 async function endQuestion(channel, io) {
-  console.log(`Ending question for channel: ${channel}`);
+  log(`Ending question for channel: ${channel}`);
   const game = activeGames.get(channel);
   if (!game || !game.currentQuestion) {
-    console.log(`No game or question to end for channel: ${channel}`);
+    log(`No game or question to end for channel: ${channel}`);
     return;
   }
   
@@ -651,7 +654,7 @@ async function endQuestion(channel, io) {
     answers: game.currentQuestion.answers || []
   };
   
-  console.log(`[GAME] Sending question ended data:`, endData);
+  log(`[GAME] Sending question ended data:`, endData);
   io.to(`game_${channel}`).emit('question_ended', endData);
   
   // Optimiser l'envoi des résultats
@@ -738,4 +741,4 @@ module.exports.handleChatMessage = handleChatMessage;
 module.exports.activeGames = activeGames;
 module.exports.gameTimers = gameTimers;
 
-console.log('Game handlers module loaded with memory optimization');
+log('Game handlers module loaded with memory optimization');

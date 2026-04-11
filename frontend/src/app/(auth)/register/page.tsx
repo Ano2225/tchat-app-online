@@ -53,8 +53,8 @@ export default function RegisterPage() {
     if (step === 2) {
       if (!formData.password) {
         errors.password = 'Le mot de passe est requis'
-      } else if (formData.password.length < 6) {
-        errors.password = 'Le mot de passe doit contenir au moins 6 caractères'
+      } else if (formData.password.length < 8) {
+        errors.password = 'Le mot de passe doit contenir au moins 8 caractères'
       }
       if (!formData.confirmPassword) {
         errors.confirmPassword = 'Veuillez confirmer votre mot de passe'
@@ -273,7 +273,7 @@ export default function RegisterPage() {
                       type={showPassword ? 'text' : 'password'}
                       value={formData.password}
                       onChange={handleChange}
-                      placeholder="Au moins 6 caractères"
+                      placeholder="Au moins 8 caractères"
                       className="w-full rounded-xl pl-10 pr-12 py-3 text-sm focus:outline-none transition-all"
                       style={inputStyle('password')}
                       aria-invalid={!!fieldErrors.password}

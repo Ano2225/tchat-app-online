@@ -52,7 +52,7 @@ interface AuthState {
   // Méthodes de compatibilité
   login: (userData: { user: User; token: string }) => void
   logout: () => Promise<void>
-  updateUser: (newUserData: Partial<User>) => Promise<void>
+  updateUser: (newUserData: Partial<User>) => void
   setIsAnonymous: (isAnonymous: boolean) => void
   fetchUserProfile: () => Promise<void>
   hydrateSession: () => Promise<boolean>
@@ -81,15 +81,15 @@ export const useAuthStore = create<AuthState>()(
           const result = await response.json()
           
           if (result.success) {
-            const session = result.session || null
-            const token = session?.token || null
+            const token = result.session?.token || result.token || null
+            const session = result.session ? { ...result.session, token } : (token ? { token } : null)
 
-            set({ 
+            set({
               user: result.user || null,
               session,
               token,
               isAnonymous: result.user?.isAnonymous || false,
-              isLoading: false 
+              isLoading: false
             })
 
             return { success: true, verificationRequired: !token }
@@ -116,12 +116,13 @@ export const useAuthStore = create<AuthState>()(
           const result = await response.json()
           
           if (result.success) {
-            set({ 
-              user: result.user, 
-              session: result.session,
-              token: result.session?.token || null,
+            const token = result.session?.token || result.token || null
+            set({
+              user: result.user,
+              session: result.session ? { ...result.session, token } : (token ? { token } : null),
+              token,
               isAnonymous: result.user?.isAnonymous || false,
-              isLoading: false 
+              isLoading: false
             })
             return { success: true }
           }
@@ -194,28 +195,10 @@ export const useAuthStore = create<AuthState>()(
         await get().signOut()
       },
 
-      updateUser: async (data) => {
-        try {
-          const response = await fetch('/api/user', {
-            method: 'PUT',
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(get().token ? { 'Authorization': `Bearer ${get().token}` } : {})
-            },
-            body: JSON.stringify(data)
-          })
-          
-          if (response.ok) {
-            const updatedUser = await response.json()
-            set((state) => ({
-              user: { ...state.user, ...updatedUser }
-            }))
-          }
-        } catch (error) {
-          console.error('Failed to update user:', error)
-          throw error
-        }
+      updateUser: (data) => {
+        set((state) => ({
+          user: state.user ? { ...state.user, ...data } : state.user
+        }))
       },
 
       setIsAnonymous: (isAnonymous) => set({ isAnonymous }),
@@ -250,11 +233,13 @@ export const useAuthStore = create<AuthState>()(
           })
           if (!response.ok) return false
           const result = await response.json()
-          if (result.user && result.session?.token) {
+          // token may be in result.session.token or result.token
+          const token = result.session?.token || result.token || null
+          if (result.user && token) {
             set({
               user: result.user,
-              session: result.session,
-              token: result.session.token,
+              session: result.session ? { ...result.session, token } : { token },
+              token,
               isAnonymous: result.user?.isAnonymous || false,
             })
             return true
@@ -285,7 +270,8 @@ if (typeof window !== 'undefined') {
     if (e.key !== 'auth-storage') return;
     try {
       const next = e.newValue ? JSON.parse(e.newValue) : null;
-      if (!next?.user) {
+      // Zustand persist stores state under next.state, not directly on next
+      if (!next?.state?.user) {
         useAuthStore.setState({ user: null, token: null, session: null, isAnonymous: false });
       }
     } catch {

@@ -8,7 +8,6 @@
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
     "init-channels": "node backend/scripts/initChannels.js",
-    "init-db": "node backend/scripts/initDatabase.js",
     "init-admin": "node backend/scripts/initAdmin.js"
   },
   "keywords": [],
@@ -17,7 +16,7 @@
   "dependencies": {
     "@socket.io/redis-adapter": "^8.3.0",
     "axios": "^1.14.0",
-    "bcryptjs": "^3.0.2",
+    "bcrypxtjs": "^3.0.2",
     "better-auth": "^1.4.17",
     "cloudinary": "^2.6.0",
     "cookie-parser": "^1.4.7",
