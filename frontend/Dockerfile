@@ -22,6 +22,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Ensure public/ always exists — git doesn't track empty dirs so it may be absent in CI
+RUN mkdir -p /app/public
 RUN npm run build
 
 # ── Stage 3: Runner ───────────────────────────────────────────────────────

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://babichat.tech/sitemap.xml
