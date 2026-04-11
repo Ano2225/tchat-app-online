@@ -94,7 +94,7 @@ export default function Home() {
               }}
             >
               <span>🇨🇮</span>
-              Réservé aux Ivoiriens
+              Disponible uniquement en Côte d'Ivoire
             </div>
           </div>
 
