@@ -32,33 +32,26 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({ onAvatarUpdate, className =
   };
 
   const uploadAvatar = async (file: File) => {
-    console.log('Début upload avatar:', file.name);
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append('media', file);
-      
-      console.log('📤 Upload vers /upload...');
+
       const uploadResponse = await axiosInstance.post('/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      console.log('✅ Upload réussi:', uploadResponse.data);
 
       const avatarUrl = uploadResponse.data.url;
 
-      console.log('📤 Mise à jour avatar vers /user/avatar...');
       await axiosInstance.put('/user/avatar', { avatarUrl });
-      console.log('✅ Avatar mis à jour en base');
 
       if (user) {
         updateUser({ ...user, avatarUrl });
-        console.log('✅ Store mis à jour');
       }
 
       onAvatarUpdate(avatarUrl);
       toast.success('Avatar mis à jour !');
     } catch (error: unknown) {
-      console.error('❌ Erreur upload:', error);
       const e = error as { response?: { data?: { message?: string } } };
       toast.error(e.response?.data?.message || 'Erreur lors de l\'upload');
     } finally {

@@ -14,6 +14,13 @@ class UserController {
     try {
       const { username, age, sexe, ville, avatarUrl, bgColor } = req.body;
 
+      if (username !== undefined) {
+        const trimmed = String(username).trim();
+        if (trimmed.length < 2 || trimmed.length > 30) {
+          return res.status(400).json({ message: "Le nom d'utilisateur doit contenir entre 2 et 30 caractères." });
+        }
+      }
+
       if (avatarUrl !== undefined && avatarUrl !== null && avatarUrl !== '') {
         if (!/^https:\/\/res\.cloudinary\.com\//i.test(avatarUrl)) {
           return res.status(400).json({ message: 'URL avatar invalide. Seules les URLs Cloudinary sont acceptées.' });
@@ -37,6 +44,13 @@ class UserController {
 
       res.status(200).json(result);
     } catch (error) {
+      if (error.code === 11000) {
+        const field = Object.keys(error.keyPattern || {})[0];
+        if (field === 'username') {
+          return res.status(409).json({ message: "Ce nom d'utilisateur est déjà pris." });
+        }
+        return res.status(409).json({ message: 'Cette valeur est déjà utilisée.' });
+      }
       console.error('❌ Erreur updateUserInfo :', error);
       res.status(500).json({ message: 'Erreur serveur' });
     }

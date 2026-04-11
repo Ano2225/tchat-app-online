@@ -20,13 +20,10 @@ const BlockedUsers: React.FC = () => {
 
   const loadBlockedUsers = async () => {
     try {
-      console.log('🔍 Chargement des utilisateurs bloqués...');
       const users = await reportService.getBlockedUsers();
-      console.log('✅ Utilisateurs bloqués récupérés:', users);
       setBlockedUsers(users);
       setError(null);
     } catch (error: unknown) {
-      console.error('❌ Erreur lors du chargement des utilisateurs bloqués:', error);
       const e = error as { response?: { data?: { message?: string } }; message?: string };
       const errorMessage = e.response?.data?.message || e.message || 'Erreur lors du chargement';
       setError(errorMessage);
