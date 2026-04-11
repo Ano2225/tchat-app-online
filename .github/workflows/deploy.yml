@@ -32,7 +32,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_PAT }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -69,11 +69,13 @@ jobs:
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: GITHUB_ACTOR,GITHUB_TOKEN
+          envs: GITHUB_ACTOR,GHCR_PAT
           script: |
             set -e
 
@@ -82,8 +84,8 @@ jobs:
             # Pull latest code — repo must be cloned via SSH key on the VPS
             GIT_TERMINAL_PROMPT=0 git pull origin main
 
-            # Authenticate with GHCR using the workflow token
-            echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+            # Authenticate with GHCR using PAT
+            echo "$GHCR_PAT" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
 
             # Pull new images and restart backend + frontend only
             cd infra
