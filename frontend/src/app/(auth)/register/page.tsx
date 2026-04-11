@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import ThemeToggle from '@/components/ui/ThemeToggle'
+import { VILLES_CI } from '@/utils/villesCoteDIvoire'
 import { Sparkles, Rocket, Lock, PartyPopper, User, Mail, Calendar, MapPin, Eye, EyeOff, ChevronDown } from 'lucide-react'
 
 export default function RegisterPage() {
@@ -388,16 +389,19 @@ export default function RegisterPage() {
                     Ville <span style={{ color: 'var(--danger)' }}>*</span>
                   </label>
                   <div className="relative">
-                    <input
+                    <select
                       name="ville"
-                      type="text"
                       value={formData.ville}
                       onChange={handleChange}
-                      placeholder="Treichville, Abidjan"
-                      className="w-full rounded-xl pl-10 py-3 text-sm focus:outline-none transition-all"
+                      className="w-full rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none transition-all appearance-none"
                       style={inputStyle('ville')}
                       aria-invalid={!!fieldErrors.ville}
-                    />
+                    >
+                      <option value="">Sélectionne ta ville</option>
+                      {VILLES_CI.map(v => (
+                        <option key={v} value={v}>{v}</option>
+                      ))}
+                    </select>
                     <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
                       <MapPin className="w-4 h-4" style={iconStyle('ville')} />
                     </div>

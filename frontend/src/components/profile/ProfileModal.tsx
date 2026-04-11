@@ -6,6 +6,7 @@ import GenderAvatar from '@/components/ui/GenderAvatar';
 import AdminBadge from '@/components/ui/AdminBadge';
 import AvatarUpload from '@/components/ui/AvatarUpload';
 import { Settings, User, UserX, X, Lock, Eye, EyeOff, Pencil, Check } from 'lucide-react';
+import { VILLES_CI } from '@/utils/villesCoteDIvoire';
 import toast from 'react-hot-toast';
 import type { Socket } from 'socket.io-client';
 
@@ -441,13 +442,16 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, socket }) => {
                     </div>
                     <div>
                       <label className="block text-gray-500 dark:text-gray-400 mb-1">Ville</label>
-                      <input
-                        type="text"
+                      <select
                         value={editForm.ville}
                         onChange={e => setEditForm(p => ({ ...p, ville: e.target.value }))}
-                        maxLength={60}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                      />
+                      >
+                        <option value="">Sélectionne ta ville</option>
+                        {VILLES_CI.map(v => (
+                          <option key={v} value={v}>{v}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 )}
