@@ -1,13 +1,65 @@
-name: Deploy Babichat
+name: CI/CD — BabiChat
 
 on:
   push:
     branches: [main]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ghcr.io/ano2225/babichat-backend
+  IMAGE_FRONTEND: ghcr.io/ano2225/babichat-frontend
+
 jobs:
+  # ── Job 1: Build & push Docker images ──────────────────────────────────────
+  build:
+    name: Build & Push images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_BACKEND }}:latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: frontend/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_FRONTEND }}:latest
+          build-args: |
+            NEXT_PUBLIC_SOCKET_URL=https://babichat.tech
+            NEXT_PUBLIC_API_URL=https://babichat.tech/api
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+  # ── Job 2: Deploy on VPS ───────────────────────────────────────────────────
   deploy:
     name: Deploy to VPS
     runs-on: ubuntu-latest
+    needs: build
 
     steps:
       - name: Deploy via SSH
@@ -16,18 +68,26 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: GITHUB_ACTOR,GITHUB_TOKEN
           script: |
             set -e
 
             cd /opt/babichat
 
-            git pull origin main
+            # Pull latest code — repo must be cloned via SSH key on the VPS
+            GIT_TERMINAL_PROMPT=0 git pull origin main
 
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ secrets.GHCR_USERNAME }} --password-stdin
+            # Authenticate with GHCR using the workflow token
+            echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
 
+            # Pull new images and restart backend + frontend only
             cd infra
             docker compose --env-file ../.env -f docker-compose.prod.yml pull backend frontend
-            docker compose --env-file ../.env -f docker-compose.prod.yml up -d --no-deps backend frontend
+            docker compose --env-file ../.env -f docker-compose.prod.yml up -d --no-deps --remove-orphans backend frontend
 
-            curl -f http://127.0.0.1:8000/api/health
-            curl -f http://127.0.0.1:3000
+            # Smoke tests
+            sleep 5
+            curl -sf http://127.0.0.1:8000/api/health || (echo "Backend health check failed" && exit 1)
+            curl -sf http://127.0.0.1:3000 || (echo "Frontend health check failed" && exit 1)
+
+            echo "Deployment successful"
