@@ -7,6 +7,7 @@ import AdminBadge from '@/components/ui/AdminBadge';
 import AvatarUpload from '@/components/ui/AvatarUpload';
 import { Settings, User, UserX, X, Lock, Eye, EyeOff, Pencil, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
+import type { Socket } from 'socket.io-client';
 
 // Composant pour le changement de mot de passe
 const PasswordChangeSection: React.FC = () => {
@@ -152,15 +153,15 @@ const PasswordChangeSection: React.FC = () => {
 
 interface ProfileModalProps {
   onClose: () => void;
+  socket?: Socket | null;
 }
 
-const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
+const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, socket }) => {
   const { user, updateUser } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'profile' | 'blocked'>('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [editForm, setEditForm] = useState({
-    username: user?.username || '',
     age: user?.age?.toString() || '',
     sexe: user?.sexe || 'autre',
     ville: user?.ville || '',
@@ -170,11 +171,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
     if (user) {
       updateUser({ ...user, avatarUrl: avatarUrl || undefined });
     }
+    socket?.emit('refresh_profile');
   };
 
   const handleStartEdit = () => {
     setEditForm({
-      username: user?.username || '',
       age: user?.age?.toString() || '',
       sexe: user?.sexe || 'autre',
       ville: user?.ville || '',
@@ -186,7 +187,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
     setSavingProfile(true);
     try {
       const payload: Record<string, unknown> = {
-        username: editForm.username.trim(),
         sexe: editForm.sexe,
         ville: editForm.ville.trim(),
       };
@@ -195,6 +195,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
       const { data } = await axiosInstance.put('/user', payload);
       updateUser(data);
       setIsEditing(false);
+      socket?.emit('refresh_profile');
       toast.success('Profil mis à jour');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -405,11 +406,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose }) => {
                       <label className="block text-gray-500 dark:text-gray-400 mb-1">Nom d&apos;utilisateur</label>
                       <input
                         type="text"
-                        value={editForm.username}
-                        onChange={e => setEditForm(p => ({ ...p, username: e.target.value }))}
-                        maxLength={30}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                        value={user?.username || ''}
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 text-sm cursor-not-allowed"
                       />
+                      <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Le pseudo ne peut pas être modifié</p>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>

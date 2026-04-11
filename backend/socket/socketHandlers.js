@@ -457,6 +457,43 @@ module.exports = (io, socket) => {
     }
   });
 
+  // ── Refresh profile meta (username, avatarUrl, sexe) after REST update ───
+  socket.on('refresh_profile', async () => {
+    const userId = socket.userId;
+    if (!userId || userId.startsWith('anon_')) return;
+    try {
+      const isObjId = /^[0-9a-f]{24}$/i.test(userId);
+      const user = await User.collection.findOne(
+        isObjId ? { $or: [{ _id: userId }, { _id: new ObjectId(userId) }] } : { _id: userId },
+        { projection: { username: 1, avatarUrl: 1, sexe: 1, role: 1 } }
+      );
+      if (!user) return;
+
+      const oldUsername = socket.username;
+      const newUsername = user.username;
+
+      // Update connectedUsers map if username changed
+      if (oldUsername && oldUsername !== newUsername) {
+        if (connectedUsers.has(oldUsername)) {
+          connectedUsers.get(oldUsername).delete(socket.id);
+          if (connectedUsers.get(oldUsername).size === 0) connectedUsers.delete(oldUsername);
+        }
+        if (!connectedUsers.has(newUsername)) connectedUsers.set(newUsername, new Set());
+        connectedUsers.get(newUsername).add(socket.id);
+        currentUsername = newUsername;
+        userIdToUsername.set(userId, newUsername);
+      }
+
+      socket.username = newUsername;
+      socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null, role: user.role || 'user' };
+
+      _scheduleUserList();
+      if (socket.currentRoom) _scheduleRoomList(socket.currentRoom);
+    } catch (err) {
+      console.error('refresh_profile error:', err);
+    }
+  });
+
   // ── Join private room ─────────────────────────────────────────────────────
   socket.on('join_private_room', async ({ recipientId }) => {
     const senderId = socket.userId;

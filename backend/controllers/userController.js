@@ -12,14 +12,8 @@ class UserController {
 
   async updateUserInfo(req, res) {
     try {
-      const { username, age, sexe, ville, avatarUrl, bgColor } = req.body;
-
-      if (username !== undefined) {
-        const trimmed = String(username).trim();
-        if (trimmed.length < 2 || trimmed.length > 30) {
-          return res.status(400).json({ message: "Le nom d'utilisateur doit contenir entre 2 et 30 caractères." });
-        }
-      }
+      const { age, sexe, ville, avatarUrl, bgColor } = req.body;
+      // username is intentionally excluded — changes are not allowed
 
       if (avatarUrl !== undefined && avatarUrl !== null && avatarUrl !== '') {
         if (!/^https:\/\/res\.cloudinary\.com\//i.test(avatarUrl)) {
@@ -27,7 +21,7 @@ class UserController {
         }
       }
 
-      const updateData = { username, age, ville };
+      const updateData = { age, ville };
       if (sexe !== undefined) updateData.sexe = sexe;
       if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl || null;
       if (bgColor) updateData.bgColor = bgColor;
@@ -44,13 +38,6 @@ class UserController {
 
       res.status(200).json(result);
     } catch (error) {
-      if (error.code === 11000) {
-        const field = Object.keys(error.keyPattern || {})[0];
-        if (field === 'username') {
-          return res.status(409).json({ message: "Ce nom d'utilisateur est déjà pris." });
-        }
-        return res.status(409).json({ message: 'Cette valeur est déjà utilisée.' });
-      }
       console.error('❌ Erreur updateUserInfo :', error);
       res.status(500).json({ message: 'Erreur serveur' });
     }

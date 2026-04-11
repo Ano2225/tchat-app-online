@@ -43,20 +43,29 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
     type UserPayloadItem = string | { username: string; userId?: string; avatarUrl?: string; sexe?: string }
     type UsersPayload = UserPayloadItem[] | { room: string; users: UserPayloadItem[] }
 
-    const normalize = (list: UserPayloadItem[], prefix: string): User[] =>
-      list.map((item, i) => {
-        if (typeof item === 'string') return { id: `${prefix}_${i}`, username: item, isOnline: true }
-        return {
-          id: item.userId || item.username || `${prefix}_${i}`,
-          userId: item.userId,
-          username: item.username,
-          avatarUrl: item.avatarUrl || undefined,
-          sexe: item.sexe || 'autre',
-          role: (item as { role?: string }).role,
-          isOnline: true,
-          isBot: (item as { isBot?: boolean }).isBot || false,
+    const normalize = (list: UserPayloadItem[], prefix: string): User[] => {
+      const seen = new Set<string>()
+      const result: User[] = []
+      list.forEach((item, i) => {
+        const entry: User = typeof item === 'string'
+          ? { id: `${prefix}_${item}`, username: item, isOnline: true }
+          : {
+              id: item.userId || item.username || `${prefix}_${i}`,
+              userId: item.userId,
+              username: item.username,
+              avatarUrl: item.avatarUrl || undefined,
+              sexe: item.sexe || 'autre',
+              role: (item as { role?: string }).role,
+              isOnline: true,
+              isBot: (item as { isBot?: boolean }).isBot || false,
+            }
+        if (!seen.has(entry.id)) {
+          seen.add(entry.id)
+          result.push(entry)
         }
       })
+      return result
+    }
 
     const handleGlobalUsersUpdate = (payload: UsersPayload) => {
       if (!currentRoom) {
