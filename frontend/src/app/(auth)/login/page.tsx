@@ -21,7 +21,6 @@ function LoginPageInner() {
   const [formError, setFormError] = useState<string | null>(null)
   const [verificationNotice, setVerificationNotice] = useState<string | null>(null)
   const [verificationEmail, setVerificationEmail] = useState('')
-  const [verificationLink, setVerificationLink] = useState<string | null>(null)
   const [sendingVerification, setSendingVerification] = useState(false)
   const { loading, error, errorInfo, withLoading, reset } = useLoadingState()
   const router = useRouter()
@@ -78,9 +77,6 @@ function LoginPageInner() {
     }
     if (verificationNotice) {
       setVerificationNotice(null)
-    }
-    if (verificationLink) {
-      setVerificationLink(null)
     }
   }
 
@@ -211,12 +207,10 @@ function LoginPageInner() {
       if (data?.delivered === false) {
         const warningMessage = data?.warning || 'Email de verification non envoye.'
         setVerificationNotice(warningMessage)
-        setVerificationLink(data?.verificationUrl || null)
         toast.error(warningMessage)
         return
       }
 
-      setVerificationLink(data?.verificationUrl || null)
       toast.success('Email de verification envoye. Consultez votre boite mail.')
     } catch (err: unknown) {
       toast.error((err as Error)?.message || 'Erreur lors de l\'envoi de l\'email')
@@ -230,7 +224,6 @@ function LoginPageInner() {
     setFieldErrors({})
     setFormError(null)
     setVerificationNotice(null)
-    setVerificationLink(null)
   }
 
   return (
@@ -297,18 +290,6 @@ function LoginPageInner() {
               retryText={sendingVerification ? 'Envoi en cours...' : 'Renvoyer l\'email'}
               className="mb-5"
             />
-          )}
-
-          {verificationLink && (
-            <div
-              className="mb-5 rounded-xl px-4 py-3 text-sm"
-              style={{ background: 'var(--accent-dim)', border: '1px solid var(--accent)', color: 'var(--accent-text)' }}
-            >
-              <div className="font-semibold mb-1">Lien de verification</div>
-              <a href={verificationLink} target="_blank" rel="noreferrer" className="break-all underline">
-                Ouvrir le lien
-              </a>
-            </div>
           )}
 
           {error && !formError && errorInfo?.code !== 'INVALID_CREDENTIALS' && !error.includes('Identifiants invalides') && (
