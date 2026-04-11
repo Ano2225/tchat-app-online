@@ -68,6 +68,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
   const [blockedByMe, setBlockedByMe] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +77,32 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
   const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const emojiPrefetched = useRef(false);
   const messageBlockedHandlerRef = useRef<((data: { optimisticId?: string; blockedByMe?: boolean; blockedByThem?: boolean }) => void) | null>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  const handleHeaderPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if ((e.target as Element).closest('button')) return;
+    if (window.innerWidth < 768) return;
+    const box = boxRef.current;
+    if (!box) return;
+    const rect = box.getBoundingClientRect();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const originX = rect.left;
+    const originY = rect.top;
+    setDragPos({ x: originX, y: originY });
+    const onMove = (ev: PointerEvent) => {
+      const newX = Math.max(0, Math.min(window.innerWidth - rect.width, originX + ev.clientX - startX));
+      const newY = Math.max(0, Math.min(window.innerHeight - 60, originY + ev.clientY - startY));
+      setDragPos({ x: newX, y: newY });
+    };
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    e.preventDefault();
+  }, []);
 
   // Detect dark mode
   useEffect(() => {
@@ -346,14 +373,14 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
     new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
-    // Mobile: full-screen between header and tab bar. Desktop: compact corner popup.
+    // Mobile: full-screen between header and tab bar. Desktop: compact corner popup (draggable).
     <div
-      className="fixed z-50 flex flex-col md:inset-auto md:bottom-4 md:right-4 md:w-[360px]"
-      style={{
-        insetInline: '0',
-        top: 'var(--header-h)',
-        bottom: 'max(4rem, calc(3.5rem + env(safe-area-inset-bottom)))',
-      }}
+      ref={boxRef}
+      className={`fixed z-50 flex flex-col md:w-[360px] ${dragPos ? '' : 'md:inset-auto md:bottom-4 md:right-4'}`}
+      style={dragPos
+        ? { top: dragPos.y, left: dragPos.x, bottom: 'auto', right: 'auto', width: '360px' }
+        : { insetInline: '0', top: 'var(--header-h)', bottom: 'max(4rem, calc(3.5rem + env(safe-area-inset-bottom)))' }
+      }
     >
 
       {/* Emoji Picker portal */}
@@ -391,10 +418,11 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
           boxShadow: '0 16px 48px rgba(0,0,0,0.35), 0 0 0 1px var(--border-subtle)',
         }}
       >
-        {/* Header */}
+        {/* Header — drag handle on desktop */}
         <div
-          className="flex items-center gap-3 px-3 py-3 flex-shrink-0"
+          className="flex items-center gap-3 px-3 py-3 flex-shrink-0 md:cursor-grab md:active:cursor-grabbing select-none"
           style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-subtle)' }}
+          onPointerDown={handleHeaderPointerDown}
         >
           <div className="relative flex-shrink-0">
             <GenderAvatar

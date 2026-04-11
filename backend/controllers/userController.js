@@ -12,7 +12,7 @@ class UserController {
 
   async updateUserInfo(req, res) {
     try {
-      const { age, sexe, ville, avatarUrl, bgColor } = req.body;
+      const { age, sexe, ville, avatarUrl, bgColor, statut } = req.body;
       // username is intentionally excluded — changes are not allowed
 
       if (avatarUrl !== undefined && avatarUrl !== null && avatarUrl !== '') {
@@ -25,6 +25,7 @@ class UserController {
       if (sexe !== undefined) updateData.sexe = sexe;
       if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl || null;
       if (bgColor) updateData.bgColor = bgColor;
+      if (statut !== undefined) updateData.statut = String(statut).slice(0, 60);
 
       const result = await User.collection.findOneAndUpdate(
         buildIdQuery(req.user.id),
@@ -67,7 +68,7 @@ class UserController {
       // Inclusion projection: only expose fields the UI actually needs
       const user = await User.collection.findOne(
         buildIdQuery(id),
-        { projection: { username: 1, avatarUrl: 1, sexe: 1, role: 1, isOnline: 1, isAnonymous: 1 } }
+        { projection: { username: 1, avatarUrl: 1, sexe: 1, role: 1, isOnline: 1, isAnonymous: 1, statut: 1 } }
       );
 
       if (!user) {

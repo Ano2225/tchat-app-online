@@ -15,6 +15,7 @@ interface User {
   avatarUrl?: string
   sexe?: string
   role?: string
+  statut?: string
   isBot?: boolean
 }
 
@@ -56,6 +57,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
               avatarUrl: item.avatarUrl || undefined,
               sexe: item.sexe || 'autre',
               role: (item as { role?: string }).role,
+              statut: (item as { statut?: string }).statut || undefined,
               isOnline: true,
               isBot: (item as { isBot?: boolean }).isBot || false,
             }
@@ -246,19 +248,26 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
                 {/* Name + unread (when expanded) */}
                 {!isCollapsed && (
                   <div className="flex-1 min-w-0 flex items-center justify-between gap-1">
-                    <p
-                      className="text-sm font-medium truncate"
-                      style={{
-                        fontFamily: 'var(--font-ui)',
-                        color: unread ? 'var(--text-primary)' : 'var(--text-secondary)',
-                        fontWeight: unread ? '600' : '500',
-                      }}
-                    >
-                      <span className="inline-flex items-center gap-1.5 max-w-full">
-                        <span className="truncate">{u.username}</span>
-                        {u.role === 'admin' && <AdminBadge className="flex-shrink-0" />}
-                      </span>
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className="text-sm font-medium truncate leading-tight"
+                        style={{
+                          fontFamily: 'var(--font-ui)',
+                          color: unread ? 'var(--text-primary)' : 'var(--text-secondary)',
+                          fontWeight: unread ? '600' : '500',
+                        }}
+                      >
+                        <span className="inline-flex items-center gap-1.5 max-w-full">
+                          <span className="truncate">{u.username}</span>
+                          {u.role === 'admin' && <AdminBadge className="flex-shrink-0" />}
+                        </span>
+                      </p>
+                      {u.statut && (
+                        <p className="text-[10px] truncate leading-tight" style={{ color: 'var(--text-muted)' }}>
+                          {u.statut}
+                        </p>
+                      )}
+                    </div>
                     {unread && unread.count > 0 && (
                       <span
                         className="flex-shrink-0 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold text-white rounded-full px-1"

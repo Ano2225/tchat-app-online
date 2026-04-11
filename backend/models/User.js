@@ -24,6 +24,9 @@ const UserSchema = new mongoose.Schema({
   isBlocked: { type: Boolean, default: false },
   blockedUsers: [{ type: String, ref: 'User' }],
   
+  // Statut / humeur (affiché dans la liste des utilisateurs)
+  statut: { type: String, default: '', maxlength: 60 },
+
   // Bot flag
   isBot: { type: Boolean, default: false },
 

@@ -76,6 +76,7 @@ function emitUserList(io) {
       avatarUrl: s?.userMeta?.avatarUrl || null,
       sexe: s?.userMeta?.sexe || 'autre',
       role: s?.userMeta?.role || null,
+      statut: s?.userMeta?.statut || null,
       isBot: false,
     });
   }
@@ -110,6 +111,7 @@ function emitRoomUserList(room, io) {
           avatarUrl: s.userMeta?.avatarUrl || null,
           sexe:     s.userMeta?.sexe || 'autre',
           role:     s.userMeta?.role || null,
+          statut:   s.userMeta?.statut || null,
           isBot:    false,
         });
       }
@@ -201,16 +203,16 @@ module.exports = (io, socket) => {
         if (senderId.startsWith('anon_')) {
           // Anonymous user — no DB record, use username from socket
           socket.username = socket.username || senderId.slice(5);
-          socket.userMeta = { avatarUrl: null, sexe: null, role: null };
+          socket.userMeta = { avatarUrl: null, sexe: null, role: null, statut: null };
         } else {
           const isObjId = /^[0-9a-f]{24}$/i.test(senderId);
           const user = await User.collection.findOne(
             isObjId ? { $or: [{ _id: senderId }, { _id: new ObjectId(senderId) }] } : { _id: senderId },
-            { projection: { username: 1, avatarUrl: 1, sexe: 1, role: 1 } }
+            { projection: { username: 1, avatarUrl: 1, sexe: 1, role: 1, statut: 1 } }
           );
           if (!user) return;
           socket.username = user.username;
-          socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null, role: user.role || 'user' };
+          socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null, role: user.role || 'user', statut: user.statut || null };
         }
       }
 
@@ -371,7 +373,7 @@ module.exports = (io, socket) => {
       currentUserId   = verifiedId;
       socket.userId   = verifiedId;
       socket.username = user.username || username;
-      socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null, role: user.role || 'user' };
+      socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null, role: user.role || 'user', statut: user.statut || null };
 
       // Add this socket to the user's set of connections (multi-tab support).
       // Stale socket IDs (from disconnected sockets) are cleaned up here.
@@ -434,7 +436,7 @@ module.exports = (io, socket) => {
         currentUserId   = user._id.toString();
         socket.userId   = currentUserId;
         socket.username = newUsername;
-        socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null, role: user.role || 'user' };
+        socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null, role: user.role || 'user', statut: user.statut || null };
         userIdToUsername.set(currentUserId, newUsername);
         // Join personal room so direct delivery of private messages works
         socket.join(currentUserId);
@@ -465,7 +467,7 @@ module.exports = (io, socket) => {
       const isObjId = /^[0-9a-f]{24}$/i.test(userId);
       const user = await User.collection.findOne(
         isObjId ? { $or: [{ _id: userId }, { _id: new ObjectId(userId) }] } : { _id: userId },
-        { projection: { username: 1, avatarUrl: 1, sexe: 1, role: 1 } }
+        { projection: { username: 1, avatarUrl: 1, sexe: 1, role: 1, statut: 1 } }
       );
       if (!user) return;
 
@@ -485,13 +487,31 @@ module.exports = (io, socket) => {
       }
 
       socket.username = newUsername;
-      socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null, role: user.role || 'user' };
+      socket.userMeta = { avatarUrl: user.avatarUrl || null, sexe: user.sexe || null, role: user.role || 'user', statut: user.statut || null };
 
       _scheduleUserList();
       if (socket.currentRoom) _scheduleRoomList(socket.currentRoom);
     } catch (err) {
       console.error('refresh_profile error:', err);
     }
+  });
+
+  // ── Statut mis à jour — notifier les autres utilisateurs ─────────────────
+  socket.on('statut_updated', (newStatut) => {
+    if (!socket.userId || socket.userId.startsWith('anon_')) return;
+    if (typeof newStatut !== 'string') return;
+    const statut = newStatut.slice(0, 60).trim();
+    socket.userMeta = { ...socket.userMeta, statut: statut || null };
+    // Diffuser aux autres utilisateurs connectés
+    socket.broadcast.emit('statut_notification', {
+      userId: socket.userId,
+      username: socket.username,
+      avatarUrl: socket.userMeta.avatarUrl,
+      sexe: socket.userMeta.sexe,
+      statut,
+    });
+    _scheduleUserList();
+    if (socket.currentRoom) _scheduleRoomList(socket.currentRoom);
   });
 
   // ── Join private room ─────────────────────────────────────────────────────
@@ -716,6 +736,7 @@ module.exports = (io, socket) => {
             avatarUrl: s.userMeta?.avatarUrl || null,
             sexe:     s.userMeta?.sexe || 'autre',
             role:     s.userMeta?.role || null,
+            statut:   s.userMeta?.statut || null,
             isBot:    false,
           });
         }

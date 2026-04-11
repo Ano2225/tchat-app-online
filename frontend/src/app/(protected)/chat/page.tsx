@@ -239,14 +239,44 @@ const ChatPage = () => {
       setMentionNotif(data);
     };
 
+    const handleStatutNotification = (data: {
+      username: string;
+      statut: string;
+      avatarUrl?: string | null;
+      sexe?: string | null;
+    }) => {
+      toast(() => (
+        <div className="flex items-center gap-3 min-w-0">
+          <GenderAvatar
+            username={data.username}
+            avatarUrl={data.avatarUrl || undefined}
+            sexe={data.sexe || undefined}
+            size="sm"
+            className="w-9 h-9 flex-shrink-0"
+            clickable={false}
+          />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+              {data.username}
+            </p>
+            <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+              est maintenant : <span style={{ color: 'var(--text-primary)' }}>{data.statut}</span>
+            </p>
+          </div>
+        </div>
+      ), { duration: 4000, position: 'bottom-left' });
+    };
+
     socket.on('session_replaced', handleSessionReplaced);
     socket.on('new_private_message', handleNewPrivateMessage);
     socket.on('mention_notification', handleMentionNotification);
+    socket.on('statut_notification', handleStatutNotification);
 
     return () => {
       socket.off('session_replaced', handleSessionReplaced);
       socket.off('new_private_message', handleNewPrivateMessage);
       socket.off('mention_notification', handleMentionNotification);
+      socket.off('statut_notification', handleStatutNotification);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, currentRoom]);

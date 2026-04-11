@@ -16,6 +16,7 @@ interface UserProfile {
   sexe?: string;
   avatarUrl?: string;
   role?: string;
+  statut?: string;
 }
 
 interface Props {
@@ -135,6 +136,13 @@ const UserSelectedModal: React.FC<Props> = ({ userId, socket, onClose }) => {
             <span className="w-2 h-2 rounded-full" style={{ background: 'var(--online)' }} />
             <span className="text-xs" style={{ color: 'var(--text-muted)' }}>En ligne</span>
           </div>
+
+          {profile.statut && (
+            <p className="mt-2 text-xs px-4 py-1.5 rounded-full inline-block"
+              style={{ background: 'var(--accent-dim)', color: 'var(--accent-text)' }}>
+              {profile.statut}
+            </p>
+          )}
         </div>
 
         {/* ── Info pills ── */}

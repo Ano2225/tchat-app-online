@@ -12,6 +12,7 @@ export interface User {
   ville?: string
   sexe?: string
   role?: string
+  statut?: string
   createdAt?: string
   updatedAt?: string
 }

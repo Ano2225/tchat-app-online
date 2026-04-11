@@ -168,6 +168,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, socket }) => {
     age: user?.age?.toString() || '',
     sexe: user?.sexe || 'autre',
     ville: user?.ville || '',
+    statut: user?.statut || '',
   });
 
   const handleAvatarUpdate = (avatarUrl: string | null) => {
@@ -182,6 +183,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, socket }) => {
       age: user?.age?.toString() || '',
       sexe: user?.sexe || 'autre',
       ville: user?.ville || '',
+      statut: user?.statut || '',
     });
     setIsEditing(true);
   };
@@ -189,9 +191,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, socket }) => {
   const handleSaveProfile = async () => {
     setSavingProfile(true);
     try {
+      const newStatut = editForm.statut.trim();
       const payload: Record<string, unknown> = {
         sexe: editForm.sexe,
         ville: editForm.ville.trim(),
+        statut: newStatut,
       };
       if (editForm.age) payload.age = Number(editForm.age);
 
@@ -199,6 +203,10 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, socket }) => {
       updateUser(data);
       setIsEditing(false);
       socket?.emit('refresh_profile');
+      // Notifier les autres si le statut a changé
+      if (newStatut && newStatut !== (user?.statut || '')) {
+        socket?.emit('statut_updated', newStatut);
+      }
       toast.success('Profil mis à jour');
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -402,6 +410,10 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, socket }) => {
                       <span className="text-gray-500 dark:text-gray-400">Ville</span>
                       <p className="font-medium text-gray-900 dark:text-white">{user?.ville || 'Non renseignée'}</p>
                     </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-500 dark:text-gray-400">Statut</span>
+                      <p className="font-medium text-gray-900 dark:text-white">{user?.statut || 'Aucun statut'}</p>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-3 text-sm">
@@ -452,6 +464,18 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, socket }) => {
                           <option key={v} value={v}>{v}</option>
                         ))}
                       </select>
+                    </div>
+                    <div>
+                      <label className="block text-gray-500 dark:text-gray-400 mb-1">
+                        Statut <span className="text-gray-400 dark:text-gray-500">({editForm.statut.length}/60)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.statut}
+                        onChange={e => setEditForm(p => ({ ...p, statut: e.target.value.slice(0, 60) }))}
+                        placeholder="En cours d'exam 😤, Dispo pour causer 👋..."
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                      />
                     </div>
                   </div>
                 )}
