@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
 
+# Required for GITHUB_TOKEN to push images to GHCR
+permissions:
+  contents: read
+  packages: write
+
 env:
   REGISTRY: ghcr.io
   IMAGE_BACKEND: ghcr.io/ano2225/babichat-backend
