@@ -61,9 +61,10 @@ const BlockedUsers: React.FC = () => {
           <span className="text-xl">⚠️</span>
         </div>
         <p className="text-red-600 dark:text-red-400 text-sm mb-4">{error}</p>
-        <button 
+        <button
           onClick={loadBlockedUsers}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+          className="text-white px-4 py-2 rounded-lg text-sm transition-opacity hover:opacity-80"
+          style={{ background: 'var(--accent)' }}
         >
           Réessayer
         </button>
@@ -91,7 +92,8 @@ const BlockedUsers: React.FC = () => {
               </span>
               <button
                 onClick={() => handleUnblock(user._id, user.username)}
-                className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                className="px-3 py-1 text-sm text-white rounded transition-opacity hover:opacity-80"
+                style={{ background: 'var(--accent)' }}
               >
                 Débloquer
               </button>

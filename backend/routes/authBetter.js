@@ -186,7 +186,12 @@ router.post('/register', async (req, res) => {
     if (session?.token) setSessionCookie(res, session.token);
 
     const emailPreview = getVerificationEmailPreview(email);
-    // Welcome email is sent after email verification, not at registration
+
+    // If email verification is disabled (no RESEND_API_KEY), send welcome email now.
+    // Otherwise it's sent after the user clicks the verification link.
+    if (!process.env.RESEND_API_KEY) {
+      sendWelcomeEmail({ user: result.user }).catch(() => {});
+    }
 
     res.json({
       success: true,
@@ -481,44 +486,29 @@ router.get('/verify-email', async (req, res) => {
       } catch (_) { /* non-blocking */ }
     }
 
-    const base = getVerifyRedirectTarget(
-      typeof callbackURL === 'string' ? callbackURL : undefined,
-      req
-    );
-    // Append verified=true so the login page can show a success toast
-    const separator = base.includes('?') ? '&' : '?';
-    const redirectTarget = `${base}${separator}verified=true`;
+    const frontendBase = getFrontendBaseUrl(req);
+    const emailVerifiedPage = `${frontendBase}/email-verified`;
 
     if (result?.status) {
-      return res.redirect(redirectTarget);
+      return res.redirect(emailVerifiedPage);
     }
     return res.json(result);
   } catch (error) {
     const statusCode = Number(error?.statusCode || error?.status);
-    const redirectLocation = error?.headers?.Location || error?.headers?.location;
-    if (redirectLocation) {
-      // Append verified=true to the library's own redirect too
-      const sep = redirectLocation.includes('?') ? '&' : '?';
-      return res.redirect(`${redirectLocation}${sep}verified=true`);
+    const frontendBase = getFrontendBaseUrl(req);
+    const emailVerifiedPage = `${frontendBase}/email-verified`;
+
+    if (error?.headers?.Location || error?.headers?.location) {
+      return res.redirect(emailVerifiedPage);
     }
 
     if (statusCode === 302 || error?.status === 'FOUND') {
-      const base = getVerifyRedirectTarget(
-        typeof req.query.callbackURL === 'string' ? req.query.callbackURL : undefined,
-        req
-      );
-      const sep = base.includes('?') ? '&' : '?';
-      return res.redirect(`${base}${sep}verified=true`);
+      return res.redirect(emailVerifiedPage);
     }
 
     const normalized = normalizeAuthError(error);
     if (normalized.status === 302) {
-      const base = getVerifyRedirectTarget(
-        typeof req.query.callbackURL === 'string' ? req.query.callbackURL : undefined,
-        req
-      );
-      const sep = base.includes('?') ? '&' : '?';
-      return res.redirect(`${base}${sep}verified=true`);
+      return res.redirect(emailVerifiedPage);
     }
     return res.status(normalized.status).json(normalized);
   }

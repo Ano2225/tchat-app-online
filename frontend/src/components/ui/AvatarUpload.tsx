@@ -88,7 +88,8 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({ onAvatarUpdate, className =
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg text-sm transition-colors disabled:opacity-50"
+          className="flex-1 text-white py-2 px-4 rounded-lg text-sm transition-opacity hover:opacity-80 disabled:opacity-50"
+          style={{ background: 'var(--accent)' }}
         >
           {uploading ? (
             <div className="flex items-center gap-2">

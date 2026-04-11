@@ -70,7 +70,8 @@ const PasswordChangeSection: React.FC = () => {
         </div>
         <button
           onClick={() => setShowPasswordForm(!showPasswordForm)}
-          className="text-xs bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600 transition-colors"
+          className="text-xs text-white px-3 py-1 rounded-lg transition-opacity hover:opacity-80"
+          style={{ background: 'var(--accent)' }}
         >
           {showPasswordForm ? 'Annuler' : 'Changer le mot de passe'}
         </button>
@@ -141,7 +142,8 @@ const PasswordChangeSection: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 text-sm"
+            className="w-full text-white py-2 rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50 text-sm"
+            style={{ background: 'var(--accent)' }}
           >
             {loading ? 'Modification...' : 'Modifier le mot de passe'}
           </button>
@@ -289,22 +291,20 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, socket }) => {
           <div className="flex bg-gray-100 dark:bg-gray-700/50 rounded-xl p-1 mb-6">
             <button
               onClick={() => setActiveTab('profile')}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
-                activeTab === 'profile'
-                  ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
+              className="flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
+              style={activeTab === 'profile'
+                ? { background: 'var(--bg-panel)', color: 'var(--accent)', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }
+                : { color: 'var(--text-muted)' }}
             >
               <User className="w-4 h-4" />
               Profil
             </button>
             <button
               onClick={() => setActiveTab('blocked')}
-              className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
-                activeTab === 'blocked'
-                  ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
+              className="flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
+              style={activeTab === 'blocked'
+                ? { background: 'var(--bg-panel)', color: 'var(--accent)', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }
+                : { color: 'var(--text-muted)' }}
             >
               <UserX className="w-4 h-4" />
               Bloqués
@@ -343,7 +343,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, socket }) => {
                   {!isEditing ? (
                     <button
                       onClick={handleStartEdit}
-                      className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400"
+                      className="flex items-center gap-1 text-xs transition-opacity hover:opacity-70"
+                      style={{ color: 'var(--accent)' }}
                     >
                       <Pencil className="w-3 h-3" /> Modifier
                     </button>
@@ -358,7 +359,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ onClose, socket }) => {
                       <button
                         onClick={handleSaveProfile}
                         disabled={savingProfile}
-                        className="flex items-center gap-1 text-xs bg-blue-500 text-white px-2 py-1 rounded-lg hover:bg-blue-600 disabled:opacity-50"
+                        className="flex items-center gap-1 text-xs text-white px-2 py-1 rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
+                        style={{ background: 'var(--accent)' }}
                       >
                         <Check className="w-3 h-3" />
                         {savingProfile ? 'Enregistrement...' : 'Sauvegarder'}
