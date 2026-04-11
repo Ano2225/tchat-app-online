@@ -106,7 +106,7 @@ const buildVerificationEmail = ({ user, url }) => {
 const buildWelcomeEmail = ({ user }) => {
   const displayName = user?.name || user?.username || 'utilisateur';
   const subject = 'Bienvenue sur BabiChat';
-  const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
+  const loginUrl = `${(process.env.FRONTEND_URL || 'http://localhost:3000').split(',')[0].trim()}/login`;
   const text = [
     `Bonjour ${displayName},`,
     '',

@@ -12,9 +12,14 @@ const sendVerificationEmail = async ({ user, url, token: _token }) => {
   try {
     const parsed = new URL(url);
     const token = parsed.searchParams.get('token') || _token;
-    const backendBase = (process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 8000}`)
+    // Use FRONTEND_URL (public domain) as the base — nginx proxies /api/* to the backend.
+    // Never use BACKEND_URL here: in Docker it resolves to an internal hostname
+    // (e.g. http://backend:8000) that is unreachable from outside the network.
+    const publicBase = (process.env.FRONTEND_URL || `http://localhost:${process.env.PORT || 8000}`)
+      .split(',')[0]      // FRONTEND_URL may be comma-separated; take the first (primary) origin
+      .trim()
       .replace(/\/+$/, '');
-    const customUrl = `${backendBase}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+    const customUrl = `${publicBase}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
     return _sendVerificationEmail({ user, url: customUrl });
   } catch {
     return _sendVerificationEmail({ user, url });
