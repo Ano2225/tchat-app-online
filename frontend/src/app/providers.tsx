@@ -8,7 +8,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-const publicPaths = ['/', '/login', '/register', '/anonymous', '/forgot-password', '/reset-password'];
+const publicPaths = ['/', '/login', '/register', '/anonymous', '/forgot-password', '/reset-password', '/email-verified'];
 
 export default function AuthProvider({ children }: AuthProviderProps) {
   const [hasHydrated, setHasHydrated] = useState(false);
@@ -81,8 +81,8 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   // Protected pages: show spinner only while resolving session
   if (!hasHydrated || cookieHydrating) {
     return (
-      <div className="flex h-screen items-center justify-center bg-white dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 dark:border-blue-400" />
+      <div className="flex h-screen items-center justify-center" style={{ background: 'var(--bg-base)' }}>
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-transparent" style={{ borderTopColor: 'var(--accent)' }} />
       </div>
     );
   }

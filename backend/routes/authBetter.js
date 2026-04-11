@@ -452,64 +452,56 @@ router.get('/me', authMiddleware, (req, res) => {
 
 // Email verification callback
 router.get('/verify-email', async (req, res) => {
+  const token = req.query.token;
+
+  if (!token || typeof token !== 'string') {
+    return res.status(400).json({ error: 'Token manquant' });
+  }
+
+  // Fetch the user email from the verification record BEFORE the token is consumed
+  // by better-auth (which deletes it on success).
+  let verifiedUserEmail = null;
   try {
-    const token = req.query.token;
-    const callbackURL = req.query.callbackURL;
+    const db = require('mongoose').connection.db;
+    const record = await db.collection('verification').findOne({ value: token });
+    if (record?.identifier) verifiedUserEmail = record.identifier;
+  } catch (_) { /* non-blocking */ }
 
-    if (!token || typeof token !== 'string') {
-      return res.status(400).json({ error: 'Token manquant' });
-    }
+  const sendWelcome = () => {
+    if (!verifiedUserEmail) return;
+    User.findOne({ email: verifiedUserEmail }).lean()
+      .then(u => { if (u) sendWelcomeEmail({ user: u }).catch(() => {}); })
+      .catch(() => {});
+  };
 
-    // Look up the verification record to retrieve the user email before it's consumed
-    let verifiedUserEmail = null;
-    try {
-      const db = require('mongoose').connection.db;
-      const record = await db.collection('verification').findOne({ value: token });
-      if (record?.identifier) verifiedUserEmail = record.identifier;
-    } catch (_) { /* non-blocking */ }
+  const frontendBase = getFrontendBaseUrl(req);
+  const emailVerifiedPage = `${frontendBase}/email-verified`;
 
-    const result = await auth.api.verifyEmail({
-      query: {
-        token,
-        ...(callbackURL ? { callbackURL } : {})
-      },
+  try {
+    await auth.api.verifyEmail({
+      query: { token },
       headers: req.headers
     });
 
-    // Send welcome email after successful verification
-    if (verifiedUserEmail) {
-      try {
-        const verifiedUser = await User.findOne({ email: verifiedUserEmail }).lean();
-        if (verifiedUser) {
-          sendWelcomeEmail({ user: verifiedUser }).catch(() => {});
-        }
-      } catch (_) { /* non-blocking */ }
-    }
-
-    const frontendBase = getFrontendBaseUrl(req);
-    const emailVerifiedPage = `${frontendBase}/email-verified`;
-
-    if (result?.status) {
-      return res.redirect(emailVerifiedPage);
-    }
-    return res.json(result);
+    // better-auth returned normally (rare) — send welcome and redirect
+    sendWelcome();
+    return res.redirect(emailVerifiedPage);
   } catch (error) {
     const statusCode = Number(error?.statusCode || error?.status);
-    const frontendBase = getFrontendBaseUrl(req);
-    const emailVerifiedPage = `${frontendBase}/email-verified`;
 
-    if (error?.headers?.Location || error?.headers?.location) {
-      return res.redirect(emailVerifiedPage);
-    }
+    // better-auth throws a 302 on success — this is the normal path
+    const isSuccessRedirect =
+      statusCode === 302 ||
+      error?.status === 'FOUND' ||
+      error?.headers?.Location ||
+      error?.headers?.location;
 
-    if (statusCode === 302 || error?.status === 'FOUND') {
+    if (isSuccessRedirect) {
+      sendWelcome();
       return res.redirect(emailVerifiedPage);
     }
 
     const normalized = normalizeAuthError(error);
-    if (normalized.status === 302) {
-      return res.redirect(emailVerifiedPage);
-    }
     return res.status(normalized.status).json(normalized);
   }
 });

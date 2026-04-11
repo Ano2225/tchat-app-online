@@ -3,6 +3,8 @@ import "./globals.css";
 import { Outfit, DM_Sans } from 'next/font/google';
 import Script from 'next/script';
 
+const themeScript = `(function(){try{var t=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(t==='dark'||(t===null&&d))document.documentElement.classList.add('dark')}catch(e){}})();`
+
 const outfit = Outfit({
   subsets: ['latin'],
   weight: ['400', '600', '700', '800'],
@@ -48,12 +50,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html lang="fr" suppressHydrationWarning>
       <head>
-        {/* Theme init: runs before first paint — prevents flash of wrong theme */}
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(t==='dark'||(t===null&&d))document.documentElement.classList.add('dark')}catch(e){}})()` }} />
+        {/* Theme init: runs before first paint — prevents flash of wrong theme.
+            Native <script> in a Server Component is serialized as raw HTML by the
+            server and executed by the browser before React hydration, so React never
+            "sees" it as a component node. suppressHydrationWarning silences the
+            mismatch check on this element. */}
+        {/* eslint-disable-next-line @next/next/no-before-interactive-script-component */}
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} suppressHydrationWarning />
         {/* Preconnect to backend so the first API/socket call pays no DNS+TCP cost */}
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000'} />
+      </head>
+      <body className={`antialiased ${outfit.variable} ${dmSans.variable}`}>
         {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
           <Script
             src={`${process.env.NEXT_PUBLIC_UMAMI_URL || 'http://localhost:3001'}/script.js`}
@@ -62,8 +71,6 @@ export default function RootLayout({
             defer
           />
         )}
-      </head>
-      <body className={`antialiased ${outfit.variable} ${dmSans.variable}`}>
         {children}
       </body>
     </html>

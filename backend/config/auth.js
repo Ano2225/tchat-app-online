@@ -2,7 +2,24 @@ const { betterAuth } = require("better-auth");
 const { mongodbAdapter } = require("better-auth/adapters/mongodb");
 const { bearer } = require("better-auth/plugins");
 const mongoose = require("mongoose");
-const { sendVerificationEmail } = require("../services/emailService");
+const { sendVerificationEmail: _sendVerificationEmail } = require("../services/emailService");
+
+// Wrap better-auth's sendVerificationEmail to redirect the verification link
+// to our custom /api/verify-email endpoint (which sends the welcome email and
+// redirects to /email-verified). Without this, better-auth uses its own
+// /api/auth/verify-email handler which never calls our welcome-email logic.
+const sendVerificationEmail = async ({ user, url, token: _token }) => {
+  try {
+    const parsed = new URL(url);
+    const token = parsed.searchParams.get('token') || _token;
+    const backendBase = (process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 8000}`)
+      .replace(/\/+$/, '');
+    const customUrl = `${backendBase}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+    return _sendVerificationEmail({ user, url: customUrl });
+  } catch {
+    return _sendVerificationEmail({ user, url });
+  }
+};
 
 const getMongoDb = () => {
   const db = mongoose.connection?.db;
