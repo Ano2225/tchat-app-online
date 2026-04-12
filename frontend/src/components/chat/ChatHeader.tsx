@@ -107,6 +107,17 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showMessages])
 
+  useEffect(() => {
+    if (!showMessages) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowMessages(false)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [showMessages])
+
   const handleOpenConversation = (conv: Conversation) => {
     if (!conv.user || !onOpenChat) return
     onOpenChat({
@@ -127,6 +138,8 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
       return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' })
   }
+
+  const messagesPanelTitleId = 'private-messages-panel-title'
 
   return (
     <>
@@ -208,6 +221,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                   {/* Backdrop (mobile + desktop) */}
                   <div
                     className="fixed inset-0"
+                    aria-hidden="true"
                     style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 9998 }}
                     onClick={() => setShowMessages(false)}
                   />
@@ -215,6 +229,9 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                   {/* Panel */}
                   <div
                     ref={panelRef}
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby={messagesPanelTitleId}
                     className={[
                       /* mobile: full-width bottom sheet */
                       'fixed bottom-0 left-0 right-0 rounded-t-2xl overflow-hidden',
@@ -246,6 +263,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                     style={{ borderBottom: '1px solid var(--border-subtle)' }}
                   >
                     <h3
+                      id={messagesPanelTitleId}
                       className="font-semibold text-sm"
                       style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}
                     >
@@ -266,6 +284,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                       )}
                       {/* Close — mobile only */}
                       <button
+                        type="button"
                         onClick={() => setShowMessages(false)}
                         className="md:hidden w-7 h-7 flex items-center justify-center rounded-lg"
                         style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)' }}
@@ -283,6 +302,8 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                     {loadingConvs ? (
                       <div className="p-6 flex justify-center">
                         <div
+                          role="status"
+                          aria-label="Chargement des conversations"
                           className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
                           style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }}
                         />
@@ -297,13 +318,17 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                         const isFromMe = conv.lastMessage?.sender?._id === user?.id
                         const hasUnread = conv.unreadCount > 0
                         return (
-                          <div
+                          <button
                             key={conv.user._id || index}
+                            type="button"
                             onClick={() => handleOpenConversation(conv)}
-                            className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-all active:opacity-70"
+                            className="flex w-full items-center gap-3 border-0 bg-transparent px-4 py-3 text-left transition-all active:opacity-70"
                             style={{ borderBottom: '1px solid var(--border-subtle)' }}
                             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'}
                             onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                            onFocus={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'}
+                            onBlur={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                            aria-label={`${conv.user.username}${hasUnread ? `, ${conv.unreadCount} message${conv.unreadCount > 1 ? 's' : ''} non lu${conv.unreadCount > 1 ? 's' : ''}` : ''}`}
                           >
                             <div className="relative flex-shrink-0">
                               <GenderAvatar
@@ -353,7 +378,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                                 {conv.lastMessage?.content || '📎 Image'}
                               </p>
                             </div>
-                          </div>
+                          </button>
                         )
                       })
                     )}
@@ -377,6 +402,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
             <button
               onClick={() => setShowProfile(true)}
               className="flex items-center gap-2 rounded-xl px-2 md:px-3 py-1.5 transition-all"
+              aria-label={`Mon profil — ${user?.username || ''}`}
               style={{
                 background: 'var(--bg-surface)',
                 border: '1px solid var(--border-default)',
@@ -427,6 +453,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                   color: 'var(--text-secondary)',
                 }}
                 title="Dashboard Admin"
+                aria-label="Dashboard Admin"
                 onMouseEnter={e => {
                   (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
                   (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)';
@@ -453,6 +480,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                   color: 'var(--text-secondary)',
                 }}
                 title="Guide de la plateforme"
+                aria-label="Guide de la plateforme"
                 onMouseEnter={e => {
                   (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
                   (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)';
@@ -481,6 +509,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                 color: 'var(--text-secondary)',
               }}
               title="Se déconnecter"
+              aria-label="Se déconnecter"
               onMouseEnter={e => {
                 (e.currentTarget as HTMLElement).style.color = 'var(--danger)';
                 (e.currentTarget as HTMLElement).style.borderColor = 'var(--danger)';

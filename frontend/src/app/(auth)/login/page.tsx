@@ -380,6 +380,7 @@ function LoginPageInner() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-3 flex items-center transition-colors"
                   style={{ color: 'var(--text-muted)' }}
+                  aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                   disabled={loading}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -422,12 +423,12 @@ function LoginPageInner() {
               </p>
               <p>
                 Pas encore de compte ?{' '}
-                <Link href="/register" className="font-medium hover:underline" style={{ color: 'var(--accent)' }}>
+                <Link href="/register" className="font-medium hover:underline" style={{ color: 'var(--accent-text)' }}>
                   S&apos;inscrire
                 </Link>
               </p>
               <p>
-                <Link href="/anonymous" className="font-medium hover:underline" style={{ color: 'var(--accent)' }}>
+                <Link href="/anonymous" className="font-medium hover:underline" style={{ color: 'var(--accent-text)' }}>
                   Continuer en mode anonyme
                 </Link>
               </p>

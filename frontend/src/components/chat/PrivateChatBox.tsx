@@ -82,6 +82,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
   const emojiPrefetched = useRef(false);
   const messageBlockedHandlerRef = useRef<((data: { optimisticId?: string; blockedByMe?: boolean; blockedByThem?: boolean }) => void) | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleHeaderPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if ((e.target as Element).closest('button')) return;
@@ -184,6 +185,25 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [showEmojiPicker]);
+
+  useEffect(() => {
+    if (blockedByMe) {
+      closeButtonRef.current?.focus();
+    } else {
+      textareaRef.current?.focus();
+    }
+  }, [blockedByMe, recipient._id]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !showEmojiPicker) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, showEmojiPicker]);
 
   // Socket event handlers
   useEffect(() => {
@@ -398,10 +418,17 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
   const formatTime = (iso: string) =>
     new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+  const dialogTitleId = `private-chat-title-${recipient._id}`;
+  const dialogStatusId = `private-chat-status-${recipient._id}`;
+
   return (
     // Mobile: full-screen between header and tab bar. Desktop: compact corner popup (draggable).
     <div
       ref={boxRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={dialogTitleId}
+      aria-describedby={dialogStatusId}
       className={`fixed z-50 flex flex-col md:w-[360px] ${dragPos ? '' : 'md:inset-auto md:bottom-4 md:right-4'}`}
       style={dragPos
         ? { top: dragPos.y, left: dragPos.x, bottom: 'auto', right: 'auto', width: '360px' }
@@ -492,19 +519,20 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate leading-tight" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
+            <p id={dialogTitleId} className="text-sm font-semibold truncate leading-tight" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
               <span className="inline-flex items-center gap-1.5 max-w-full">
                 <span className="truncate">{recipient.username}</span>
                 {recipient.role === 'admin' && <AdminBadge className="flex-shrink-0" />}
               </span>
             </p>
-            <p className="text-xs leading-tight mt-0.5" style={{ color: isRecipientOnline ? 'var(--online)' : 'var(--text-muted)' }}>
+            <p id={dialogStatusId} className="text-xs leading-tight mt-0.5" style={{ color: isRecipientOnline ? 'var(--online)' : 'var(--text-muted)' }}>
               {isRecipientOnline ? 'En ligne' : 'Hors ligne'}
             </p>
           </div>
 
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
+              type="button"
               onClick={async () => {
                 setBlockLoading(true);
                 try {
@@ -536,6 +564,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
               disabled={blockLoading || (isBlocked && !blockedByMe)}
               className="relative w-9 h-9 flex items-center justify-center rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               style={{ color: 'var(--text-muted)' }}
+              aria-label={blockedByMe ? `Débloquer ${recipient.username}` : `Bloquer ${recipient.username}`}
               onMouseEnter={e => {
                 if (isBlocked && !blockedByMe) return;
                 (e.currentTarget as HTMLElement).style.color = blockedByMe ? 'var(--online)' : 'var(--danger)';
@@ -559,9 +588,12 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
               {blockedByMe ? <ShieldCheck className="w-4 h-4" /> : <ShieldBan className="w-4 h-4" />}
             </button>
             <button
+              ref={closeButtonRef}
+              type="button"
               onClick={onClose}
               className="w-9 h-9 flex items-center justify-center rounded-xl transition-all"
               style={{ color: 'var(--text-muted)' }}
+              aria-label={`Fermer la conversation avec ${recipient.username}`}
               onMouseEnter={e => {
                 (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)';
                 (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)';
@@ -681,6 +713,8 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                           <img
                             src={message.media_url}
                             alt="Image"
+                            loading="lazy"
+                            decoding="async"
                             className="block rounded-2xl cursor-pointer hover:opacity-90 transition-opacity"
                             style={{
                               maxWidth: '220px',
@@ -771,6 +805,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
               <img
                 src={previewUrl}
                 alt="Aperçu"
+                decoding="async"
                 className="block rounded-xl"
                 style={{ maxWidth: '120px', maxHeight: '100px', objectFit: 'cover', border: '2px solid var(--border-default)' }}
               />
@@ -801,6 +836,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                 onClick={() => fileInputRef.current?.click()}
                 className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-full transition-colors self-end mb-0.5"
                 title="Joindre une image"
+                aria-label="Joindre une image"
                 style={{ color: 'var(--text-muted)' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
@@ -834,6 +870,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                 rows={1}
                 maxLength={500}
                 className="flex-1 bg-transparent text-sm focus:outline-none resize-none"
+                aria-label={`Message privé à ${recipient.username}`}
                 style={{
                   color: 'var(--text-primary)',
                   caretColor: 'var(--accent)',
@@ -871,6 +908,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                 ref={emojiButtonRef}
                 className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-full transition-colors self-end mb-0.5"
                 title="Emoji"
+                aria-label="Ajouter un emoji"
                 aria-expanded={showEmojiPicker}
                 style={{ color: showEmojiPicker ? 'var(--accent)' : 'var(--text-muted)' }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent)'; }}
@@ -892,6 +930,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                 boxShadow: (newMessage.trim() || selectedFile) ? '0 2px 8px var(--accent-glow)' : 'none',
               }}
               title="Envoyer"
+              aria-label={`Envoyer un message à ${recipient.username}`}
             >
               {uploading
                 ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />

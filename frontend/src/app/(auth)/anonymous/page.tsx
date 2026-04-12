@@ -78,7 +78,7 @@ export default function AnonymousPage() {
   }
 
   return (
-    <div
+    <main
       className="min-h-[100dvh] flex flex-col items-center justify-center p-4 py-8 relative"
       style={{ background: 'var(--bg-base)' }}
     >
@@ -202,10 +202,10 @@ export default function AnonymousPage() {
             <div className="space-y-1.5 text-sm" style={{ color: 'var(--text-muted)' }}>
               <p>
                 Vous avez un compte ?{' '}
-                <Link href="/login" className="font-medium hover:underline" style={{ color: 'var(--accent)' }}>Se connecter</Link>
+                <Link href="/login" className="font-medium hover:underline" style={{ color: 'var(--accent-text)' }}>Se connecter</Link>
               </p>
               <p>
-                <Link href="/register" className="font-medium hover:underline" style={{ color: 'var(--accent)' }}>Créer un compte permanent</Link>
+                <Link href="/register" className="font-medium hover:underline" style={{ color: 'var(--accent-text)' }}>Créer un compte permanent</Link>
               </p>
             </div>
           </div>
@@ -227,6 +227,6 @@ export default function AnonymousPage() {
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

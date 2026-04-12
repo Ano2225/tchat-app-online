@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div
+    <main
       className="min-h-[100dvh] flex flex-col items-center justify-center p-4 py-8 relative"
       style={{ background: 'var(--bg-base)' }}
     >
@@ -172,11 +172,11 @@ export default function ForgotPasswordPage() {
         </div>
 
         <p className="text-center mt-6 text-sm">
-          <Link href="/login" className="hover:underline" style={{ color: 'var(--accent)' }}>
+          <Link href="/login" className="hover:underline" style={{ color: 'var(--accent-text)' }}>
             ← Retour à la connexion
           </Link>
         </p>
       </div>
-    </div>
+    </main>
   );
 }

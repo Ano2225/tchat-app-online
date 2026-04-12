@@ -149,7 +149,7 @@ export default function RegisterPage() {
   const labelClass = 'block text-sm font-medium mb-2'
 
   return (
-    <div
+    <main
       className="min-h-[100dvh] flex flex-col items-center justify-center p-4 py-8 relative"
       style={{ background: 'var(--bg-base)' }}
     >
@@ -287,6 +287,7 @@ export default function RegisterPage() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute inset-y-0 right-3 flex items-center transition-colors"
                       style={{ color: 'var(--text-muted)' }}
+                      aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -317,6 +318,7 @@ export default function RegisterPage() {
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute inset-y-0 right-3 flex items-center transition-colors"
                       style={{ color: 'var(--text-muted)' }}
+                      aria-label={showConfirmPassword ? 'Masquer la confirmation' : 'Afficher la confirmation'}
                     >
                       {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -447,10 +449,10 @@ export default function RegisterPage() {
             <div className="space-y-1.5 text-sm" style={{ color: 'var(--text-muted)' }}>
               <p>
                 Déjà un compte ?{' '}
-                <Link href="/login" className="font-medium hover:underline" style={{ color: 'var(--accent)' }}>Se connecter</Link>
+                <Link href="/login" className="font-medium hover:underline" style={{ color: 'var(--accent-text)' }}>Se connecter</Link>
               </p>
               <p>
-                <Link href="/anonymous" className="font-medium hover:underline" style={{ color: 'var(--accent)' }}>Continuer en mode anonyme</Link>
+                <Link href="/anonymous" className="font-medium hover:underline" style={{ color: 'var(--accent-text)' }}>Continuer en mode anonyme</Link>
               </p>
             </div>
           </div>
@@ -462,6 +464,6 @@ export default function RegisterPage() {
           </Link>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ChevronRight, ChevronLeft } from 'lucide-react';
 
@@ -173,6 +173,7 @@ const OnboardingModal: React.FC<Props> = ({ onClose }) => {
   const [step, setStep] = useState(0);
   const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
@@ -208,14 +209,39 @@ const OnboardingModal: React.FC<Props> = ({ onClose }) => {
     };
   }, [updateSpotlight]);
 
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
   const goNext = () => { if (isLast) { onClose(); return; } setStep(s => s + 1); };
   const goPrev = () => setStep(s => s - 1);
 
   const isCentered = current.placement === 'center' || !spotlight;
   const shouldCenterTooltip = isMobile || isCentered;
 
+  const tooltipTitleId = `onboarding-title-${step}`;
+  const tooltipDescriptionId = `onboarding-description-${step}`;
+
   const tooltipCard = (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={tooltipTitleId}
+      aria-describedby={tooltipDescriptionId}
       className="rounded-2xl overflow-hidden flex flex-col animate-in fade-in-0 zoom-in-95 duration-200"
       style={{
         background: 'var(--bg-panel)',
@@ -239,6 +265,8 @@ const OnboardingModal: React.FC<Props> = ({ onClose }) => {
 
       {/* Close */}
       <button
+        ref={closeButtonRef}
+        type="button"
         onClick={onClose}
         className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-xl z-10"
         style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}
@@ -263,12 +291,12 @@ const OnboardingModal: React.FC<Props> = ({ onClose }) => {
           <p className="text-[11px] font-medium mb-1" style={{ color: 'var(--text-muted)' }}>
             {step + 1} / {STEPS.length}
           </p>
-          <h2 className="text-base font-bold leading-snug" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
+          <h2 id={tooltipTitleId} className="text-base font-bold leading-snug" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
             {current.title}
           </h2>
         </div>
 
-        <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+        <p id={tooltipDescriptionId} className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
           {current.description}
         </p>
 
@@ -314,6 +342,7 @@ const OnboardingModal: React.FC<Props> = ({ onClose }) => {
       >
         {step > 0 ? (
           <button
+            type="button"
             onClick={goPrev}
             className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-sm font-medium transition-all"
             style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
@@ -322,6 +351,7 @@ const OnboardingModal: React.FC<Props> = ({ onClose }) => {
           </button>
         ) : (
           <button
+            type="button"
             onClick={onClose}
             className="text-sm transition-opacity hover:opacity-70"
             style={{ color: 'var(--text-muted)' }}
@@ -331,6 +361,7 @@ const OnboardingModal: React.FC<Props> = ({ onClose }) => {
         )}
 
         <button
+          type="button"
           onClick={goNext}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95"
           style={{ background: 'var(--accent)', boxShadow: '0 2px 10px var(--accent-glow)' }}
@@ -347,12 +378,13 @@ const OnboardingModal: React.FC<Props> = ({ onClose }) => {
     <>
       {/* Overlay sombre — uniquement quand pas de spotlight (étape centrée) */}
       {!spotlight && (
-        <div className="fixed inset-0" style={{ zIndex: 9000, background: 'rgba(0,0,0,0.65)' }} />
+        <div aria-hidden="true" className="fixed inset-0" style={{ zIndex: 9000, background: 'rgba(0,0,0,0.65)' }} />
       )}
 
       {/* Spotlight — son box-shadow joue le rôle d'overlay ET met en valeur la zone */}
       {spotlight && (
         <div
+          aria-hidden="true"
           style={{
             position: 'fixed',
             top: spotlight.top,

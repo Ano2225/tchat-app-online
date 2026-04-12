@@ -52,15 +52,11 @@ export default function RootLayout({
   return (
     <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
-        {/* Theme init: runs before first paint — prevents flash of wrong theme.
-            Native <script> in a Server Component is serialized as raw HTML by the
-            server and executed by the browser before React hydration, so React never
-            "sees" it as a component node. suppressHydrationWarning silences the
-            mismatch check on this element. */}
-        {/* eslint-disable-next-line @next/next/no-before-interactive-script-component */}
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} suppressHydrationWarning />
+        <Script id="theme-init" strategy="beforeInteractive">
+          {themeScript}
+        </Script>
         {/* Preconnect to backend so the first API/socket call pays no DNS+TCP cost */}
-        <link rel="preconnect" href={process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000'} />
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000'} crossOrigin="" />
       </head>
       <body className={`antialiased ${outfit.variable} ${dmSans.variable}`}>
         {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
