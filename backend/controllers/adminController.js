@@ -23,6 +23,7 @@ class AdminController {
       const [
         totalUsers,
         registeredUsers,
+        adminUsers,
         activeUsers,
         onlineUsers,
         totalMessages,
@@ -33,21 +34,12 @@ class AdminController {
       ] = await Promise.all([
         User.countDocuments(),
         User.countDocuments({ isAnonymous: false }),
-        User.countDocuments({ 
-          $and: [
-            { isAnonymous: false },
-            { lastSeen: { $gte: last24h } }
-          ]
-        }),
+        User.countDocuments({ role: 'admin' }),
+        User.countDocuments({ isAnonymous: false, lastSeen: { $gte: last24h } }),
         User.countDocuments({ isOnline: true }),
         Message.countDocuments(),
         User.countDocuments({ createdAt: { $gte: last7d } }),
-        User.countDocuments({ 
-          $and: [
-            { isAnonymous: false },
-            { createdAt: { $gte: last7d } }
-          ]
-        }),
+        User.countDocuments({ isAnonymous: false, createdAt: { $gte: last7d } }),
         Message.countDocuments({ createdAt: { $gte: last24h } }),
         Report.countDocuments({ status: 'pending' })
       ]);
@@ -55,6 +47,7 @@ class AdminController {
       res.json({
         totalUsers,
         registeredUsers,
+        adminUsers,
         activeUsers,
         onlineUsers,
         totalMessages,
@@ -282,6 +275,36 @@ class AdminController {
       const { channelId } = req.params;
       await Channel.findByIdAndDelete(channelId);
       res.json({ message: 'Canal supprimé' });
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
+    }
+  }
+
+  // Changer le rôle d'un utilisateur (user ↔ admin)
+  async setUserRole(req, res) {
+    try {
+      const { userId } = req.params;
+      const { role } = req.body;
+
+      if (!['user', 'admin'].includes(role)) {
+        return res.status(400).json({ message: 'Rôle invalide. Valeurs acceptées : user, admin' });
+      }
+
+      // Empêcher un admin de se rétrograder lui-même
+      if (String(req.user.id) === String(userId) && role === 'user') {
+        return res.status(403).json({ message: 'Vous ne pouvez pas vous rétrograder vous-même' });
+      }
+
+      // Empêcher de rétrograder le dernier admin de la plateforme
+      if (role === 'user') {
+        const adminCount = await User.countDocuments({ role: 'admin' });
+        if (adminCount <= 1) {
+          return res.status(403).json({ message: 'Impossible : il doit rester au moins un admin sur la plateforme' });
+        }
+      }
+
+      await User.collection.updateOne(buildIdQuery(userId), { $set: { role } });
+      res.json({ message: `Rôle mis à jour : ${role}` });
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }

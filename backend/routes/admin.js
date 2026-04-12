@@ -19,6 +19,7 @@ router.get('/messages', adminController.getAllMessages);
 // Utilisateurs
 router.get('/users', adminController.getUsers);
 router.put('/users/:userId/block', adminController.toggleUserBlock);
+router.put('/users/:userId/role', adminController.setUserRole);
 router.delete('/users/:userId', adminController.deleteUser);
 
 // Canaux

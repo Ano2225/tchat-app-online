@@ -149,6 +149,19 @@ const AdminDashboard = () => {
     }
   };
 
+  const setUserRole = async (userId: string, role: 'user' | 'admin') => {
+    const label = role === 'admin' ? 'promouvoir en admin' : 'rétrograder en utilisateur';
+    if (!confirm(`Êtes-vous sûr de vouloir ${label} cet utilisateur ?`)) return;
+    try {
+      await axiosInstance.put(`/admin/users/${userId}/role`, { role });
+      fetchUsers(usersPagination.page, usersSearch, usersTypeFilter);
+      fetchDashboardData();
+    } catch (error: unknown) {
+      const msg = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      alert(msg || 'Erreur lors du changement de rôle');
+    }
+  };
+
   const renameChannel = async (channelId: string) => {
     if (!renameValue.trim()) return;
     try {
@@ -249,7 +262,7 @@ const AdminDashboard = () => {
         {/* ── OVERVIEW TAB ── */}
         {activeTab === 'overview' && (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
               <StatCard
                 title="Total utilisateurs" value={stats?.totalUsers ?? 0}
                 sub={`+${stats?.newUsersLast7d ?? 0} cette semaine`}
@@ -261,6 +274,12 @@ const AdminDashboard = () => {
                 sub={`+${stats?.newRegisteredUsersLast7d ?? 0} cette semaine`}
                 color="bg-indigo-100 dark:bg-indigo-900"
                 icon={<svg className="w-5 h-5 text-indigo-600 dark:text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
+              />
+              <StatCard
+                title="Admins" value={stats?.adminUsers ?? 0}
+                sub="Comptes à privilèges élevés"
+                color="bg-yellow-100 dark:bg-yellow-900"
+                icon={<svg className="w-5 h-5 text-yellow-600 dark:text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>}
               />
               <StatCard
                 title="Actifs 24h" value={stats?.activeUsers ?? 0}
@@ -472,7 +491,16 @@ const AdminDashboard = () => {
                       <td className="px-4 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">{new Date(u.createdAt).toLocaleDateString('fr-FR')}</td>
                       <td className="px-4 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">{u.lastSeen ? new Date(u.lastSeen).toLocaleDateString('fr-FR') : 'Jamais'}</td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="flex space-x-1">
+                        <div className="flex flex-wrap gap-1">
+                          {!u.isAnonymous && u._id !== user?._id && (
+                            <button
+                              onClick={() => setUserRole(u._id, u.role === 'admin' ? 'user' : 'admin')}
+                              className={`px-2 py-1 rounded text-xs ${u.role === 'admin' ? 'bg-yellow-500 text-white hover:bg-yellow-600' : 'bg-purple-500 text-white hover:bg-purple-600'}`}
+                              title={u.role === 'admin' ? 'Rétrograder en utilisateur' : 'Promouvoir en admin'}
+                            >
+                              {u.role === 'admin' ? '↓ User' : '↑ Admin'}
+                            </button>
+                          )}
                           <button onClick={() => toggleUserBlock(u._id, u.isBlocked)} className={`px-2 py-1 rounded text-xs ${u.isBlocked ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-yellow-500 text-white hover:bg-yellow-600'}`}>
                             {u.isBlocked ? 'Débloquer' : 'Bloquer'}
                           </button>
