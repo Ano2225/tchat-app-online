@@ -18,6 +18,7 @@ import PrivateChatBox from '@/components/chat/PrivateChatBox';
 import GenderAvatar from '@/components/ui/GenderAvatar';
 import AdminBadge from '@/components/ui/AdminBadge';
 import axiosInstance from '@/utils/axiosInstance';
+import OnboardingModal from '@/components/ui/OnboardingModal';
 
 const GamePanel = dynamic(() => import('@/components/Game/GamePanel'), { ssr: false });
 const MusicPlayer = dynamic(() => import('@/components/ui/MusicPlayer'), { ssr: false });
@@ -55,6 +56,35 @@ const ChatPage = () => {
   } | null>(null);
 
   const previousRoomRef = useRef<string | null>(null);
+
+  // ── Onboarding — 7 jours après la première visite ─────────────────────────
+  const OB_KEY = 'babichat_ob';
+  const OB_TTL = 7 * 24 * 60 * 60 * 1000;
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingAvailable, setOnboardingAvailable] = useState(false);
+
+  useEffect(() => {
+    if (user?.isAnonymous) return; // pas d'onboarding pour les anonymes
+    try {
+      const raw = localStorage.getItem(OB_KEY);
+      if (!raw) {
+        // Première visite → démarrer le compteur et ouvrir la modal
+        localStorage.setItem(OB_KEY, JSON.stringify({ startedAt: Date.now() }));
+        setShowOnboarding(true);
+        setOnboardingAvailable(true);
+      } else {
+        const { startedAt } = JSON.parse(raw) as { startedAt: number };
+        if (Date.now() - startedAt < OB_TTL) {
+          // Dans la fenêtre de 7 jours → bouton ? disponible mais pas d'ouverture auto
+          setOnboardingAvailable(true);
+        }
+        // Au-delà de 7 jours → rien
+      }
+    } catch {
+      // localStorage indisponible → silencieux
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   // Load initial unread counts from DB on mount
   useEffect(() => {
@@ -350,6 +380,7 @@ const ChatPage = () => {
         socket={socket}
         totalUnread={Object.values(unreadMap).reduce((s, e) => s + e.count, 0)}
         onOpenChat={handleOpenChatFromSidebar}
+        onShowOnboarding={onboardingAvailable ? () => setShowOnboarding(true) : undefined}
       />
 
       <MentionBanner
@@ -520,6 +551,9 @@ const ChatPage = () => {
         />
       )}
       {showDesktopMusicPlayer ? <MusicPlayer /> : null}
+
+      {/* Onboarding — affiché auto à la première visite, accessible 7 jours via bouton ? */}
+      {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
     </main>
   );
 };

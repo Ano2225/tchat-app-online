@@ -11,13 +11,14 @@ import ThemeToggle from '../ui/ThemeToggle'
 import ProfileModal from '../profile/ProfileModal'
 import GenderAvatar from '@/components/ui/GenderAvatar'
 import AdminBadge from '@/components/ui/AdminBadge'
-import { LogOut, MessageSquare, Shield } from 'lucide-react'
+import { LogOut, MessageSquare, Shield, HelpCircle } from 'lucide-react'
 
 interface ChatHeaderProps {
   users?: { id: string; username: string }
   socket: Socket | null
   totalUnread?: number
   onOpenChat?: (user: { _id: string; username: string; avatarUrl?: string; sexe?: string; role?: string }) => void
+  onShowOnboarding?: () => void
 }
 
 interface Conversation {
@@ -37,7 +38,7 @@ interface Conversation {
   unreadCount: number
 }
 
-const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0, onOpenChat }) => {
+const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0, onOpenChat, onShowOnboarding }) => {
   const router = useRouter()
   const logout = useAuthStore((state) => state.logout)
   const user = useAuthStore((state) => state.user)
@@ -434,6 +435,32 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
                 }}
               >
                 <Shield className="w-4 h-4" />
+              </button>
+            )}
+
+            {/* Guide / Onboarding */}
+            {onShowOnboarding && (
+              <button
+                onClick={onShowOnboarding}
+                className="w-9 h-9 flex items-center justify-center rounded-xl transition-all"
+                style={{
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-default)',
+                  color: 'var(--text-secondary)',
+                }}
+                title="Guide de la plateforme"
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)';
+                  (e.currentTarget as HTMLElement).style.background = 'var(--accent-dim)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+                  (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)';
+                  (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)';
+                }}
+              >
+                <HelpCircle className="w-4 h-4" />
               </button>
             )}
 
