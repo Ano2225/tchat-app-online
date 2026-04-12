@@ -75,6 +75,9 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'users' | 'channels' | 'reports'>('overview');
   const [newChannelName, setNewChannelName] = useState('');
+  const [usersTypeFilter, setUsersTypeFilter] = useState<'all' | 'registered' | 'anonymous'>('all');
+  const [renamingChannelId, setRenamingChannelId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -96,9 +99,9 @@ const AdminDashboard = () => {
     }
   }, []);
 
-  const fetchUsers = useCallback(async (page = 1, search = '') => {
+  const fetchUsers = useCallback(async (page = 1, search = '', type: 'all' | 'registered' | 'anonymous' = 'all') => {
     try {
-      const response = await axiosInstance.get(`/admin/users?page=${page}&limit=10&search=${encodeURIComponent(search)}`);
+      const response = await axiosInstance.get(`/admin/users?page=${page}&limit=10&search=${encodeURIComponent(search)}&type=${type}`);
       setUsers(response.data.users ?? []);
       setUsersPagination(response.data.pagination ?? { page: 1, limit: 10, total: 0, pages: 0 });
     } catch (error) {
@@ -130,7 +133,7 @@ const AdminDashboard = () => {
   const toggleUserBlock = async (userId: string, isBlocked: boolean) => {
     try {
       await axiosInstance.put(`/admin/users/${userId}/block`, { isBlocked: !isBlocked });
-      fetchUsers(usersPagination.page, usersSearch);
+      fetchUsers(usersPagination.page, usersSearch, usersTypeFilter);
     } catch (error) {
       console.error('Error toggling user block:', error);
     }
@@ -140,9 +143,21 @@ const AdminDashboard = () => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) return;
     try {
       await axiosInstance.delete(`/admin/users/${userId}`);
-      fetchUsers(usersPagination.page, usersSearch);
+      fetchUsers(usersPagination.page, usersSearch, usersTypeFilter);
     } catch (error) {
       console.error('Error deleting user:', error);
+    }
+  };
+
+  const renameChannel = async (channelId: string) => {
+    if (!renameValue.trim()) return;
+    try {
+      await axiosInstance.put(`/admin/channels/${channelId}`, { name: renameValue.trim() });
+      setRenamingChannelId(null);
+      setRenameValue('');
+      fetchChannels();
+    } catch (error) {
+      console.error('Error renaming channel:', error);
     }
   };
 
@@ -378,13 +393,34 @@ const AdminDashboard = () => {
         {/* ── USERS TAB ── */}
         {activeTab === 'users' && (
           <Card className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Gestion des utilisateurs</h3>
+            <div className="flex flex-wrap gap-3 justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Utilisateurs</h3>
+                {/* Type filter pills */}
+                <div className="flex gap-1 ml-2">
+                  {([['all', 'Tous'], ['registered', 'Inscrits'], ['anonymous', 'Anonymes']] as const).map(([val, label]) => (
+                    <button
+                      key={val}
+                      onClick={() => {
+                        setUsersTypeFilter(val);
+                        fetchUsers(1, usersSearch, val);
+                      }}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                        usersTypeFilter === val
+                          ? 'bg-primary-500 text-white shadow'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <input
                 type="text"
                 placeholder="Rechercher..."
                 value={usersSearch}
-                onChange={(e) => { setUsersSearch(e.target.value); fetchUsers(1, e.target.value); }}
+                onChange={(e) => { setUsersSearch(e.target.value); fetchUsers(1, e.target.value, usersTypeFilter); }}
                 className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
               />
             </div>
@@ -457,9 +493,9 @@ const AdminDashboard = () => {
                   : '0 utilisateurs'}
               </p>
               <div className="flex space-x-2">
-                <button onClick={() => fetchUsers(usersPagination.page - 1, usersSearch)} disabled={usersPagination.page <= 1} className="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50 text-sm">Précédent</button>
+                <button onClick={() => fetchUsers(usersPagination.page - 1, usersSearch, usersTypeFilter)} disabled={usersPagination.page <= 1} className="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50 text-sm">Précédent</button>
                 <span className="px-3 py-1 bg-primary-500 text-white rounded text-sm">{usersPagination.page} / {usersPagination.pages || 1}</span>
-                <button onClick={() => fetchUsers(usersPagination.page + 1, usersSearch)} disabled={usersPagination.page >= usersPagination.pages} className="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50 text-sm">Suivant</button>
+                <button onClick={() => fetchUsers(usersPagination.page + 1, usersSearch, usersTypeFilter)} disabled={usersPagination.page >= usersPagination.pages} className="px-3 py-1 bg-gray-300 dark:bg-gray-600 rounded disabled:opacity-50 text-sm">Suivant</button>
               </div>
             </div>
           </Card>
@@ -493,10 +529,53 @@ const AdminDashboard = () => {
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                   {channels.map((ch) => (
                     <tr key={ch._id}>
-                      <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">#{ch.name}</td>
+                      <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                        {renamingChannelId === ch._id ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-400">#</span>
+                            <input
+                              autoFocus
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') renameChannel(ch._id);
+                                if (e.key === 'Escape') { setRenamingChannelId(null); setRenameValue(''); }
+                              }}
+                              className="px-2 py-1 border border-blue-400 rounded text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400 w-40"
+                            />
+                          </div>
+                        ) : (
+                          <span>#{ch.name}</span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-gray-600 dark:text-gray-400">{new Date(ch.createdAt).toLocaleString('fr-FR')}</td>
                       <td className="px-6 py-4">
-                        <button onClick={() => deleteChannel(ch._id)} className="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Supprimer</button>
+                        <div className="flex gap-1">
+                          {renamingChannelId === ch._id ? (
+                            <>
+                              <button
+                                onClick={() => renameChannel(ch._id)}
+                                className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600"
+                              >
+                                Valider
+                              </button>
+                              <button
+                                onClick={() => { setRenamingChannelId(null); setRenameValue(''); }}
+                                className="px-2 py-1 bg-gray-400 text-white rounded text-xs hover:bg-gray-500"
+                              >
+                                Annuler
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => { setRenamingChannelId(ch._id); setRenameValue(ch.name); }}
+                              className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                            >
+                              Renommer
+                            </button>
+                          )}
+                          <button onClick={() => deleteChannel(ch._id)} className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">Supprimer</button>
+                        </div>
                       </td>
                     </tr>
                   ))}

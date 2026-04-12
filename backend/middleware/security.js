@@ -23,7 +23,7 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-csrf-token']
 };
 
-// Rate limiting global
+// Rate limiting global — désactivé en développement pour ne pas gêner les tests
 const globalRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 200, // 200 requêtes par IP par fenêtre
@@ -32,6 +32,7 @@ const globalRateLimit = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'development',
 });
 
 // Rate limiting pour l'authentification
@@ -42,6 +43,7 @@ const authRateLimit = rateLimit({
     error: 'Trop de tentatives de connexion, réessayez dans 15 minutes.'
   },
   skipSuccessfulRequests: true,
+  skip: () => process.env.NODE_ENV === 'development',
 });
 
 // Rate limiting pour l'envoi de messages (POST uniquement)
@@ -51,7 +53,7 @@ const messageRateLimit = rateLimit({
   message: {
     error: 'Trop de messages envoyés, ralentissez un peu.'
   },
-  skip: (req) => req.method !== 'POST',
+  skip: (req) => process.env.NODE_ENV === 'development' || req.method !== 'POST',
 });
 
 // Configuration Helmet pour la sécurité

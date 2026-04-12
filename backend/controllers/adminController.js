@@ -211,32 +211,29 @@ class AdminController {
       const limit = parseInt(req.query.limit) || 10;
       const skip = (page - 1) * limit;
       const search = req.query.search || '';
+      const type = req.query.type || 'all'; // 'all' | 'registered' | 'anonymous'
       const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-      // Construire le filtre de recherche
-      const filter = escapedSearch ? {
-        $or: [
+      const filter = {};
+
+      if (type === 'registered') filter.isAnonymous = false;
+      else if (type === 'anonymous') filter.isAnonymous = true;
+
+      if (escapedSearch) {
+        filter.$or = [
           { username: { $regex: escapedSearch, $options: 'i' } },
           { email: { $regex: escapedSearch, $options: 'i' } }
-        ]
-      } : {};
-      
+        ];
+      }
+
       const [users, total] = await Promise.all([
-        User.find(filter)
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit),
+        User.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
         User.countDocuments(filter)
       ]);
-      
+
       res.json({
         users,
-        pagination: {
-          page,
-          limit,
-          total,
-          pages: Math.ceil(total / limit)
-        }
+        pagination: { page, limit, total, pages: Math.ceil(total / limit) }
       });
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
@@ -285,6 +282,24 @@ class AdminController {
       const { channelId } = req.params;
       await Channel.findByIdAndDelete(channelId);
       res.json({ message: 'Canal supprimé' });
+    } catch (error) {
+      res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
+    }
+  }
+
+  // Renommer un canal
+  async renameChannel(req, res) {
+    try {
+      const { channelId } = req.params;
+      const { name } = req.body;
+      if (!name || !name.trim()) return res.status(400).json({ message: 'Nom invalide' });
+      const channel = await Channel.findByIdAndUpdate(
+        channelId,
+        { name: name.trim() },
+        { new: true }
+      );
+      if (!channel) return res.status(404).json({ message: 'Canal introuvable' });
+      res.json(channel);
     } catch (error) {
       res.status(500).json({ message: 'Erreur serveur', ...(process.env.NODE_ENV === 'development' && { error: error.message }) });
     }

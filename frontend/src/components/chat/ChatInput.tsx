@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
 import type { EmojiClickData } from 'emoji-picker-react'
@@ -10,6 +10,28 @@ import { Socket } from 'socket.io-client'
 import GenderAvatar from '@/components/ui/GenderAvatar'
 
 const NATIVE_EMOJI_STYLE = 'native' as never
+
+// Split text into plain-text and @mention segments for the highlight mirror
+function parseForHighlight(text: string): React.ReactNode[] {
+  return text.split(/(@\w+)/g).map((part, i) =>
+    /^@\w+$/.test(part)
+      ? (
+          <mark
+            key={i}
+            style={{
+              background: 'var(--accent-dim)',
+              color: 'var(--accent-text)',
+              borderRadius: '3px',
+              padding: '0 1px',
+              fontWeight: 600,
+            }}
+          >
+            {part}
+          </mark>
+        )
+      : <React.Fragment key={i}>{part}</React.Fragment>
+  )
+}
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), {
   ssr: false,
@@ -77,6 +99,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const inputContainerRef = useRef<HTMLDivElement>(null)
+  const mirrorRef = useRef<HTMLDivElement>(null)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
   const mentionListRef = useRef<HTMLDivElement>(null)
@@ -92,6 +115,21 @@ const ChatInput: React.FC<ChatInputProps> = ({
         )
         .slice(0, 6)
     : []
+
+  // Resolved @mentions present in the current message (only online users get chips)
+  const mentionedUsers = useMemo(() => {
+    const matches = [...message.matchAll(/@(\w+)/g)]
+    const seen = new Set<string>()
+    const result: MentionUser[] = []
+    for (const m of matches) {
+      const name = m[1].toLowerCase()
+      if (seen.has(name)) continue
+      seen.add(name)
+      const found = mentionUsers.find(u => u.username.toLowerCase() === name && u.id !== user?.id)
+      if (found) result.push(found)
+    }
+    return result
+  }, [message, mentionUsers, user?.id])
 
   // Écouter les indicateurs de frappe des autres utilisateurs
   useEffect(() => {
@@ -360,6 +398,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
       className="relative flex-shrink-0"
       style={{ borderTop: '1px solid var(--border-default)', background: 'var(--bg-panel)' }}
     >
+      {/* Mirror textarea styles: selection highlight + placeholder color */}
+      <style>{`
+        .chat-textarea::selection { background-color: var(--accent-dim); color: var(--text-primary); }
+        .chat-textarea::placeholder { color: var(--text-muted); }
+      `}</style>
+
       {/* Typing indicator — affiché au-dessus de l'input, sous les messages */}
       {typingUsers.length > 0 && (
         <div
@@ -415,23 +459,86 @@ const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
+      {/* Mention chips — shows who will be tagged when @username is in the message */}
+      {mentionedUsers.length > 0 && (
+        <div className="mb-2.5 flex flex-wrap gap-1.5" aria-label="Utilisateurs mentionnés">
+          {mentionedUsers.map(u => (
+            <div
+              key={u.id}
+              className="flex items-center gap-1.5 pl-1 pr-2.5 py-0.5 rounded-full text-xs font-semibold"
+              style={{
+                background: 'var(--accent-dim)',
+                border: '1px solid var(--accent-glow)',
+                color: 'var(--accent-text)',
+              }}
+            >
+              <GenderAvatar
+                username={u.username}
+                avatarUrl={u.avatarUrl}
+                sexe={u.sexe}
+                size="sm"
+                className="w-4 h-4 rounded-full flex-shrink-0"
+                clickable={false}
+              />
+              @{u.username}
+            </div>
+          ))}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="flex items-end gap-2" data-tour="chat-input">
         {/* Input pill */}
         <div
           ref={inputContainerRef}
           className="flex-1 relative min-w-0 flex items-end rounded-2xl px-3 py-2 gap-2 transition-all"
-          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)' }}
+          style={{
+            background: 'var(--bg-surface)',
+            border: `1px solid ${mentionedUsers.length > 0 ? 'var(--accent-glow)' : 'var(--border-default)'}`,
+          }}
         >
+          {/* Mirror div — renders @mention highlights behind the transparent textarea */}
+          <div
+            ref={mirrorRef}
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              top: '8px',       // matches py-2 (0.5rem = 8px)
+              bottom: '8px',
+              left: '12px',     // matches px-3 (0.75rem = 12px)
+              right: '12px',
+              fontSize: '16px',
+              lineHeight: '1.5',
+              fontFamily: 'inherit',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
+              overflow: 'hidden',
+              color: 'var(--text-primary)',
+              pointerEvents: 'none',
+              userSelect: 'none',
+              zIndex: 0,
+            }}
+          >
+            {parseForHighlight(message)}
+            {/* Extra space so trailing newlines create a visible line (matches textarea) */}
+            {message.endsWith('\n') && ' '}
+          </div>
+
           <textarea
             ref={inputRef}
             rows={1}
             value={message}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            onScroll={() => {
+              if (mirrorRef.current && inputRef.current) {
+                mirrorRef.current.scrollTop = inputRef.current.scrollTop
+              }
+            }}
             placeholder={currentRoom === 'Game' ? 'Tapez votre réponse...' : `Message dans ${currentRoom}…`}
-            className="w-full bg-transparent focus:outline-none"
+            className="chat-textarea w-full bg-transparent focus:outline-none"
             style={{
-              color: 'var(--text-primary)',
+              color: 'transparent',
               caretColor: 'var(--accent)',
               fontSize: '16px',
               resize: 'none',
@@ -439,6 +546,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
               lineHeight: '1.5',
               display: 'block',
               paddingRight: message.length > 900 ? '40px' : '0',
+              position: 'relative',
+              zIndex: 1,
             }}
             maxLength={1000}
             autoComplete="off"
@@ -450,7 +559,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           {message.length > 900 && (
             <span
               className="absolute bottom-2 right-3 text-[10px] pointer-events-none select-none"
-              style={{ color: message.length > 950 ? 'var(--danger)' : 'var(--text-muted)' }}
+              style={{ color: message.length > 950 ? 'var(--danger)' : 'var(--text-muted)', zIndex: 2 }}
             >
               {1000 - message.length}
             </span>

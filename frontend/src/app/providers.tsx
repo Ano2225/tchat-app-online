@@ -78,8 +78,10 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     return <>{children}</>;
   }
 
-  // Protected pages: show spinner only while resolving session
-  if (!hasHydrated || cookieHydrating) {
+  // Protected pages: show spinner only while Zustand rehydrates from localStorage (< 5ms).
+  // cookieHydrating is intentionally excluded — we render children immediately so the
+  // chat page is not blocked by the /api/auth/me round-trip (main LCP fix).
+  if (!hasHydrated) {
     return (
       <div className="flex h-screen items-center justify-center" style={{ background: 'var(--bg-base)' }}>
         <div className="animate-spin rounded-full h-10 w-10 border-2 border-transparent" style={{ borderTopColor: 'var(--accent)' }} />

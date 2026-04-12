@@ -23,6 +23,7 @@ router.delete('/users/:userId', adminController.deleteUser);
 
 // Canaux
 router.post('/channels', adminController.createChannel);
+router.put('/channels/:channelId', adminController.renameChannel);
 router.delete('/channels/:channelId', adminController.deleteChannel);
 
 // Alertes

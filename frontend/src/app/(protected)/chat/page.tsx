@@ -14,11 +14,12 @@ import UsersOnline from '@/components/chat/UsersOnline';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import toast from 'react-hot-toast';
 import MentionBanner from '@/components/chat/MentionBanner';
-import PrivateChatBox from '@/components/chat/PrivateChatBox';
 import GenderAvatar from '@/components/ui/GenderAvatar';
 import AdminBadge from '@/components/ui/AdminBadge';
 import axiosInstance from '@/utils/axiosInstance';
-import OnboardingModal from '@/components/ui/OnboardingModal';
+
+const PrivateChatBox = dynamic(() => import('@/components/chat/PrivateChatBox'), { ssr: false });
+const OnboardingModal = dynamic(() => import('@/components/ui/OnboardingModal'), { ssr: false });
 
 const GamePanel = dynamic(() => import('@/components/Game/GamePanel'), { ssr: false });
 const MusicPlayer = dynamic(() => import('@/components/ui/MusicPlayer'), { ssr: false });
@@ -42,6 +43,7 @@ interface Message {
 
 const ChatPage = () => {
   const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
   const [currentRoom, setCurrentRoom] = useState('General');
   const [socket, setSocket] = useState<Socket | null>(null);
   const [registeredOnSocket, setRegisteredOnSocket] = useState(false);
@@ -136,12 +138,15 @@ const ChatPage = () => {
   }, [socket]);
 
   useEffect(() => {
-    const currentToken = useAuthStore.getState().token;
+    // Do not connect until the auth token is available (prevents connecting with null token
+    // during cookieHydrating, then reconnecting once the session is restored).
+    if (!token) return;
+
     let newSocket: Socket;
 
     import('socket.io-client').then(({ io }) => {
       newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000', {
-        auth: { token: currentToken },
+        auth: { token },
         withCredentials: true,
       });
       setSocket(newSocket);
@@ -174,11 +179,13 @@ const ChatPage = () => {
         newSocket.off('connect');
         newSocket.disconnect();
       }
+      setSocket(null);
+      setRegisteredOnSocket(false);
     };
-  // We intentionally do not include `currentRoom` here to avoid recreating the socket when the room changes.
-  // `user` is used only to pick the username to send on first connect; updates to username are handled elsewhere.
+  // token changes when session is restored from cookie or on logout — reconnect accordingly.
+  // currentRoom and user are intentionally excluded to avoid recreating the socket on room/username changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     // Only attempt to join/leave rooms after we've registered the user on the socket
