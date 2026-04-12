@@ -590,24 +590,30 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                     </div>
                   )}
 
-                  <div className={`flex flex-col gap-0.5 max-w-[72%] ${isOwn ? 'items-end' : 'items-start'}`}>
+                  <div className={`flex flex-col gap-0.5 min-w-0 max-w-[78%] ${isOwn ? 'items-end' : 'items-start'}`}>
                     {/* Bubble */}
                     <div
-                      className={`text-sm leading-relaxed ${isOptimistic ? 'opacity-60' : ''} ${isImageOnly ? '' : 'px-3 py-2'}`}
+                      className={`text-sm leading-relaxed min-w-0 ${isOptimistic ? 'opacity-60' : ''} ${isImageOnly ? '' : 'px-3 py-2'}`}
                       style={
                         isOwn
                           ? {
                               background: isImageOnly ? 'transparent' : 'var(--accent)',
                               color: '#fff',
-                              borderRadius: isOwn
-                                ? (isLastInGroup ? '18px 18px 4px 18px' : '18px 18px 4px 18px')
-                                : (isLastInGroup ? '18px 18px 18px 4px' : '4px 18px 18px 18px'),
+                              borderRadius: isLastInGroup ? '18px 18px 4px 18px' : '18px 18px 4px 18px',
+                              maxWidth: '100%',
+                              overflowWrap: 'break-word',
+                              wordBreak: 'break-word',
+                              whiteSpace: 'pre-wrap',
                             }
                           : {
-                              background: isImageOnly ? 'transparent' : 'var(--msg-other-bg)',
-                              color: 'var(--msg-other-text)',
-                              border: isImageOnly ? 'none' : '1px solid var(--msg-other-border)',
+                              background: isImageOnly ? 'transparent' : 'var(--bg-elevated)',
+                              color: 'var(--text-primary)',
+                              border: isImageOnly ? 'none' : '1px solid var(--border-default)',
                               borderRadius: isLastInGroup ? '18px 18px 18px 4px' : '4px 18px 18px 18px',
+                              maxWidth: '100%',
+                              overflowWrap: 'break-word',
+                              wordBreak: 'break-word',
+                              whiteSpace: 'pre-wrap',
                             }
                       }
                     >
@@ -635,9 +641,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                       )}
                       {/* Text */}
                       {message.content && (
-                        <span style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                          {message.content}
-                        </span>
+                        <span>{message.content}</span>
                       )}
                     </div>
 

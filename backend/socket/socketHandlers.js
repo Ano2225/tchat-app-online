@@ -496,6 +496,17 @@ module.exports = (io, socket) => {
     }
   });
 
+  // ── Indicateur de frappe ─────────────────────────────────────────────────
+  socket.on('typing_start', ({ room }) => {
+    if (!socket.username || !room || typeof room !== 'string') return;
+    socket.to(room).emit('user_typing', { username: socket.username, room });
+  });
+
+  socket.on('typing_stop', ({ room }) => {
+    if (!socket.username || !room || typeof room !== 'string') return;
+    socket.to(room).emit('user_stopped_typing', { username: socket.username, room });
+  });
+
   // ── Statut mis à jour — notifier les autres utilisateurs ─────────────────
   socket.on('statut_updated', (newStatut) => {
     if (!socket.userId || socket.userId.startsWith('anon_')) return;

@@ -84,6 +84,7 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
   return (
     <div
       className="flex h-full min-h-0 w-full flex-col rounded-xl overflow-hidden md:w-60"
+      data-tour="channels"
       style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}
     >
       {/* Header */}
@@ -116,6 +117,7 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
 
         {/* Game channel */}
         <button
+          data-tour="game-channel"
           onClick={() => {
             if (!user || user.isAnonymous) {
               alert('Vous devez être inscrit pour accéder au canal Game.')

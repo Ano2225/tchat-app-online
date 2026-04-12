@@ -119,6 +119,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
   return (
     <div
       className="flex h-full min-h-0 flex-col rounded-xl overflow-hidden transition-all duration-300"
+      data-tour="users"
       style={{
         background: 'var(--bg-panel)',
         border: '1px solid var(--border-default)',

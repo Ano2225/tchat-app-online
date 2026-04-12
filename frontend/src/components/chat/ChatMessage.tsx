@@ -164,15 +164,23 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
 
   const getBubbleStyle = (isOwnMessage: boolean, sexe?: string): React.CSSProperties => {
     if (isOwnMessage) return { background: 'var(--accent)', color: '#fff' };
-    if (sexe === 'homme') return { background: 'var(--bubble-m, #EFF6FF)', color: 'var(--text-primary)', border: '1px solid var(--bubble-m-border, #BFDBFE)' };
-    if (sexe === 'femme') return { background: 'var(--bubble-f, #FDF2F8)', color: 'var(--text-primary)', border: '1px solid var(--bubble-f-border, #FBCFE8)' };
+    if (sexe === 'homme') return {
+      background: 'rgba(59,130,246,0.10)',
+      color: 'var(--text-primary)',
+      border: '1px solid rgba(59,130,246,0.20)',
+    };
+    if (sexe === 'femme') return {
+      background: 'rgba(236,72,153,0.10)',
+      color: 'var(--text-primary)',
+      border: '1px solid rgba(236,72,153,0.20)',
+    };
     return { background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' };
   };
 
-  const getNameColor = (sexe?: string) => {
-    if (sexe === 'homme') return 'text-blue-600 dark:text-blue-400';
-    if (sexe === 'femme') return 'text-pink-500 dark:text-pink-400';
-    return 'text-gray-900 dark:text-white';
+  const getNameColor = (sexe?: string): React.CSSProperties => {
+    if (sexe === 'homme') return { color: '#3B82F6' };
+    if (sexe === 'femme') return { color: '#EC4899' };
+    return { color: 'var(--text-primary)' };
   };
 
   // Render message content with @mention highlighting
@@ -206,11 +214,8 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
 
   const handleAddReaction = (messageId: string, emoji: string) => {
     if (!socket || !user?.id) {
-      console.log('Cannot add reaction: missing socket or user', { socket: !!socket, userId: user?.id });
-      return;
+        return;
     }
-    
-    console.log('Emitting add_reaction:', { messageId, emoji, userId: user.id, room: currentRoom });
     socket.emit('add_reaction', {
       messageId,
       emoji,
@@ -379,13 +384,13 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                   </div>
                 )}
 
-                <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[75%] sm:max-w-[65%]`}>
+                <div className={`flex flex-col min-w-0 ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[82%] sm:max-w-[68%] lg:max-w-[58%]`}>
                   {/* Sender name + time — only on first bubble of group */}
                   {!isOwnMessage && isFirst && (
                     <div className="flex items-baseline gap-1.5 mb-0.5 ml-1">
                       <span
-                        className={`text-xs font-semibold ${getNameColor(sender?.sexe)}`}
-                        style={{ fontFamily: 'var(--font-ui)' }}
+                        className="text-xs font-semibold"
+                        style={{ fontFamily: 'var(--font-ui)', ...getNameColor(sender?.sexe) }}
                       >
                         <span className="inline-flex items-center gap-1.5">
                           <span>{senderName}</span>
@@ -401,7 +406,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                   {/* Reply context */}
                   {msg.replyTo && (
                     <div
-                      className="mb-1 px-2.5 py-1.5 rounded-xl w-full"
+                      className="mb-1 px-2.5 py-1.5 rounded-xl max-w-full"
                       style={{ background: 'var(--bg-surface)', borderLeft: '2px solid var(--accent)' }}
                     >
                       <div className="text-[10px] font-medium mb-0.5" style={{ color: 'var(--accent)' }}>
@@ -414,7 +419,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                   )}
 
                   {/* Bubble */}
-                  <div className="relative flex items-end gap-1">
+                  <div className="relative flex items-end gap-1 min-w-0 max-w-full">
                     {/* Reply button — visible on hover desktop, always small on mobile */}
                     {!isOwnMessage && (
                       <button
@@ -430,8 +435,14 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                     )}
 
                     <div
-                      className={`px-3 py-1.5 text-sm leading-relaxed break-words ${isOwnMessage ? ownRadius : otherRadius}`}
-                      style={getBubbleStyle(isOwnMessage, sender?.sexe)}
+                      className={`px-3 py-2 text-sm leading-relaxed min-w-0 ${isOwnMessage ? ownRadius : otherRadius}`}
+                      style={{
+                        ...getBubbleStyle(isOwnMessage, sender?.sexe),
+                        overflowWrap: 'break-word',
+                        wordBreak: 'break-word',
+                        whiteSpace: 'pre-wrap',
+                        maxWidth: '100%',
+                      }}
                     >
                       {renderContent(msg.content, isOwnMessage)}
                     </div>
@@ -473,15 +484,18 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
           })}
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center p-8">
-            <div className="w-16 h-16 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <MessageCircle className="w-8 h-8 text-gray-500 dark:text-gray-400" />
+        <div className="flex-1 flex items-center justify-center py-16">
+          <div className="text-center">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{ background: 'var(--accent-dim)', border: '1px solid var(--border-default)' }}
+            >
+              <MessageCircle className="w-6 h-6" style={{ color: 'var(--accent)' }} />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              Bienvenue dans #{currentRoom}
+            <h3 className="text-base font-semibold mb-1" style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}>
+              #{currentRoom}
             </h3>
-            <p className="text-gray-600 dark:text-gray-300">
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               Soyez le premier à envoyer un message !
             </p>
           </div>

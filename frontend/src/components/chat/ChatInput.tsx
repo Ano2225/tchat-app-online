@@ -64,6 +64,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
 }) => {
   const [message, setMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
+  const [typingUsers, setTypingUsers] = useState<string[]>([])
+  const typingTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [pickerPos, setPickerPos] = useState<{ top: number; left: number; width: number; height: number } | null>(null)
 
@@ -72,7 +74,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [mentionIndex, setMentionIndex] = useState(0)
   const [mentionDropdownPos, setMentionDropdownPos] = useState<{ bottom: number; left: number; width: number } | null>(null)
 
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const inputContainerRef = useRef<HTMLDivElement>(null)
   const emojiPickerRef = useRef<HTMLDivElement>(null)
   const emojiButtonRef = useRef<HTMLButtonElement>(null)
@@ -89,6 +91,50 @@ const ChatInput: React.FC<ChatInputProps> = ({
         )
         .slice(0, 6)
     : []
+
+  // Écouter les indicateurs de frappe des autres utilisateurs
+  useEffect(() => {
+    if (!socket) return;
+
+    const removeTyping = (username: string) => {
+      clearTimeout(typingTimers.current[username]);
+      delete typingTimers.current[username];
+      setTypingUsers(prev => prev.filter(u => u !== username));
+    };
+
+    const onTyping = ({ username }: { username: string; room: string }) => {
+      setTypingUsers(prev => prev.includes(username) ? prev : [...prev, username]);
+      clearTimeout(typingTimers.current[username]);
+      // Auto-suppression après 3s si typing_stop n'arrive pas
+      typingTimers.current[username] = setTimeout(() => removeTyping(username), 3000);
+    };
+    const onStopTyping = ({ username }: { username: string }) => removeTyping(username);
+
+    socket.on('user_typing', onTyping);
+    socket.on('user_stopped_typing', onStopTyping);
+    return () => {
+      socket.off('user_typing', onTyping);
+      socket.off('user_stopped_typing', onStopTyping);
+      Object.values(typingTimers.current).forEach(clearTimeout);
+    };
+  }, [socket]);
+
+  // Réinitialiser les typingUsers au changement de salon
+  useEffect(() => {
+    setTypingUsers([]);
+    Object.values(typingTimers.current).forEach(clearTimeout);
+    typingTimers.current = {};
+  }, [currentRoom]);
+
+  // Auto-resize textarea (WhatsApp style) — grandit jusqu'à 120px puis scroll interne
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    const sh = el.scrollHeight
+    el.style.height = `${Math.min(sh, 120)}px`
+    el.style.overflowY = sh > 120 ? 'auto' : 'hidden'
+  }, [message])
 
   // Keep mention index in range when candidates change
   useEffect(() => {
@@ -118,9 +164,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
     const newCursor = before.length + 1 + username.length + 1
     // Restore focus + cursor position after React re-render
     requestAnimationFrame(() => {
-      if (inputRef.current) {
-        inputRef.current.focus()
-        inputRef.current.setSelectionRange(newCursor, newCursor)
+      const el = inputRef.current
+      if (el) {
+        el.focus()
+        el.setSelectionRange(newCursor, newCursor)
       }
     })
   }, [message, mentionState])
@@ -229,10 +276,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
     setShowEmojiPicker(false)
     setMentionState(null)
     if (onCancelReply) onCancelReply()
-    if (inputRef.current) inputRef.current.focus()
+    // Reset textarea height after clearing
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+      inputRef.current.style.overflowY = 'hidden'
+      inputRef.current.focus()
+    }
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value
     setMessage(val)
 
@@ -258,7 +310,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Mention dropdown keyboard navigation
     if (mentionState && mentionCandidates.length > 0) {
       if (e.key === 'ArrowDown') {
@@ -300,9 +352,31 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   return (
     <div
-      className="p-3 md:p-4 relative flex-shrink-0"
+      className="relative flex-shrink-0"
       style={{ borderTop: '1px solid var(--border-default)', background: 'var(--bg-panel)' }}
     >
+      {/* Typing indicator — affiché au-dessus de l'input, sous les messages */}
+      {typingUsers.length > 0 && (
+        <div
+          className="flex items-center gap-1.5 px-4 py-1 text-xs"
+          style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border-subtle)' }}
+        >
+          <div className="flex gap-0.5 items-center">
+            <span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--accent)', animationDelay: '0ms' }} />
+            <span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--accent)', animationDelay: '150ms' }} />
+            <span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--accent)', animationDelay: '300ms' }} />
+          </div>
+          <span className="truncate">
+            {typingUsers.length === 1
+              ? `${typingUsers[0]} est en train d'écrire…`
+              : typingUsers.length === 2
+              ? `${typingUsers[0]} et ${typingUsers[1]} écrivent…`
+              : `${typingUsers[0]} et ${typingUsers.length - 1} autres écrivent…`}
+          </span>
+        </div>
+      )}
+
+      <div className="p-3 md:p-4">
       {/* Reply preview */}
       {replyTo && (
         <div
@@ -336,39 +410,50 @@ const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-end gap-2">
+      <form onSubmit={handleSubmit} className="flex items-end gap-2" data-tour="chat-input">
         {/* Input pill */}
         <div
           ref={inputContainerRef}
           className="flex-1 relative min-w-0 flex items-end rounded-2xl px-3 py-2 gap-2 transition-all"
           style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)' }}
         >
-          <input
+          <textarea
             ref={inputRef}
-            type="text"
+            rows={1}
             value={message}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder={currentRoom === 'Game' ? 'Tapez votre réponse...' : `Message dans ${currentRoom}…`}
-            className="flex-1 bg-transparent focus:outline-none min-w-0 pr-10"
-            style={{ color: 'var(--text-primary)', caretColor: 'var(--accent)', fontSize: '16px' }}
+            className="w-full bg-transparent focus:outline-none"
+            style={{
+              color: 'var(--text-primary)',
+              caretColor: 'var(--accent)',
+              fontSize: '16px',
+              resize: 'none',
+              overflowY: 'hidden',
+              lineHeight: '1.5',
+              display: 'block',
+              paddingRight: message.length > 900 ? '40px' : '0',
+            }}
             maxLength={1000}
             autoComplete="off"
             aria-label="Message input"
             aria-autocomplete="list"
           />
 
-          {/* Character counter */}
-          <span
-            className="absolute bottom-2 right-3 text-[10px] pointer-events-none select-none"
-            style={{ color: 'var(--text-muted)' }}
-          >
-            {message.length}/1000
-          </span>
+          {/* Character counter — visible only when approaching limit */}
+          {message.length > 900 && (
+            <span
+              className="absolute bottom-2 right-3 text-[10px] pointer-events-none select-none"
+              style={{ color: message.length > 950 ? 'var(--danger)' : 'var(--text-muted)' }}
+            >
+              {1000 - message.length}
+            </span>
+          )}
         </div>
 
         {/* Buttons */}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-shrink-0 self-end">
           <button
             type="button"
             onClick={() => showEmojiPicker ? setShowEmojiPicker(false) : openPicker()}
@@ -400,18 +485,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
           </button>
         </div>
       </form>
-
-      {/* Typing indicator */}
-      {isTyping && (
-        <div className="mt-1.5 flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-          <div className="flex gap-0.5">
-            <div className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--accent)' }} />
-            <div className="w-1 h-1 rounded-full animate-bounce delay-100" style={{ background: 'var(--accent)' }} />
-            <div className="w-1 h-1 rounded-full animate-bounce delay-200" style={{ background: 'var(--accent)' }} />
-          </div>
-          <span>Vous tapez…</span>
-        </div>
-      )}
 
       {/* ── Mention dropdown ── portal to avoid overflow clipping */}
       {showMentionDropdown && mentionDropdownPos && typeof document !== 'undefined' && createPortal(
@@ -569,6 +642,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         </div>,
         document.body
       )}
+    </div>
     </div>
   )
 }
