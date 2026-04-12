@@ -69,7 +69,7 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
   if (loading) {
     return (
       <div
-        className="h-full w-full rounded-xl overflow-hidden md:w-60"
+        className="h-full w-full rounded-xl overflow-hidden lg:w-60"
         style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}
       >
         <div className="p-4" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
@@ -83,12 +83,16 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
 
   return (
     <div
-      className="flex h-full min-h-0 w-full flex-col rounded-xl overflow-hidden md:w-60"
+      className="flex h-full min-h-0 w-full flex-col rounded-xl overflow-hidden lg:w-60"
       data-tour="channels"
       style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-default)' }}
     >
       {/* Header */}
-      <div className="px-4 py-3.5 flex-shrink-0 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+      <div
+        data-tour="channels-header"
+        className="px-4 py-3.5 flex-shrink-0 flex items-center justify-between"
+        style={{ borderBottom: '1px solid var(--border-subtle)' }}
+      >
         <div>
           <h2
             className="text-base font-bold"
@@ -103,7 +107,7 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
         {onClose && (
           <button
             onClick={onClose}
-            className="md:hidden w-8 h-8 flex items-center justify-center rounded-xl transition-all"
+            className="lg:hidden w-8 h-8 flex items-center justify-center rounded-xl transition-all"
             style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
             aria-label="Fermer"
           >
@@ -117,7 +121,6 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
 
         {/* Game channel */}
         <button
-          data-tour="game-channel"
           onClick={() => {
             if (!user || user.isAnonymous) {
               alert('Vous devez être inscrit pour accéder au canal Game.')
@@ -148,42 +151,44 @@ const ChatChannel: React.FC<ChatChannelProps> = ({ onJoinRoom, currentRoom, sock
           aria-label="Salon Game"
           aria-current={currentRoom === 'Game' ? 'page' : undefined}
         >
-          <div className="flex items-center gap-3">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{
-                background: currentRoom === 'Game' ? 'rgba(255,255,255,0.2)' : 'var(--bg-surface)',
-              }}
-            >
-              <Gamepad2 className="w-4 h-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span
-                  className="text-xs font-bold"
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    color: currentRoom === 'Game' ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)',
-                  }}
-                >
-                  #
-                </span>
-                <p className="text-sm font-semibold truncate" style={{ fontFamily: 'var(--font-ui)' }}>
-                  Game
-                </p>
-              </div>
-              <p
-                className="text-xs truncate"
+          <div className="flex items-center justify-between gap-3">
+            <div data-tour="game-channel-summary" className="flex min-w-0 items-center gap-3">
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                 style={{
-                  color: currentRoom === 'Game'
-                    ? 'rgba(255,255,255,0.65)'
-                    : (!user || user.isAnonymous)
-                      ? 'var(--text-muted)'
-                      : 'var(--text-muted)',
+                  background: currentRoom === 'Game' ? 'rgba(255,255,255,0.2)' : 'var(--bg-surface)',
                 }}
               >
-                {(!user || user.isAnonymous) ? '🔒 Inscription requise' : 'Quiz en temps réel'}
-              </p>
+                <Gamepad2 className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="text-xs font-bold"
+                    style={{
+                      fontFamily: 'var(--font-ui)',
+                      color: currentRoom === 'Game' ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)',
+                    }}
+                  >
+                    #
+                  </span>
+                  <p className="text-sm font-semibold truncate" style={{ fontFamily: 'var(--font-ui)' }}>
+                    Game
+                  </p>
+                </div>
+                <p
+                  className="text-xs truncate"
+                  style={{
+                    color: currentRoom === 'Game'
+                      ? 'rgba(255,255,255,0.65)'
+                      : (!user || user.isAnonymous)
+                        ? 'var(--text-muted)'
+                        : 'var(--text-muted)',
+                  }}
+                >
+                  {(!user || user.isAnonymous) ? '🔒 Inscription requise' : 'Quiz en temps réel'}
+                </p>
+              </div>
             </div>
             {roomCounts['Game'] ? (
               <span

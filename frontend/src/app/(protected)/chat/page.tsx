@@ -308,7 +308,6 @@ const ChatPage = () => {
       socket.off('mention_notification', handleMentionNotification);
       socket.off('statut_notification', handleStatutNotification);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, currentRoom]);
   // Note: we emit `user_connected` on socket 'connect' and gate joins until registration.
   // If the user's username changes after initial connect (e.g., logs in), inform the server
@@ -396,6 +395,7 @@ const ChatPage = () => {
       >
         <button
           onClick={() => { setShowChannels(v => !v); setShowUsers(false); }}
+          data-tour="mobile-channels"
           className="flex flex-col items-center gap-0.5 min-w-[4rem] py-2 rounded-xl transition-all active:scale-95"
           style={{ color: showChannels ? 'var(--accent)' : 'var(--text-muted)', background: showChannels ? 'var(--accent-dim)' : 'transparent' }}
           aria-label="Salons"
@@ -407,6 +407,7 @@ const ChatPage = () => {
         </button>
         <button
           onClick={() => { setShowUsers(v => !v); setShowChannels(false); }}
+          data-tour="mobile-users"
           className="flex flex-col items-center gap-0.5 min-w-[4rem] py-2 rounded-xl transition-all active:scale-95"
           style={{ color: showUsers ? 'var(--accent)' : 'var(--text-muted)', background: showUsers ? 'var(--accent-dim)' : 'transparent' }}
           aria-label="Utilisateurs"
@@ -449,10 +450,10 @@ const ChatPage = () => {
       <div className="chat-body relative flex flex-1 min-h-0 gap-2 overflow-hidden p-2">
         {/* Channel Sidebar - Desktop always visible, Mobile overlay */}
         <div
-          className={`md:flex md:min-h-0 md:flex-shrink-0 md:relative md:translate-x-0 fixed bottom-0 left-0 z-40 transform transition-transform duration-300 ease-in-out ${showChannels ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}
+          className={`lg:flex lg:min-h-0 lg:flex-shrink-0 lg:relative lg:translate-x-0 fixed bottom-0 left-0 z-40 transform transition-transform duration-300 ease-in-out ${showChannels ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
           style={{ top: 'var(--header-h)' }}
         >
-          <div className="h-full md:min-h-0">
+          <div className="h-full lg:min-h-0">
             <ChatChannel
               onJoinRoom={handleJoinRoom}
               currentRoom={currentRoom}
@@ -465,7 +466,7 @@ const ChatPage = () => {
         {/* Overlay for mobile */}
         {(showChannels || showUsers) && (
           <div 
-            className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-30"
+            className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-30"
             onClick={() => {
               setShowChannels(false);
               setShowUsers(false);
@@ -499,10 +500,10 @@ const ChatPage = () => {
 
         {/* Users Sidebar - Desktop always visible, Mobile overlay */}
         <div
-          className={`md:flex md:min-h-0 md:flex-shrink-0 md:relative md:translate-x-0 fixed bottom-0 right-0 w-full sm:w-72 md:w-auto z-40 transform transition-transform duration-300 ease-in-out ${showUsers ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}
+          className={`lg:flex lg:min-h-0 lg:flex-shrink-0 lg:relative lg:translate-x-0 fixed bottom-0 right-0 w-full sm:w-72 lg:w-auto z-40 transform transition-transform duration-300 ease-in-out ${showUsers ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}
           style={{ top: 'var(--header-h)' }}
         >
-          <div className="h-full md:min-h-0">
+          <div className="h-full lg:min-h-0">
             <ErrorBoundary>
               <UsersOnline
                 socket={socket}

@@ -5,10 +5,13 @@ import { createPortal } from 'react-dom';
 import { X, ChevronRight, ChevronLeft } from 'lucide-react';
 
 type Placement = 'center' | 'right' | 'left' | 'top' | 'bottom';
+type SpotlightPad = number | { top?: number; right?: number; bottom?: number; left?: number };
 
 interface Step {
   target: string | null;
+  mobileTarget?: string | null;
   placement: Placement;
+  spotlightPad?: SpotlightPad;
   icon: string;
   title: string;
   description: string;
@@ -26,6 +29,8 @@ const STEPS: Step[] = [
   },
   {
     target: '[data-tour="channels"]',
+    mobileTarget: '[data-tour="mobile-channels"]',
+    spotlightPad: { top: 6, right: 4, bottom: 6, left: 4 },
     placement: 'right',
     icon: '💬',
     title: 'Les salons de discussion',
@@ -35,6 +40,7 @@ const STEPS: Step[] = [
   },
   {
     target: '[data-tour="users"]',
+    mobileTarget: '[data-tour="mobile-users"]',
     placement: 'left',
     icon: '💌',
     title: 'Messages privés',
@@ -42,8 +48,9 @@ const STEPS: Step[] = [
       'Clique sur le pseudo ou l\'avatar d\'un utilisateur dans cette liste pour lui envoyer un message privé. La conversation reste visible uniquement entre vous deux.',
   },
   {
-    target: '[data-tour="profile"]',
+    target: '[data-tour="profile-summary"]',
     placement: 'bottom',
+    spotlightPad: { top: 6, right: 8, bottom: 3, left: 8 },
     icon: '😊',
     title: 'Ton statut du jour',
     description:
@@ -60,7 +67,8 @@ const STEPS: Step[] = [
     tip: 'Ex : "@Koné tu as vu le match ?" — il sera notifié même s\'il ne regarde pas.',
   },
   {
-    target: '[data-tour="game-channel"]',
+    target: '[data-tour="game-channel-summary"]',
+    mobileTarget: null,
     placement: 'right',
     icon: '🎮',
     title: 'Le Quiz en direct',
@@ -72,6 +80,8 @@ const STEPS: Step[] = [
 const TOOLTIP_W = 340;
 const GAP = 14;
 const PAD = 10;
+const DESKTOP_BREAKPOINT = 1024;
+const TOOLTIP_H = 340;
 
 interface SpotlightRect {
   top: number;
@@ -80,36 +90,76 @@ interface SpotlightRect {
   height: number;
 }
 
-function measureTarget(selector: string): SpotlightRect | null {
+function resolvePad(pad?: SpotlightPad) {
+  if (typeof pad === 'number') {
+    return { top: pad, right: pad, bottom: pad, left: pad };
+  }
+  return {
+    top: pad?.top ?? PAD,
+    right: pad?.right ?? PAD,
+    bottom: pad?.bottom ?? PAD,
+    left: pad?.left ?? PAD,
+  };
+}
+
+function getViewportSize() {
+  const viewport = window.visualViewport;
+  return {
+    vw: viewport?.width ?? window.innerWidth,
+    vh: viewport?.height ?? window.innerHeight,
+  };
+}
+
+function measureTarget(selector: string, pad?: SpotlightPad): SpotlightRect | null {
   const el = document.querySelector(selector);
   if (!el) return null;
   const r = el.getBoundingClientRect();
-  if (r.width === 0 && r.height === 0) return null;
+  const { vw, vh } = getViewportSize();
+  const isOutsideViewport = r.bottom <= 0 || r.top >= vh || r.right <= 0 || r.left >= vw;
+  if ((r.width === 0 && r.height === 0) || isOutsideViewport) return null;
+  const resolvedPad = resolvePad(pad);
+  const top = Math.max(8, r.top - resolvedPad.top);
+  const left = Math.max(8, r.left - resolvedPad.left);
   return {
-    top: r.top - PAD,
-    left: r.left - PAD,
-    width: r.width + PAD * 2,
-    height: r.height + PAD * 2,
+    top,
+    left,
+    width: Math.max(16, Math.min(r.width + resolvedPad.left + resolvedPad.right, vw - left - 8)),
+    height: Math.max(16, Math.min(r.height + resolvedPad.top + resolvedPad.bottom, vh - top - 8)),
   };
 }
 
 function tooltipStyle(rect: SpotlightRect, placement: Placement): React.CSSProperties {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
+  const { vw, vh } = getViewportSize();
   const base: React.CSSProperties = { position: 'fixed', width: TOOLTIP_W, zIndex: 9003 };
 
-  const clampTop = (v: number) => Math.max(8, Math.min(vh - 320, v));
+  const clampTop = (v: number) => Math.max(8, Math.min(vh - TOOLTIP_H - 8, v));
   const clampLeft = (v: number) => Math.max(8, Math.min(vw - TOOLTIP_W - 8, v));
 
   switch (placement) {
     case 'right':
-      return { ...base, top: clampTop(rect.top + rect.height / 2 - 160), left: rect.left + rect.width + GAP };
+      return {
+        ...base,
+        top: clampTop(rect.top + rect.height / 2 - TOOLTIP_H / 2),
+        left: clampLeft(rect.left + rect.width + GAP),
+      };
     case 'left':
-      return { ...base, top: clampTop(rect.top + rect.height / 2 - 160), right: vw - rect.left + GAP };
+      return {
+        ...base,
+        top: clampTop(rect.top + rect.height / 2 - TOOLTIP_H / 2),
+        left: clampLeft(rect.left - TOOLTIP_W - GAP),
+      };
     case 'bottom':
-      return { ...base, top: rect.top + rect.height + GAP, left: clampLeft(rect.left + rect.width / 2 - TOOLTIP_W / 2) };
+      return {
+        ...base,
+        top: clampTop(rect.top + rect.height + GAP),
+        left: clampLeft(rect.left + rect.width / 2 - TOOLTIP_W / 2),
+      };
     case 'top':
-      return { ...base, bottom: vh - rect.top + GAP, left: clampLeft(rect.left + rect.width / 2 - TOOLTIP_W / 2) };
+      return {
+        ...base,
+        top: clampTop(rect.top - TOOLTIP_H - GAP),
+        left: clampLeft(rect.left + rect.width / 2 - TOOLTIP_W / 2),
+      };
     default:
       return base;
   }
@@ -122,26 +172,47 @@ interface Props {
 const OnboardingModal: React.FC<Props> = ({ onClose }) => {
   const [step, setStep] = useState(0);
   const [spotlight, setSpotlight] = useState<SpotlightRect | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
 
   const updateSpotlight = useCallback(() => {
-    if (!current.target) { setSpotlight(null); return; }
-    setSpotlight(measureTarget(current.target));
-  }, [current.target]);
+    const { vw } = getViewportSize();
+    const mobile = vw < DESKTOP_BREAKPOINT;
+    const target = mobile
+      ? (current.mobileTarget === undefined ? current.target : current.mobileTarget)
+      : current.target;
+    setIsMobile(mobile);
+    if (!target) {
+      setSpotlight(null);
+      return;
+    }
+    setSpotlight(measureTarget(target, current.spotlightPad));
+  }, [current.mobileTarget, current.spotlightPad, current.target]);
 
   useEffect(() => {
     // Small delay so layout is stable before measuring
     const t = setTimeout(updateSpotlight, 80);
     window.addEventListener('resize', updateSpotlight);
-    return () => { clearTimeout(t); window.removeEventListener('resize', updateSpotlight); };
+    window.addEventListener('scroll', updateSpotlight, true);
+    const viewport = window.visualViewport;
+    viewport?.addEventListener('resize', updateSpotlight);
+    viewport?.addEventListener('scroll', updateSpotlight);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('resize', updateSpotlight);
+      window.removeEventListener('scroll', updateSpotlight, true);
+      viewport?.removeEventListener('resize', updateSpotlight);
+      viewport?.removeEventListener('scroll', updateSpotlight);
+    };
   }, [updateSpotlight]);
 
   const goNext = () => { if (isLast) { onClose(); return; } setStep(s => s + 1); };
   const goPrev = () => setStep(s => s - 1);
 
   const isCentered = current.placement === 'center' || !spotlight;
+  const shouldCenterTooltip = isMobile || isCentered;
 
   const tooltipCard = (
     <div
@@ -150,7 +221,12 @@ const OnboardingModal: React.FC<Props> = ({ onClose }) => {
         background: 'var(--bg-panel)',
         border: '2px solid var(--accent)',
         boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
-        width: isCentered ? 'min(440px, calc(100vw - 2rem))' : TOOLTIP_W,
+        width: isMobile
+          ? 'min(360px, calc(100vw - 1rem))'
+          : shouldCenterTooltip
+          ? 'min(440px, calc(100vw - 2rem))'
+          : TOOLTIP_W,
+        maxHeight: isMobile ? 'min(62vh, 460px)' : 'min(calc(100vh - 24px), 560px)',
       }}
     >
       {/* Progress bar */}
@@ -172,15 +248,18 @@ const OnboardingModal: React.FC<Props> = ({ onClose }) => {
       </button>
 
       {/* Content */}
-      <div className={`px-5 pt-6 pb-4 flex flex-col gap-3 ${isCentered ? 'items-center text-center' : 'items-start'}`}>
+      <div
+        className={`flex flex-col ${isMobile ? 'gap-2.5 px-4 pt-5 pb-3' : 'gap-3 px-5 pt-6 pb-4'} ${shouldCenterTooltip ? 'items-center text-center' : 'items-start'}`}
+        style={{ overflowY: 'auto' }}
+      >
         <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+          className={`${isMobile ? 'w-12 h-12 text-2xl' : 'w-14 h-14 text-3xl'} rounded-2xl flex items-center justify-center flex-shrink-0`}
           style={{ background: 'var(--accent-dim)', border: '1px solid var(--border-default)' }}
         >
           {current.icon}
         </div>
 
-        <div className={isCentered ? 'text-center' : ''}>
+        <div className={shouldCenterTooltip ? 'text-center' : ''}>
           <p className="text-[11px] font-medium mb-1" style={{ color: 'var(--text-muted)' }}>
             {step + 1} / {STEPS.length}
           </p>
@@ -205,18 +284,25 @@ const OnboardingModal: React.FC<Props> = ({ onClose }) => {
       </div>
 
       {/* Dot indicators */}
-      <div className="flex items-center justify-center gap-1.5 pb-1">
+      <div
+        className="mx-auto mb-1 inline-flex items-center justify-center gap-1 rounded-full px-2 py-1"
+        style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
+      >
         {STEPS.map((_, i) => (
           <button
             key={i}
+            type="button"
             onClick={() => setStep(i)}
-            className="rounded-full transition-all duration-300"
+            className="rounded-full transition-all duration-200 focus:outline-none"
             style={{
-              width: i === step ? '18px' : '6px',
-              height: '6px',
-              background: i === step ? 'var(--accent)' : 'var(--border-default)',
+              width: i === step ? '12px' : '4px',
+              height: '4px',
+              background: i === step ? 'var(--accent)' : 'color-mix(in srgb, var(--border-default) 78%, transparent)',
+              opacity: i === step ? 1 : 0.9,
+              boxShadow: i === step ? '0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent)' : 'none',
             }}
             aria-label={`Étape ${i + 1}`}
+            aria-current={i === step ? 'step' : undefined}
           />
         ))}
       </div>
@@ -283,8 +369,8 @@ const OnboardingModal: React.FC<Props> = ({ onClose }) => {
       )}
 
       {/* Tooltip / Card */}
-      {isCentered ? (
-        // Centré (étape welcome ou fallback mobile)
+      {shouldCenterTooltip ? (
+        // Centré (mobile ou étape welcome / fallback)
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{ zIndex: 9002 }}>
           <div className="relative">{tooltipCard}</div>
         </div>

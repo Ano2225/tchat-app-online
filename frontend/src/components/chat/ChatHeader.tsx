@@ -375,7 +375,6 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
 
             {/* Profile */}
             <button
-              data-tour="profile"
               onClick={() => setShowProfile(true)}
               className="flex items-center gap-2 rounded-xl px-2 md:px-3 py-1.5 transition-all"
               style={{
@@ -385,30 +384,34 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ users, socket, totalUnread = 0,
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)'}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'}
             >
-              <GenderAvatar
-                username={user?.username || ''}
-                avatarUrl={user?.avatarUrl}
-                sexe={user?.sexe}
-                size="sm"
-                className="w-7 h-7 md:w-8 md:h-8 rounded-lg"
-                clickable={false}
-              />
-              <div className="hidden sm:block text-left">
-                <p
-                  className="text-xs md:text-sm font-semibold leading-tight truncate max-w-[96px]"
-                  style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}
-                >
-                  <span className="inline-flex items-center gap-1.5 max-w-full">
-                    <span className="truncate">{users?.username || user?.username}</span>
-                    {user?.role === 'admin' && <AdminBadge className="flex-shrink-0" />}
-                  </span>
-                </p>
-                <div className="flex items-center gap-1">
-                  <div
-                    className="w-1.5 h-1.5 rounded-full animate-pulse-soft"
-                    style={{ background: 'var(--online)' }}
+              <div data-tour="profile-summary" className="flex min-w-0 items-center gap-2">
+                <span className="flex-shrink-0">
+                  <GenderAvatar
+                    username={user?.username || ''}
+                    avatarUrl={user?.avatarUrl}
+                    sexe={user?.sexe}
+                    size="sm"
+                    className="w-7 h-7 md:w-8 md:h-8 rounded-lg"
+                    clickable={false}
                   />
-                  <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>En ligne</span>
+                </span>
+                <div className="hidden sm:block text-left">
+                  <p
+                    className="text-xs md:text-sm font-semibold leading-tight truncate max-w-[96px]"
+                    style={{ fontFamily: 'var(--font-ui)', color: 'var(--text-primary)' }}
+                  >
+                    <span className="inline-flex items-center gap-1.5 max-w-full">
+                      <span className="truncate">{users?.username || user?.username}</span>
+                      {user?.role === 'admin' && <AdminBadge className="flex-shrink-0" />}
+                    </span>
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <div
+                      className="w-1.5 h-1.5 rounded-full animate-pulse-soft"
+                      style={{ background: 'var(--online)' }}
+                    />
+                    <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>En ligne</span>
+                  </div>
                 </div>
               </div>
             </button>

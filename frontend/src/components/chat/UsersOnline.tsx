@@ -39,6 +39,22 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    const syncCollapsedState = (event?: MediaQueryListEvent) => {
+      if (!(event ? event.matches : mediaQuery.matches)) {
+        setIsCollapsed(false)
+      }
+    }
+
+    syncCollapsedState()
+    mediaQuery.addEventListener('change', syncCollapsedState)
+
+    return () => {
+      mediaQuery.removeEventListener('change', syncCollapsedState)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!socket) return
 
     type UserPayloadItem = string | { username: string; userId?: string; avatarUrl?: string; sexe?: string }
@@ -153,7 +169,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
           {onClose && (
             <button
               onClick={onClose}
-              className="md:hidden w-8 h-8 flex items-center justify-center rounded-xl transition-all"
+              className="lg:hidden w-8 h-8 flex items-center justify-center rounded-xl transition-all"
               style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
               aria-label="Fermer"
             >
@@ -165,7 +181,7 @@ const UsersOnline: React.FC<UsersOnlineProps> = ({ socket, currentRoom, unreadMa
             onClick={() => setIsCollapsed(v => !v)}
             aria-label={isCollapsed ? 'Développer' : 'Réduire'}
             aria-expanded={!isCollapsed}
-            className="hidden md:flex w-7 h-7 items-center justify-center rounded-lg transition-all focus:outline-none"
+            className="hidden lg:flex w-7 h-7 items-center justify-center rounded-lg transition-all focus:outline-none"
             style={{ color: 'var(--text-muted)' }}
             onMouseEnter={e => {
               (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
