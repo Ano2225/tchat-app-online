@@ -492,7 +492,7 @@ const AdminDashboard = () => {
                       <td className="px-4 py-4 whitespace-nowrap text-gray-600 dark:text-gray-400">{u.lastSeen ? new Date(u.lastSeen).toLocaleDateString('fr-FR') : 'Jamais'}</td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="flex flex-wrap gap-1">
-                          {!u.isAnonymous && u._id !== user?._id && (
+                          {!u.isAnonymous && u._id !== user?.id && (
                             <button
                               onClick={() => setUserRole(u._id, u.role === 'admin' ? 'user' : 'admin')}
                               className={`px-2 py-1 rounded text-xs ${u.role === 'admin' ? 'bg-yellow-500 text-white hover:bg-yellow-600' : 'bg-purple-500 text-white hover:bg-purple-600'}`}
