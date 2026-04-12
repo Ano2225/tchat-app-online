@@ -12,7 +12,7 @@ import GenderAvatar from '@/components/ui/GenderAvatar';
 import AdminBadge from '@/components/ui/AdminBadge';
 import { reportService } from '@/services/reportService';
 import toast from 'react-hot-toast';
-import { ShieldBan, ShieldCheck, Smile, Paperclip, Send, X } from 'lucide-react';
+import { ArrowUp, ShieldBan, ShieldCheck, Smile, Paperclip, X } from 'lucide-react';
 
 const NATIVE_EMOJI_STYLE = 'native' as never;
 
@@ -52,6 +52,7 @@ interface Message {
   media_type?: string;
   createdAt: string;
   read: boolean;
+  failed?: boolean;
 }
 
 const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onClose }) => {
@@ -69,7 +70,10 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
   const [blockLoading, setBlockLoading] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null);
+  const [isRecipientTyping, setIsRecipientTyping] = useState(false);
 
+  const isTypingRef = useRef(false);
+  const typingStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -231,18 +235,20 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
 
     // Bug fix: store handler ref to properly remove it on cleanup
     const messageBlockedHandler = ({ optimisticId, blockedByMe: bme, blockedByThem: bth }: { optimisticId?: string; blockedByMe?: boolean; blockedByThem?: boolean }) => {
+      if (bth) {
+        // Bloqué par le destinataire — garder le message visible avec icône ✗, pas de toast
+        if (optimisticId) {
+          setMessages(prev => prev.map(m => m._id === optimisticId ? { ...m, failed: true } : m));
+        }
+        return;
+      }
+      // Bloqué par moi ou autre erreur — supprimer le message optimiste
       if (optimisticId) {
         setMessages(prev => prev.filter(m => m._id !== optimisticId));
       }
       setIsBlocked(true);
       if (bme) {
         setBlockedByMe(true);
-        toast.error(`Vous avez bloqué ${recipient.username}. Débloquez-le pour envoyer des messages.`);
-      } else if (bth) {
-        setBlockedByMe(false);
-        toast.error(`${recipient.username} vous a bloqué.`);
-      } else {
-        toast.error('Impossible d\'envoyer ce message.');
       }
     };
     messageBlockedHandlerRef.current = messageBlockedHandler;
@@ -258,25 +264,35 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       toast.error(errMsg || 'Erreur lors de l\'envoi du message.');
     };
 
+    const handlePrivateTyping = () => {
+      if (!blockedByMe) {
+        setIsRecipientTyping(true);
+      }
+    };
+    const handlePrivateStopTyping = () => setIsRecipientTyping(false);
+
     socket.on('receive_private_message', handleReceiveMessage);
     socket.on('messages_read', handleMessagesRead);
     socket.on('user_online', handleUserOnline);
     socket.on('user_offline', handleUserOffline);
     socket.on('message_blocked', messageBlockedHandler);
     socket.on('private_message_error', handlePrivateMessageError);
+    socket.on('private_user_typing', handlePrivateTyping);
+    socket.on('private_user_stopped_typing', handlePrivateStopTyping);
 
     return () => {
       socket.off('receive_private_message', handleReceiveMessage);
       socket.off('messages_read', handleMessagesRead);
       socket.off('user_online', handleUserOnline);
       socket.off('user_offline', handleUserOffline);
-      // Bug fix: pass the specific handler reference, not a bare off()
       if (messageBlockedHandlerRef.current) {
         socket.off('message_blocked', messageBlockedHandlerRef.current);
       }
       socket.off('private_message_error', handlePrivateMessageError);
+      socket.off('private_user_typing', handlePrivateTyping);
+      socket.off('private_user_stopped_typing', handlePrivateStopTyping);
     };
-  }, [socket, recipient, user]);
+  }, [socket, recipient, user, blockedByMe]);
 
   const autoResizeTextarea = useCallback(() => {
     const el = textareaRef.current;
@@ -288,6 +304,12 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
   useEffect(() => {
     autoResizeTextarea();
   }, [newMessage, autoResizeTextarea]);
+
+  useEffect(() => {
+    if (blockedByMe) {
+      setIsRecipientTyping(false);
+    }
+  }, [blockedByMe]);
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     setTimeout(() => {
@@ -358,9 +380,13 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl(null);
       setShowEmojiPicker(false);
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+      // Arrêter l'indicateur de frappe
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        socket.emit('private_typing_stop', { recipientId: recipient._id });
       }
+      if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
     } catch (error) {
       console.error('Error sending message:', error);
       toast.error('Erreur lors de l\'envoi du message.');
@@ -382,6 +408,29 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
         : { insetInline: '0', top: 'var(--header-h)', bottom: 'max(4rem, calc(3.5rem + env(safe-area-inset-bottom)))' }
       }
     >
+
+      {/* Tooltip bloquer — portal pour éviter overflow:hidden */}
+      {typeof document !== 'undefined' && createPortal(
+        <span
+          id="block-btn-tip"
+          className="pointer-events-none fixed px-2 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap -translate-x-1/2"
+          style={{
+            opacity: 0,
+            transition: 'opacity 0.15s',
+            background: 'var(--bg-elevated)',
+            color: blockedByMe ? 'var(--online)' : 'var(--danger)',
+            border: '1px solid var(--border-default)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+            fontFamily: 'var(--font-ui)',
+            zIndex: 99999,
+            top: 0,
+            left: 0,
+          }}
+        >
+          {blockedByMe ? 'Débloquer' : 'Bloquer'}
+        </span>,
+        document.body
+      )}
 
       {/* Emoji Picker portal */}
       {showEmojiPicker && pickerPos && typeof document !== 'undefined' && createPortal(
@@ -450,7 +499,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
               </span>
             </p>
             <p className="text-xs leading-tight mt-0.5" style={{ color: isRecipientOnline ? 'var(--online)' : 'var(--text-muted)' }}>
-              {isRecipientOnline ? '● En ligne' : '○ Hors ligne'}
+              {isRecipientOnline ? 'En ligne' : 'Hors ligne'}
             </p>
           </div>
 
@@ -485,17 +534,26 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                 }
               }}
               disabled={blockLoading || (isBlocked && !blockedByMe)}
-              title={blockedByMe ? 'Débloquer' : isBlocked ? 'Bloqué par cet utilisateur' : 'Bloquer'}
-              className="w-9 h-9 flex items-center justify-center rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              className="relative w-9 h-9 flex items-center justify-center rounded-xl transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               style={{ color: 'var(--text-muted)' }}
               onMouseEnter={e => {
                 if (isBlocked && !blockedByMe) return;
                 (e.currentTarget as HTMLElement).style.color = blockedByMe ? 'var(--online)' : 'var(--danger)';
                 (e.currentTarget as HTMLElement).style.background = blockedByMe ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)';
+                const tip = document.getElementById('block-btn-tip');
+                if (tip) tip.style.opacity = '1';
               }}
               onMouseLeave={e => {
                 (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)';
                 (e.currentTarget as HTMLElement).style.background = 'transparent';
+                const tip = document.getElementById('block-btn-tip');
+                if (tip) tip.style.opacity = '0';
+              }}
+              onMouseMove={e => {
+                const tip = document.getElementById('block-btn-tip');
+                if (!tip) return;
+                tip.style.left = `${e.clientX}px`;
+                tip.style.top = `${e.clientY - 36}px`;
               }}
             >
               {blockedByMe ? <ShieldCheck className="w-4 h-4" /> : <ShieldBan className="w-4 h-4" />}
@@ -518,17 +576,15 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
           </div>
         </div>
 
-        {/* Blocked notice — compact single line */}
-        {isBlocked && (
+        {/* Blocked notice — seulement si c'est moi qui ai bloqué */}
+        {blockedByMe && (
           <div
             className="flex items-center gap-2 px-3 py-2 flex-shrink-0 text-xs"
             style={{ background: 'rgba(248,113,113,0.07)', borderBottom: '1px solid rgba(248,113,113,0.15)', color: 'var(--danger)' }}
           >
             <ShieldBan className="w-3 h-3 flex-shrink-0" />
             <span className="truncate">
-              {blockedByMe
-                ? `Vous avez bloqué ${recipient.username} — cliquez sur l'icône pour débloquer`
-                : `${recipient.username} vous a bloqué`}
+              Vous avez bloqué {recipient.username} — cliquez sur l&apos;icône pour débloquer
             </span>
           </div>
         )}
@@ -539,9 +595,9 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
               <div
                 className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                style={{ background: isBlocked ? 'rgba(248,113,113,0.1)' : 'var(--accent-dim)' }}
+                style={{ background: blockedByMe ? 'rgba(248,113,113,0.1)' : 'var(--accent-dim)' }}
               >
-                {isBlocked
+                {blockedByMe
                   ? <ShieldBan className="w-6 h-6" style={{ color: 'var(--danger)' }} />
                   : <svg className="w-6 h-6" style={{ color: 'var(--accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -549,11 +605,9 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                 }
               </div>
               <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                {isBlocked
-                  ? (blockedByMe ? `Vous avez bloqué ${recipient.username}` : `${recipient.username} vous a bloqué`)
-                  : `Dites bonjour à ${recipient.username} 👋`}
+                {blockedByMe ? `Vous avez bloqué ${recipient.username}` : `Dites bonjour à ${recipient.username} 👋`}
               </p>
-              {!isBlocked && (
+              {!blockedByMe && (
                 <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Vos messages sont privés</p>
               )}
             </div>
@@ -597,8 +651,11 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                       style={
                         isOwn
                           ? {
-                              background: isImageOnly ? 'transparent' : 'var(--accent)',
-                              color: '#fff',
+                              background: isImageOnly ? 'transparent'
+                                : message.failed ? 'rgba(248,113,113,0.15)'
+                                : 'var(--accent)',
+                              color: message.failed ? 'var(--danger)' : '#fff',
+                              border: message.failed ? '1px solid rgba(248,113,113,0.35)' : 'none',
                               borderRadius: isLastInGroup ? '18px 18px 4px 18px' : '18px 18px 4px 18px',
                               maxWidth: '100%',
                               overflowWrap: 'break-word',
@@ -654,10 +711,27 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
                         <span>{formatTime(message.createdAt)}</span>
                         {isOwn && (
                           isOptimistic
-                            ? <span style={{ color: 'var(--text-muted)' }}>···</span>
-                            : <span style={{ color: message.read ? 'var(--accent)' : 'var(--text-muted)' }}>
-                                {message.read ? '✓✓' : '✓'}
-                              </span>
+                            ? <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>···</span>
+                            : message.read
+                            ? (
+                              /* Lu — ✓✓ accent, chevauchés comme WhatsApp */
+                              <svg width="18" height="11" viewBox="0 0 18 11" fill="none" style={{ flexShrink: 0 }} aria-label="Lu">
+                                <path d="M1 5.5L4 9L9.5 2" stroke="var(--accent)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M6 5.5L9 9L14.5 2" stroke="var(--accent)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            ) : isRecipientOnline
+                            ? (
+                              /* En ligne, non lu — ✓✓ gris */
+                              <svg width="18" height="11" viewBox="0 0 18 11" fill="none" style={{ flexShrink: 0 }} aria-label="Envoyé">
+                                <path d="M1 5.5L4 9L9.5 2" stroke="var(--text-muted)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                                <path d="M6 5.5L9 9L14.5 2" stroke="var(--text-muted)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            ) : (
+                              /* Hors ligne — ✓ gris seul */
+                              <svg width="11" height="11" viewBox="0 0 11 11" fill="none" style={{ flexShrink: 0 }} aria-label="Envoyé">
+                                <path d="M1 5.5L4 9L10 2" stroke="var(--text-muted)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )
                         )}
                       </div>
                     )}
@@ -669,11 +743,26 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Typing indicator */}
+        {!blockedByMe && isRecipientTyping && (
+          <div
+            className="flex items-center gap-1.5 px-3 py-1 text-xs flex-shrink-0"
+            style={{ color: 'var(--text-muted)', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-panel)' }}
+          >
+            <div className="flex gap-0.5 items-center">
+              <span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--accent)', animationDelay: '0ms' }} />
+              <span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--accent)', animationDelay: '150ms' }} />
+              <span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--accent)', animationDelay: '300ms' }} />
+            </div>
+            <span>{recipient.username} est en train d&apos;écrire…</span>
+          </div>
+        )}
+
         {/* Input */}
         <div
-          className={`flex-shrink-0 px-3 py-2 ${isBlocked ? 'opacity-40 pointer-events-none select-none' : ''}`}
-          title={isBlocked && !blockedByMe ? `${recipient.username} vous a bloqué` : undefined}
-          style={{ background: 'var(--bg-panel)', borderTop: '1px solid var(--border-subtle)' }}
+          className={`flex-shrink-0 px-3 py-2 ${blockedByMe ? 'opacity-40 pointer-events-none select-none' : ''}`}
+          title={blockedByMe ? `Vous avez bloqué ${recipient.username}` : undefined}
+          style={{ background: 'var(--bg-panel)', borderTop: isRecipientTyping && !blockedByMe ? 'none' : '1px solid var(--border-subtle)' }}
         >
           {/* Image preview */}
           {selectedFile && previewUrl && (
@@ -722,7 +811,25 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
               <textarea
                 ref={textareaRef}
                 value={newMessage}
-                onChange={(e) => { if (e.target.value.length <= 500) setNewMessage(e.target.value); }}
+                onChange={(e) => {
+                  if (e.target.value.length <= 500) setNewMessage(e.target.value);
+                  if (!socket || !recipient._id) return;
+                  if (!isTypingRef.current && e.target.value.length > 0) {
+                    isTypingRef.current = true;
+                    socket.emit('private_typing_start', { recipientId: recipient._id });
+                  } else if (isTypingRef.current && e.target.value.length === 0) {
+                    isTypingRef.current = false;
+                    socket.emit('private_typing_stop', { recipientId: recipient._id });
+                  }
+                  // Auto-stop après 3s d'inactivité
+                  if (typingStopTimerRef.current) clearTimeout(typingStopTimerRef.current);
+                  typingStopTimerRef.current = setTimeout(() => {
+                    if (isTypingRef.current) {
+                      isTypingRef.current = false;
+                      socket.emit('private_typing_stop', { recipientId: recipient._id });
+                    }
+                  }, 3000);
+                }}
                 placeholder="Message…"
                 rows={1}
                 maxLength={500}
@@ -788,7 +895,7 @@ const PrivateChatBox: React.FC<PrivateChatBoxProps> = ({ recipient, socket, onCl
             >
               {uploading
                 ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                : <Send className="w-3.5 h-3.5" style={{ color: (newMessage.trim() || selectedFile) ? 'white' : 'var(--text-muted)' }} />
+                : <ArrowUp className="w-3.5 h-3.5" strokeWidth={2.4} style={{ color: (newMessage.trim() || selectedFile) ? 'white' : 'var(--text-muted)' }} />
               }
             </button>
           </form>

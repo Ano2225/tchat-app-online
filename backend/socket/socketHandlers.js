@@ -497,14 +497,32 @@ module.exports = (io, socket) => {
   });
 
   // ── Indicateur de frappe ─────────────────────────────────────────────────
-  socket.on('typing_start', ({ room }) => {
-    if (!socket.username || !room || typeof room !== 'string') return;
-    socket.to(room).emit('user_typing', { username: socket.username, room });
+  socket.on('typing_start', ({ room, username: clientUsername }) => {
+    if (!room || typeof room !== 'string') return;
+    // Priorité : socket.username (vérifié côté serveur) > fallback client > anonyme générique
+    const name = socket.username || clientUsername || (socket.userId ? 'Anonyme' : null);
+    if (!name) return;
+    socket.to(room).emit('user_typing', { username: name, room });
   });
 
-  socket.on('typing_stop', ({ room }) => {
-    if (!socket.username || !room || typeof room !== 'string') return;
-    socket.to(room).emit('user_stopped_typing', { username: socket.username, room });
+  socket.on('typing_stop', ({ room, username: clientUsername }) => {
+    if (!room || typeof room !== 'string') return;
+    const name = socket.username || clientUsername || (socket.userId ? 'Anonyme' : null);
+    if (!name) return;
+    socket.to(room).emit('user_stopped_typing', { username: name, room });
+  });
+
+  // ── Indicateur de frappe — messages privés ──────────────────────────────
+  socket.on('private_typing_start', ({ recipientId }) => {
+    if (!socket.userId || !recipientId) return;
+    const roomId = getPrivateRoomId(socket.userId, recipientId);
+    socket.to(roomId).emit('private_user_typing', { username: socket.username });
+  });
+
+  socket.on('private_typing_stop', ({ recipientId }) => {
+    if (!socket.userId || !recipientId) return;
+    const roomId = getPrivateRoomId(socket.userId, recipientId);
+    socket.to(roomId).emit('private_user_stopped_typing', { username: socket.username });
   });
 
   // ── Statut mis à jour — notifier les autres utilisateurs ─────────────────

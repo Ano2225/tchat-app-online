@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuthStore } from '@/store/authStore';
 import { Socket } from 'socket.io-client';
@@ -51,6 +51,7 @@ interface ChatMessagesProps {
 }
 
 const PAGE_SIZE = 50;
+const SWIPE_THRESHOLD = 68;
 
 const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onReply }) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -62,12 +63,71 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
 
   const user = useAuthStore((state) => state.user);
   const isGameChannel = currentRoom === 'Game';
+  const prevMsgLengthRef = useRef(0);
+
+  // Swipe-to-reply state (no re-renders — direct DOM mutation)
+  const swipeRef = useRef<{
+    startX: number;
+    isOwn: boolean;
+    triggered: boolean;
+    msg: Message;
+  } | null>(null);
 
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   };
+
+  // ── Swipe handlers ──────────────────────────────────────────
+  const handleMsgPointerDown = useCallback((
+    e: React.PointerEvent<HTMLDivElement>,
+    msg: Message,
+    isOwn: boolean
+  ) => {
+    if (e.pointerType !== 'touch') return;
+    swipeRef.current = { startX: e.clientX, isOwn, triggered: false, msg };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, []);
+
+  const handleMsgPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const s = swipeRef.current;
+    if (!s || s.triggered) return;
+    const dx = e.clientX - s.startX;
+    const validDx = s.isOwn ? -dx : dx; // own = swipe left, other = swipe right
+    if (validDx < 8) return;
+
+    const clamped = Math.min(validDx, SWIPE_THRESHOLD + 20);
+    const tx = s.isOwn ? -clamped : clamped;
+
+    const col = e.currentTarget.querySelector<HTMLElement>('.swipe-col');
+    if (col) { col.style.transform = `translateX(${tx}px)`; col.style.transition = 'none'; }
+
+    const icon = e.currentTarget.querySelector<HTMLElement>('.swipe-icon');
+    if (icon) {
+      const p = Math.min(1, validDx / SWIPE_THRESHOLD);
+      icon.style.opacity = String(p);
+      icon.style.transform = `scale(${0.5 + 0.5 * p})`;
+    }
+
+    if (validDx >= SWIPE_THRESHOLD) {
+      s.triggered = true;
+      navigator.vibrate?.(20);
+      if (onReply) onReply(s.msg);
+      // snap back
+      if (col) { col.style.transition = 'transform 0.3s cubic-bezier(.25,.46,.45,.94)'; col.style.transform = 'translateX(0)'; }
+      if (icon) { icon.style.transition = 'opacity 0.2s, transform 0.2s'; icon.style.opacity = '0'; icon.style.transform = 'scale(0.5)'; }
+    }
+  }, [onReply]);
+
+  const handleMsgPointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!swipeRef.current) return;
+    const col = e.currentTarget.querySelector<HTMLElement>('.swipe-col');
+    if (col) { col.style.transition = 'transform 0.3s cubic-bezier(.25,.46,.45,.94)'; col.style.transform = 'translateX(0)'; }
+    const icon = e.currentTarget.querySelector<HTMLElement>('.swipe-icon');
+    if (icon) { icon.style.transition = 'opacity 0.2s, transform 0.2s'; icon.style.opacity = '0'; icon.style.transform = 'scale(0.5)'; }
+    swipeRef.current = null;
+  }, []);
 
   const loadMessages = async (room: string) => {
     setLoading(true);
@@ -152,7 +212,13 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
   }, [socket, isGameChannel]);
 
   useEffect(() => {
-    scrollToBottom();
+    // Ne scroller que si un nouveau message est ajouté (pas pour les mises à jour de réactions)
+    if (messages.length > prevMsgLengthRef.current) {
+      const el = messagesContainerRef.current;
+      const isNearBottom = !el || (el.scrollHeight - el.scrollTop - el.clientHeight < 150);
+      if (isNearBottom) scrollToBottom();
+    }
+    prevMsgLengthRef.current = messages.length;
   }, [messages]);
 
   const formatTime = (dateString: string) => {
@@ -364,8 +430,31 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
             return (
               <div
                 key={msg._id}
-                className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} ${isFirst ? 'mt-3' : 'mt-0.5'} group px-1`}
+                className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} ${isFirst ? 'mt-3' : 'mt-0.5'} group px-1 relative`}
+                style={{ touchAction: 'pan-y' }}
+                onPointerDown={(e) => handleMsgPointerDown(e, msg, isOwnMessage)}
+                onPointerMove={handleMsgPointerMove}
+                onPointerUp={handleMsgPointerUp}
+                onPointerCancel={handleMsgPointerUp}
               >
+                {/* Icône de réponse swipe — révélée pendant le glissement */}
+                <div
+                  className="swipe-icon pointer-events-none absolute top-1/2 flex items-center justify-center w-7 h-7 rounded-full"
+                  style={{
+                    opacity: 0,
+                    transform: 'scale(0.5)',
+                    background: 'var(--accent)',
+                    color: '#fff',
+                    zIndex: 0,
+                    ...(isOwnMessage ? { right: '4px' } : { left: '36px' }),
+                    marginTop: '-14px',
+                  }}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                </div>
+
                 {/* Avatar placeholder to maintain alignment — only shown for first message of group */}
                 {!isOwnMessage && (
                   <div className="w-7 flex-shrink-0 mr-1.5 self-end mb-0.5">
@@ -384,7 +473,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ currentRoom, socket, onRepl
                   </div>
                 )}
 
-                <div className={`flex flex-col min-w-0 ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[82%] sm:max-w-[68%] lg:max-w-[58%]`}>
+                <div className={`swipe-col flex flex-col min-w-0 ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[82%] sm:max-w-[68%] lg:max-w-[58%]`} style={{ zIndex: 1 }}>
                   {/* Sender name + time — only on first bubble of group */}
                   {!isOwnMessage && isFirst && (
                     <div className="flex items-baseline gap-1.5 mb-0.5 ml-1">

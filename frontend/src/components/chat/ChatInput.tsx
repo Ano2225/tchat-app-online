@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { createPortal } from 'react-dom'
 import type { EmojiClickData } from 'emoji-picker-react'
+import { ArrowUp } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { Socket } from 'socket.io-client'
 import GenderAvatar from '@/components/ui/GenderAvatar'
@@ -272,7 +273,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
       replyPreview,
     })
     setMessage('')
-    setIsTyping(false)
+    if (isTyping) {
+      setIsTyping(false)
+      socket.emit('typing_stop', { room: currentRoom, username: user?.username || 'Anonyme' })
+    }
     setShowEmojiPicker(false)
     setMentionState(null)
     if (onCancelReply) onCancelReply()
@@ -288,16 +292,17 @@ const ChatInput: React.FC<ChatInputProps> = ({
     const val = e.target.value
     setMessage(val)
 
-    if (!user) return
-
-    // Typing indicators
+    // Typing indicators — fonctionne pour tous (inscrits ET anonymes)
+    const displayName = user?.username || 'Anonyme'
     if (!isTyping && val.length > 0) {
       setIsTyping(true)
-      socket?.emit('typing_start', { room: currentRoom, username: user.username })
+      socket?.emit('typing_start', { room: currentRoom, username: displayName })
     } else if (isTyping && val.length === 0) {
       setIsTyping(false)
-      socket?.emit('typing_stop', { room: currentRoom, username: user.username })
+      socket?.emit('typing_stop', { room: currentRoom, username: displayName })
     }
+
+    if (!user) return
 
     // Mention detection
     const cursor = e.target.selectionStart ?? val.length
@@ -479,9 +484,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
             title={currentRoom === 'Game' ? 'Envoyer réponse/message' : 'Envoyer le message'}
             aria-label="Send message"
           >
-            <svg className="w-4 h-4" fill="none" stroke={message.trim() ? '#fff' : 'var(--text-muted)'} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
+            <ArrowUp
+              className="w-4 h-4"
+              strokeWidth={2.4}
+              style={{ color: message.trim() ? '#fff' : 'var(--text-muted)' }}
+            />
           </button>
         </div>
       </form>
